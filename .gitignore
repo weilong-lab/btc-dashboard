@@ -1,0 +1,19 @@
+# 私人内容：基于私人聊天记录的复盘报告，不公开
+btc-review.html
+dashboard/mockup.html
+
+# 大文件和本地环境
+backtest/data/
+backtest/.venv/
+backtest/results/*trades*.csv
+backtest/results_*.txt
+backtest/fetch_history.log
+__pycache__/
+*.pyc
+
+# 监控程序的本地输出（新闻库、模拟盘状态、警报记录）
+monitor/out/
+
+# 本机工具配置
+.claude/
+.DS_Store

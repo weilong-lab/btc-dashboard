@@ -1,0 +1,5 @@
+# 模拟盘需要（paper.py）
+pandas>=2.0
+numpy>=1.24
+# 可选：只有用 Claude API 标注新闻时才需要
+anthropic>=0.125

@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>BTC 作战面板</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* 布局：手机优先的单列卡片流，宽屏两列；顶部价格条吸顶 */
+:root{
+  --bg:#f3f5f7; --card:#ffffff; --fg:#14181d; --fg2:#4f5862; --muted:#808a95; --line:#e1e5ea; --grid:#edf0f3;
+  --accent:#2a78d6; --band1:rgba(42,120,214,.16); --band2:rgba(42,120,214,.08);
+  --good:#0c8f0c; --warn:#c98500; --bad:#d03b3b; --chip:#eef2f6;
+  --f:"Noto Sans SC","PingFang SC",system-ui,sans-serif; --m:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1214; --card:#181c20; --fg:#eceef0; --fg2:#b6bdc5; --muted:#87909a; --line:#2a3036; --grid:#22272c;
+  --accent:#4b93e8; --band1:rgba(75,147,232,.22); --band2:rgba(75,147,232,.10);
+  --good:#36c236; --warn:#f0b33a; --bad:#e66767; --chip:#232930; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1214; --card:#181c20; --fg:#eceef0; --fg2:#b6bdc5; --muted:#87909a; --line:#2a3036; --grid:#22272c;
+  --accent:#4b93e8; --band1:rgba(75,147,232,.22); --band2:rgba(75,147,232,.10);
+  --good:#36c236; --warn:#f0b33a; --bad:#e66767; --chip:#232930; color-scheme:dark}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f);font-size:14.5px;line-height:1.6;
+  padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-block:0 40px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--card)}
+.num{font-family:var(--m);font-variant-numeric:tabular-nums}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--card);border-bottom:1px solid var(--line);
+  margin:0 calc(-1 * max(12px,env(safe-area-inset-left,0px)));padding:8px max(12px,env(safe-area-inset-left,0px));display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+.top .px{font-size:26px;font-weight:600;transition:color .25s}
+.top .px.up{color:var(--good)} .top .px.dn{color:var(--bad)}
+.top .chg{font-weight:500}
+.conn{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.conn i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.conn.ok i{background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
+.conn.bad i{background:var(--bad)}
+.refresh{margin-left:auto;font:inherit;font-size:13px;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.refresh:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.refresh[disabled]{opacity:.6}
+.wrap{max-width:1100px;margin:12px auto 0;display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:900px){.wrap{grid-template-columns:1fr 1fr}.span{grid-column:1/-1}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h2{margin:0;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:.04em;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.card h2 small{font-weight:400}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--chip);border-radius:6px;padding:6px 10px;font-size:13px;display:flex;flex-direction:column;min-width:0}
+.chip b{font-family:var(--m);font-size:15px}
+.chip span{font-size:11.5px;color:var(--muted)}
+.good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)} .mut{color:var(--muted)}
+.note{font-size:12px;color:var(--muted);margin:0}
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.fc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.fc .h{background:var(--chip);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.fc .h .n{font-size:12px;color:var(--muted)}
+.fc .h .d{font-size:18px;font-weight:600}
+.fc .h .p{font-family:var(--m);font-size:13px}
+.fc .h .a{font-size:11.5px;color:var(--muted)}
+.meter{height:5px;border-radius:99px;background:var(--grid);position:relative;overflow:hidden}
+.meter i{position:absolute;top:0;bottom:0}
+.verdict{border-left:3px solid var(--warn);padding:8px 12px;background:var(--chip);border-radius:0 6px 6px 0;font-size:13.5px}
+.verdict.badv{border-color:var(--bad)} .verdict.goodv{border-color:var(--good)}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+input,select{font:inherit;font-family:var(--m);font-size:15px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;font:inherit;font-size:14px;padding:7px;border:0;background:var(--bg);color:var(--fg2);cursor:pointer}
+.seg button[aria-pressed="true"].long{background:var(--good);color:#fff}
+.seg button[aria-pressed="true"].short{background:var(--bad);color:#fff}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.pred{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.pred div{background:var(--chip);border-radius:6px;padding:8px 10px;font-size:13.5px;min-width:0}
+.pred b{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:2px}
+#cone{width:100%;height:330px;display:block}
+.list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px;font-size:13.5px}
+.list li{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:baseline}
+.list .t{font-family:var(--m);font-size:12px;color:var(--muted);white-space:nowrap}
+.list li>span{display:flex;flex-wrap:wrap;gap:2px 6px;align-items:baseline;min-width:0}
+.list a{color:var(--fg);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;overflow-wrap:anywhere}
+.list a:hover,.list a:focus{text-decoration-color:var(--accent)}
+.list small{flex-basis:100%;font-size:11.5px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%}
+.lean{font-style:normal;font-size:11.5px;padding:0 7px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.lean.bull{color:var(--good)} .lean.bear{color:var(--bad)} .lean.neu{color:var(--muted)}
+.plan-now{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:center;padding:12px 14px;border-radius:8px;background:var(--chip);border-left:4px solid var(--muted)}
+.plan-now.long{border-color:var(--good)} .plan-now.short{border-color:var(--bad)} .plan-now.wait{border-color:var(--warn)}
+.plan-now .act{font-size:22px;font-weight:700;white-space:nowrap}
+.plan-now .why{font-size:13.5px;color:var(--fg2)}
+.plan-now .lv{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 16px;font-family:var(--m);font-size:13.5px}
+.plan-now .lv span b{font-family:var(--f);font-weight:500;color:var(--muted);font-size:12px;margin-right:4px}
+@media(max-width:520px){.plan-now{grid-template-columns:1fr}}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px}
+.plans .pl{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.plans .pl h3{margin:0;font-size:14.5px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.plans .pl h3 small{font-weight:400;font-size:12px;color:var(--muted)}
+.plans .pl .k{font-family:var(--m);font-size:13.5px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.plans .pl .k span b{font-family:var(--f);font-weight:500;color:var(--muted);font-size:12px;margin-right:4px}
+.plans .pl p{margin:0;font-size:13px;color:var(--fg2)}
+.mirror{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
+.side{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.side.long{border-top:3px solid var(--good)} .side.short{border-top:3px solid var(--bad)}
+.side h3{margin:0;font-size:15px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.side .verdict2{font-size:13.5px;padding:7px 10px;border-radius:6px;background:var(--chip)}
+.side .verdict2 b{font-size:15px;margin-right:6px}
+.side table{width:100%;border-collapse:collapse;font-size:12.5px}
+.side th{font-weight:500;color:var(--muted);text-align:center;padding:3px 4px;font-size:11.5px}
+.side th:first-child,.side td:first-child{text-align:left}
+.side td{padding:4px;border-top:1px solid var(--grid);text-align:center}
+.side td small{display:block;font-size:10.5px;color:var(--muted)}
+.side .sub{font-size:11.5px;color:var(--muted);padding-top:2px}
+.rules{font-size:13px;color:var(--fg2)}
+.rules p{margin:6px 0 0}
+.rules summary{cursor:pointer;color:var(--accent)}
+.rules ol{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+@media (prefers-reduced-motion:reduce){.top .px{transition:none}}
+.fc .h .live{font-size:11.5px;color:var(--muted);font-family:var(--m)}
+.paper-side{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.paper-side h3{margin:0;font-size:14.5px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.paper-side h3 small{font-weight:400;font-size:12px;color:var(--muted)}
+.paper-side .bt{font-size:12px;color:var(--muted)}
+.tablewrap{overflow-x:auto;min-width:0}
+.jt,.pt{width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px}
+.jt th,.pt th{font-weight:500;color:var(--muted);text-align:left;padding:4px 6px;font-size:11.5px;border-bottom:1px solid var(--line)}
+.jt td,.pt td{padding:5px 6px;border-bottom:1px solid var(--grid);font-family:var(--m);white-space:nowrap}
+.jt td.txt{font-family:var(--f);white-space:normal;min-width:120px}
+.jt input{font-size:13px;padding:4px 6px;width:96px}
+.jbtns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:inherit;font-size:13px;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+label.wide{grid-column:1/-1}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <span class="px num" id="px">—</span>
+  <span class="chg num" id="chg">—</span>
+  <span class="conn num" id="book"></span>
+  <span class="conn" id="conn"><i></i><span id="connText">连接中…</span></span>
+  <button class="refresh" id="refresh" type="button">手动刷新</button>
+</div>
+
+<div class="wrap">
+
+  <section class="card span">
+    <h2>当前状态 <small id="stUpd">—</small></h2>
+    <div class="status" id="status"></div>
+  </section>
+
+  <section class="card span">
+    <h2>方向判断 <small>结论按已收盘 K 线 · 盘中预估另列 · 准确率来自模型没见过的数据</small></h2>
+    <div class="fc" id="fc"></div>
+    <div class="verdict" id="fcsum"></div>
+    <p class="note">「上涨概率」越偏离 50%，模型把握越大。「历史准确率」减去「±」误差后仍高于 50%，才算这个周期真的有效。大字是收盘结论，只在 K 线收盘时变化；「盘中预估」用最新成交价补全正在走的那根，会来回跳，只作参考。</p>
+  </section>
+
+  <section class="card span" id="planCard">
+    <h2>交易计划 <small id="planBasis">按已收盘 K 线判断 · 不是投资建议</small></h2>
+    <div class="plan-now" id="planNow"></div>
+    <div class="plans" id="plans"></div>
+    <details class="rules"><summary>规则和回测结果（与模拟盘、回测同一份参数）</summary>
+      <ol id="ruleText"></ol>
+    </details>
+  </section>
+
+  <section class="card span">
+    <h2>做多信号 / 做空信号 <small>完全镜像 · 5 分钟 / 15 分钟 / 1 小时同时看</small></h2>
+    <div class="mirror" id="mirror"></div>
+    <details class="rules"><summary>为什么结论不只看张主任的条件</summary>
+      <p>结论只看已收盘的 K 线，过滤条件和回测、模拟盘完全一致。用 2020 年以来的全部数据检验：只看 5 分钟信号，做多做空都显著亏损（t 值 -3.8 / -4.7，7 年里最多 1 年为正）；加 1 小时趋势过滤、三周期共振、排除周末低量，或者把信号放到 15 分钟 / 1 小时 / 4 小时 K 线上，都没有变成稳定盈利。按真实挂单执行回测，规则 A（4 小时模型高把握）和规则 B（张主任完整信号 + 过滤）也都没有通过，所以这里出现的只是「参考信号」，由模拟盘继续验证。</p>
+    </details>
+  </section>
+
+  <section class="card span" id="paperCard">
+    <h2>模拟盘 <small id="paperUpd">后台按统一规则逐根执行，不受网页开关影响</small></h2>
+    <div class="mirror" id="paper"></div>
+    <p class="note">模拟盘和回测用同一套代码逻辑（已逐笔核对一致），挂单只有被价格穿过才算成交，手续费按挂单 0.02% / 市价 0.05% 计算。攒够几十笔后，和回测对比，就知道规则在真实行情里是否成立。</p>
+  </section>
+
+  <section class="card span">
+    <h2>我的持仓 · 推演 <small>只做计算，不会下单</small></h2>
+    <form id="pos" onsubmit="return false">
+      <label>方向
+        <div class="seg" role="group" aria-label="方向">
+          <button type="button" class="long" id="b-long" aria-pressed="false">做多</button>
+          <button type="button" class="short" id="b-short" aria-pressed="true">做空</button>
+        </div>
+      </label>
+      <label for="entry">进场价<input id="entry" inputmode="decimal"></label>
+      <label for="stop">止损价<input id="stop" inputmode="decimal"></label>
+      <label for="target">止盈价<input id="target" inputmode="decimal"></label>
+      <label for="margin">保证金 (U)<input id="margin" inputmode="decimal" value="100"></label>
+      <label for="lev">杠杆<input id="lev" inputmode="decimal" value="20"></label>
+      <label for="ordtype">进场方式<select id="ordtype"><option value="maker">限价挂单</option><option value="taker">市价</option></select></label>
+    </form>
+    <div class="out" id="outs"></div>
+    <div class="pred" id="pred"></div>
+    <div class="verdict" id="verdict"></div>
+    <svg id="cone" role="img" aria-label="过去 24 小时价格与未来 4 小时概率区间"></svg>
+    <p class="note">右侧扇形：未来 4 小时价格的 50%（深）和 80%（浅）区间，来自历史同等活跃度时段的实际分布。</p>
+  </section>
+
+  <section class="card span" id="journalCard">
+    <h2>交易日志与风控 <small>只保存在这台设备的浏览器里，可导出备份</small></h2>
+    <div class="status" id="risk"></div>
+    <div class="verdict" id="riskMsg"></div>
+    <form id="jform" onsubmit="return false">
+      <label for="jbal">账户余额 (U)<input id="jbal" inputmode="decimal"></label>
+      <label for="jrisk">每笔最多亏 (% 余额)<input id="jrisk" inputmode="decimal" value="2"></label>
+      <label>方向
+        <div class="seg" role="group" aria-label="日志方向">
+          <button type="button" class="long" id="j-long" aria-pressed="true">做多</button>
+          <button type="button" class="short" id="j-short" aria-pressed="false">做空</button>
+        </div>
+      </label>
+      <label for="jentry">进场价<input id="jentry" inputmode="decimal"></label>
+      <label for="jstop">止损价<input id="jstop" inputmode="decimal"></label>
+      <label for="jnotional">名义仓位 (U)<input id="jnotional" inputmode="decimal"></label>
+      <label for="jlev">杠杆<input id="jlev" inputmode="decimal" value="10"></label>
+      <label for="jsym">品种<input id="jsym" value="BTCUSDT"></label>
+      <label for="jreason">依据<select id="jreason"><option>规则 A 信号</option><option>规则 B 信号</option><option>张主任判断</option><option>自己判断</option><option>其他</option></select></label>
+      <label for="jnote" class="wide">备注<input id="jnote" placeholder="为什么开这一单"></label>
+    </form>
+    <div class="jbtns">
+      <button type="button" class="btn" id="jsize">按风险算仓位</button>
+      <button type="button" class="btn" id="jfrom">从持仓推演带入</button>
+      <button type="button" class="btn primary" id="jadd">记一笔开仓</button>
+      <button type="button" class="btn" id="jexport">导出日志</button>
+      <label class="btn" for="jimport">导入日志<input type="file" id="jimport" accept="application/json" hidden></label>
+    </div>
+    <div class="tablewrap"><table class="jt" id="jtable"></table></div>
+  </section>
+
+  <section class="card">
+    <h2>预期振幅 <small id="rulerTag">—</small></h2>
+    <div class="row" id="ruler"></div>
+    <p class="note">止损小于 1h 振幅中位数，被正常波动扫掉的概率很高。</p>
+  </section>
+
+  <section class="card span">
+    <h2>新闻与异动 <small id="newsUpd">点击标题看原文</small></h2>
+    <ul class="list" id="news"><li><span class="t">—</span><span>正在读取新闻源…</span></li></ul>
+    <p class="note">每条新闻都标利多 / 利空 / 中性：「AI判断」来自 Claude 或 Muse，「规则判断」是 AI 结果回来前的关键词初判。新闻由后台监控程序每分钟更新，事件日志会记录每条新闻之后的实际涨跌，用来检验这些判断。</p>
+  </section>
+
+</div>
+
+<script src="weights.js"></script>
+<script src="model.js"></script>
+<script>
+// ---------------- 配置 ----------------
+const params = new URLSearchParams(location.search);
+// 后台监控程序的输出目录（status.json、paper.json）。部署到 GitHub 时由 Muse 推送到 data/；本机测试用 ?data=../../monitor/out/
+// 托管在 GitHub Pages（<用户>.github.io/<仓库>/）时，自动读取同一仓库 data 分支
+const GH = location.hostname.endsWith(".github.io") ? [location.hostname.split(".")[0], location.pathname.split("/")[1]] : null;
+const DATA = params.get("data") || (GH ? `https://raw.githubusercontent.com/${GH[0]}/${GH[1]}/data/` : "data/");
+const NEWS_URL = params.get("news") || DATA + "status.json";
+const PAPER_URL = DATA + "paper.json";
+const SPEC_URL = params.get("spec") || DATA + "rules_spec.json";
+// rules_spec.json 读不到时的兜底（和仓库里的文件保持一致）
+const SPEC_DEFAULT = {"fees":{"maker_pct":0.02,"taker_pct":0.05},"event_block_min":60,
+  "rule_a":{"name":"4 小时模型高把握","p_long":0.58,"p_short":0.42,"limit_valid_bars":3,"hold_bars":48,"insurance_stop_pct":2.0,"use_insurance_stop":false,"status":"参考","backtest":"2021–2026 按真实挂单执行：每年约 750 笔，胜率 52.5%，每笔扣费 -0.04%，6 年 1 年为正；不计费约 +0.02%。未通过。"},
+  "rule_b":{"name":"张主任完整信号 + 检验过的过滤","trend_filter":"1h","stop_atr":0.5,"tp_R":2,"max_hold_bars":288,"status":"参考","backtest":"2021–2026：每年约 45 笔，胜率 31%，每笔扣费 -0.08%，6 年 2 年为正。加关键价位（等待计划）：每年约 10 笔，每笔 -0.15%。未通过。"}};
+let SPEC = SPEC_DEFAULT;
+// 美股（NYSE）休市日
+const US_HOLIDAYS = new Set(["2026-11-26","2026-12-25","2027-01-01","2027-01-18","2027-02-15","2027-03-26","2027-05-31","2027-06-18","2027-07-05","2027-09-06","2027-11-25","2027-12-24"]);
+// 监控程序不可用时的兜底事件（美东时间）
+const EVENTS = [["FOMC 利率决议","2026-10-28T14:00:00-04:00"],["美国 CPI（10 月）","2026-11-10T08:30:00-05:00"]];
+const FAPI = "https://fapi.binance.com";
+// 币安合约推送已拆分：/market = 成交、K 线、标记价格；/public = 盘口（毫秒级）
+const WS = "wss://fstream.binance.com/market/stream?streams=btcusdt@aggTrade/btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_15m/btcusdt@kline_1h/btcusdt@markPrice@1s/btcusdt@forceOrder";
+const WS_BOOK = "wss://fstream.binance.com/public/ws/btcusdt@bookTicker";
+// 样本外误差（95%），随模型参数一起导出
+const ERR = Object.fromEntries(Object.entries(WEIGHTS).map(([k, v]) => [k, v.err]));
+const HZ = ["1 分钟","5 分钟","15 分钟","1 小时","4 小时","24 小时（大势）"];
+// 振幅尺子（%）：[1h 中位, 4h P80]，按过去 24h 振幅三分位（2.44% / 3.77%）
+const RULER = {"周末":[[0.28,1.14],[0.42,1.51],[0.65,2.22]],"工作日非美股时段":[[0.37,1.30],[0.46,1.59],[0.61,2.17]],
+  "美股交易时段":[[0.55,1.77],[0.71,2.02],[0.92,2.54]],"美股开盘那1小时":[[0.83,2.49],[0.96,2.68],[1.28,3.77]]};
+// 未来 n 分钟收益率分位（%）：P10 P25 P75 P90（过去 24h 活跃度一般的时段）
+const CONE = {30:[-0.322,-0.151,0.136,0.302],60:[-0.454,-0.211,0.184,0.416],120:[-0.655,-0.295,0.261,0.578],240:[-0.94,-0.429,0.364,0.869]};
+
+// ---------------- 状态 ----------------
+const S = { b1: [], b5: [], price: NaN, lastPrice: NaN, mark: NaN, funding: NaN, nextFunding: 0,
+  oi: [], ls: [], ticks: [], lag: NaN, ws: null, wsOk: false, side: "short", news: null, newsErr: "", prob: {}, probLive: {}, liq: [], paper: null };
+const $ = id => document.getElementById(id);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = n => isFinite(n) ? Math.round(n).toLocaleString() : "—";
+const pct = (x, d = 2) => isFinite(x) ? (x >= 0 ? "+" : "") + x.toFixed(d) + "%" : "—";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const jfetch = (u) => fetch(u, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+const toBar = k => ({ t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], v: +k[5], tb: +k[9] });
+
+// ---------------- 数据 ----------------
+async function bootstrap() {
+  const [k1, k5, k15, k60] = await Promise.all([
+    jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=1m&limit=1500`),
+    jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=5m&limit=1500`),
+    jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=15m&limit=500`),
+    jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=500`)]);
+  S.b1 = k1.map(toBar); S.b5 = k5.map(toBar); S.b15 = k15.map(toBar); S.b60 = k60.map(toBar);
+  S.price = S.lastPrice = S.b1.at(-1).c;
+  await Promise.allSettled([pollOI(), pollLS(), pollFunding(), pollNews()]);
+}
+async function pollOI() {
+  const r = await jfetch(`${FAPI}/fapi/v1/openInterest?symbol=BTCUSDT`);
+  S.oi.push([Date.now(), +r.openInterest, S.price]);
+  S.oi = S.oi.filter(x => Date.now() - x[0] < 2 * 3600e3);
+}
+async function pollLS() {
+  S.ls = (await jfetch(`${FAPI}/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=5m&limit=13`)).map(x => +x.longShortRatio);
+  if (S.oi.length < 3) {   // 首次加载：用 OI 历史补齐 1 小时
+    const h = await jfetch(`${FAPI}/futures/data/openInterestHist?symbol=BTCUSDT&period=5m&limit=13`);
+    S.oiHist = h.map(x => [+x.timestamp, +x.sumOpenInterest]);
+  }
+}
+async function pollFunding() {
+  const r = await jfetch(`${FAPI}/fapi/v1/premiumIndex?symbol=BTCUSDT`);
+  S.funding = +r.lastFundingRate * 100; S.nextFunding = +r.nextFundingTime; S.mark = +r.markPrice;
+}
+async function pollNews() {
+  try { S.news = await jfetch(NEWS_URL + (NEWS_URL.includes("?") ? "&" : "?") + "t=" + Date.now()); S.newsErr = ""; }
+  catch (e) { S.newsErr = "新闻源暂未连接（" + NEWS_URL + "）"; }
+  renderNews();
+}
+function upsert(arr, bar) {
+  const last = arr.at(-1);
+  if (last && last.t === bar.t) arr[arr.length - 1] = bar;
+  else if (!last || bar.t > last.t) { arr.push(bar); if (arr.length > 1600) arr.shift(); }
+}
+function connectBook() {
+  if (S.wsBook) { S.wsBook.onclose = null; S.wsBook.close(); }
+  const ws = new WebSocket(WS_BOOK); S.wsBook = ws;
+  ws.onclose = () => setTimeout(connectBook, 3000);
+  ws.onerror = () => ws.close();
+  ws.onmessage = ev => { const d = JSON.parse(ev.data); S.bid = +d.b; S.ask = +d.a; S.bookN = (S.bookN || 0) + 1; scheduleTick(); };
+}
+function connect() {
+  connectBook();
+  if (S.ws) { S.ws.onclose = null; S.ws.close(); }
+  const ws = new WebSocket(WS); S.ws = ws;
+  ws.onopen = () => { S.wsOk = true; S.retry = 0; };
+  ws.onclose = () => { S.wsOk = false; setTimeout(connect, Math.min(30000, 1000 * 2 ** (S.retry = (S.retry || 0) + 1))); };
+  ws.onerror = () => ws.close();
+  ws.onmessage = ev => {
+    const { stream, data: d } = JSON.parse(ev.data);
+    if (stream.endsWith("@aggTrade")) {
+      S.price = +d.p; S.lag = Date.now() - d.T; S.ticks.push(Date.now()); scheduleTick();
+    } else if (stream.includes("@kline_")) {
+      const k = d.k, bar = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.v, tb: +k.V };
+      upsert({ "1m": S.b1, "5m": S.b5, "15m": S.b15, "1h": S.b60 }[k.i], bar);
+    } else if (stream.endsWith("@forceOrder")) {
+      const o = d.o; S.liq.push({ t: o.T, side: o.S, usd: +o.ap * +o.z });
+    } else if (stream.endsWith("@markPrice@1s")) {
+      S.mark = +d.p; S.funding = +d.r * 100; S.nextFunding = +d.T;
+    }
+  };
+}
+
+// ---------------- 计算 ----------------
+function live(bars) {           // 用最新成交价更新最后一根 K 线（不改原数组）
+  if (!bars.length || !isFinite(S.price)) return bars;
+  const last = bars.at(-1), b = bars.slice(0, -1);
+  b.push({ ...last, c: S.price, h: Math.max(last.h, S.price), l: Math.min(last.l, S.price) });
+  return b;
+}
+function session(ms) {
+  const ny = BTCModel.nyParts(ms);
+  if (ny.weekend) return "周末";
+  if (ny.hour === 9) return "美股开盘那1小时";
+  if (ny.hour >= 8 && ny.hour < 16) return "美股交易时段";
+  return "工作日非美股时段";
+}
+function stats() {
+  const b1 = live(S.b1), n = b1.length;
+  if (n < 1441) return null;
+  let hi = -Infinity, lo = Infinity;
+  for (let i = n - 1440; i < n; i++) { hi = Math.max(hi, b1[i].h); lo = Math.min(lo, b1[i].l); }
+  const p24 = (hi - lo) / b1[n - 1440].c * 100, tier = p24 < 2.44 ? 0 : p24 < 3.77 ? 1 : 2, sess = session(Date.now());
+  const [m1, p4] = RULER[sess][tier];
+  return { hi24: hi, lo24: lo, chg24: (S.price / b1[n - 1441].c - 1) * 100, p24, tier, sess, h1: S.price * m1 / 100, h4: S.price * p4 / 100 };
+}
+
+// ---------------- 渲染 ----------------
+let tickQueued = false, prevShown = NaN;
+function scheduleTick() { if (!tickQueued) { tickQueued = true; requestAnimationFrame(renderPrice); } }
+function renderPrice() {
+  tickQueued = false;
+  const el = $("px"); el.textContent = S.price.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  if (isFinite(prevShown) && S.price !== prevShown) { el.className = "px num " + (S.price > prevShown ? "up" : "dn"); clearTimeout(S.flash); S.flash = setTimeout(() => el.className = "px num", 400); }
+  prevShown = S.price;
+  if (isFinite(S.bid)) $("book").textContent = `买一 ${S.bid.toFixed(1)} · 卖一 ${S.ask.toFixed(1)} · 价差 ${(S.ask - S.bid).toFixed(1)}`;
+}
+function renderConn() {
+  const now = Date.now(); S.ticks = S.ticks.filter(t => now - t < 5000);
+  const c = $("conn"), quiet = S.ticks.length === 0;
+  const bookRate = S.bookN || 0; S.bookN = 0;
+  c.className = "conn " + (S.wsOk && !quiet ? "ok" : S.wsOk ? "" : "bad");
+  $("connText").textContent = !S.wsOk ? "实时连接断开，正在重连…" : quiet ? "已连接，暂无成交" :
+    `实时 · 成交 ${(S.ticks.length / 5).toFixed(0)} 笔/秒 · 盘口 ${bookRate} 次/秒 · 延迟 ${isFinite(S.lag) ? Math.max(0, S.lag) : "—"} ms`;
+}
+function oiChange(minutes) {
+  const now = Date.now(), cur = S.oi.at(-1);
+  if (!cur) return NaN;
+  const old = S.oi.filter(x => now - x[0] >= minutes * 60e3).at(-1) || (S.oiHist || []).filter(x => now - x[0] >= minutes * 60e3).at(-1);
+  return old ? (cur[1] / old[1] - 1) * 100 : NaN;
+}
+function renderRuler(st) {
+  if (!st) return;
+  $("rulerTag").textContent = `${st.sess} · 过去 24h ${["平静", "一般", "活跃"][st.tier]}（${st.p24.toFixed(2)}%）`;
+  const lo80 = S.price * (1 + CONE[240][0] / 100), hi80 = S.price * (1 + CONE[240][3] / 100);
+  $("ruler").innerHTML = [["未来 1h 振幅中位", `≈ ${fmt(st.h1)} 点`], ["未来 4h 振幅 P80", `≈ ${fmt(st.h4)} 点`], ["4h 后价格 80% 区间", `${fmt(lo80)} – ${fmt(hi80)}`], ["24h 高 / 低", `${fmt(st.hi24)} / ${fmt(st.lo24)}`]]
+    .map(([a, b]) => `<div class="chip"><span>${a}</span><b>${b}</b></div>`).join("");
+}
+function renderNews() {
+  const ul = $("news");
+  if (!S.news) { ul.innerHTML = `<li><span class="t">—</span><span>${esc(S.newsErr || "正在读取新闻源…")}</span></li>`; return; }
+  const lean = s => !s ? "" : `<em class="lean ${s.startsWith("利多") ? "bull" : s.startsWith("利空") ? "bear" : "neu"}">${esc(s)}</em>`;
+  const color = { red: css("--bad"), yellow: css("--warn"), gray: css("--muted") };
+  const alerts = (S.news.alerts || []).filter(a => a.kind !== "新闻").slice(0, 3).map(a =>
+    `<li><span class="t">${esc(a.time_local.slice(6))}</span><span><i class="dot" style="background:${color[a.level]}"></i>${esc(a.title)}<small>${esc(a.kind)} · ${esc((a.body || "").split("\n")[0])}</small></span></li>`);
+  const news = (S.news.news || []).slice(0, 15).map(x =>
+    `<li><span class="t">${esc(x.time.slice(6))}</span><span><i class="dot" style="background:${color[x.level] || color.gray}"></i><a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title_zh || x.title)}</a> ${lean(x.lean || "中性")}<small>${x.reason ? esc(x.reason) + " · " : ""}${esc(x.source)} · ${esc(x.relevance)}相关 · ${esc(x.lean_src || "规则")}判断</small></span></li>`);
+  ul.innerHTML = alerts.concat(news).join("") || `<li><span class="t">—</span><span>暂无新闻</span></li>`;
+  $("newsUpd").textContent = `新闻源更新于 ${S.news.updated || "—"} · 点击标题看原文`;
+}
+
+
+function computeProbs() {
+  // 收盘口径：去掉正在走的那一根，结论只在 K 线收盘时变化
+  const c1 = S.b1.slice(0, -1), c5 = S.b5.slice(0, -1);
+  const f1 = BTCModel.features(c1, 1440, c5), f5 = BTCModel.features(c5, 288);
+  for (const k of HZ) S.prob[k] = BTCModel.predict(WEIGHTS[k], k === "1 分钟" ? f1 : f5) * 100;
+  S.f5 = f5;
+  // 盘中预估：用最新成交价补全正在走的那一根，只做参考显示
+  const l1 = live(S.b1), l5 = live(S.b5);
+  const g1 = BTCModel.features(l1, 1440, l5), g5 = BTCModel.features(l5, 288);
+  for (const k of HZ) S.probLive[k] = BTCModel.predict(WEIGHTS[k], k === "1 分钟" ? g1 : g5) * 100;
+  S.closedAt = c5.length ? c5.at(-1).t + 5 * 60e3 : 0;
+}
+
+// ---------------- 事件日历 ----------------
+function usOpens(nowMs) {
+  const out = [];
+  for (let d = 0; d < 4; d++) {
+    const day = new Date(nowMs + d * 864e5).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+    if (US_HOLIDAYS.has(day)) continue;
+    for (const off of ["-04:00", "-05:00"]) {
+      const t = Date.parse(`${day}T09:30:00${off}`), p = new Date(t).toLocaleString("en-US", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hour12: false, weekday: "short" });
+      if (p.endsWith("09:30") && !/Sat|Sun/.test(p)) out.push(["美股开盘", t]);
+    }
+  }
+  return out;
+}
+function calendar(nowMs) {
+  // 优先用监控程序抓到的日历（ForexFactory 高影响美国数据 + 内置日程，已排除休市日）
+  const up = S.news && S.news.upcoming;
+  let list = up && up.length && up.every(e => e.at_ms) ? up.map(e => [e.title, e.at_ms]) : [...EVENTS.map(([n, t]) => [n, Date.parse(t)]), ...usOpens(nowMs)];
+  if (!list.some(e => e[0] === "美股开盘")) list = list.concat(usOpens(nowMs));
+  return list.filter(e => e[1] > nowMs - 30 * 60e3).sort((a, b) => a[1] - b[1]);
+}
+function nextEvent(nowMs) { return calendar(nowMs).find(e => e[1] > nowMs - 15 * 60e3); }
+
+function renderStatus(st) {
+  const tr = S.f5 ? S.f5.trend4h * 100 : NaN, nowMs = Date.now();
+  const regime = !isFinite(tr) ? ["—", ""] : tr > 1 ? ["偏上涨", "good"] : tr < -1 ? ["偏下跌", "bad"] : ["震荡", "warn"];
+  const evs = calendar(nowMs);
+  const fmtIn = ms => { const m = Math.round((ms - nowMs) / 60e3); return m <= 0 ? "进行中" : m < 90 ? `${m} 分钟后` : `${(m / 60).toFixed(1)} 小时后`; };
+  const fmtJ = ms => new Date(ms).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  const o15 = oiChange(15), o60 = oiChange(60), ls = S.ls, lsNow = ls.at(-1), ls1h = ls[0];
+  const p1h = (() => { const b = live(S.b1); return b.length > 61 ? (S.price / b.at(-61).c - 1) * 100 : NaN; })();
+  let squeeze = ["中性", ""];
+  if (isFinite(o60) && isFinite(p1h) && lsNow && ls1h) {
+    if (p1h > 0.3 && o60 > 0.5 && lsNow < ls1h) squeeze = ["空头拥挤（挤压燃料）", "bad"];
+    else if (p1h < -0.3 && o60 > 0.5 && lsNow > ls1h) squeeze = ["多头拥挤（踩踏风险）", "bad"];
+    else if (p1h > 0.3 && o60 < -0.5) squeeze = ["空头在平仓（逼空）", "warn"];
+    else if (p1h < -0.3 && o60 < -0.5) squeeze = ["多头在平仓（踩踏）", "warn"];
+  }
+  // 爆仓：币安每个币种每秒最多推一条，只能看相对强弱
+  S.liq = S.liq.filter(x => nowMs - x.t < 3600e3);
+  const liqLong = S.liq.filter(x => x.side === "SELL").reduce((s, x) => s + x.usd, 0), liqShort = S.liq.filter(x => x.side === "BUY").reduce((s, x) => s + x.usd, 0);
+  const cross = S.news && S.news.market && S.news.market.cross;
+  const crossTxt = cross ? Object.entries(cross).filter(([, v]) => v).slice(0, 4).map(([k, v]) => `${k.replace("期货", "")} ${pct(v.ch15)}`).join(" · ") : "监控程序未连接";
+  const crossHot = cross && Object.values(cross).some(v => v && Math.abs(v.ch15) >= 0.5);
+  const ev0 = evs[0], ev1 = evs.find(e => e[0] !== "美股开盘");
+  const items = [
+    ["行情状态（4h）", regime[0], regime[1], `价格相对 4h MA25 ${pct(tr)}`],
+    ["下一个事件", ev0 ? ev0[0] : "—", ev0 && ev0[1] - nowMs < 3600e3 ? "bad" : "", ev0 ? `${fmtJ(ev0[1])} · ${fmtIn(ev0[1])}` : ""],
+    ["重大数据", ev1 ? ev1[0] : "本周暂无", ev1 && ev1[1] - nowMs < 3600e3 ? "bad" : "", ev1 ? `${fmtJ(ev1[1])} · ${fmtIn(ev1[1])}` : "来自 ForexFactory 日历"],
+    ["挤压雷达（未验证）", squeeze[0], squeeze[1], `1h 价格 ${pct(p1h)} · 持仓 ${pct(o60)} · 多空比 ${ls1h ? ls1h.toFixed(2) : "—"}→${lsNow ? lsNow.toFixed(2) : "—"}`],
+    ["1 小时爆仓（抽样）", `多 ${(liqLong / 1e6).toFixed(2)}M / 空 ${(liqShort / 1e6).toFixed(2)}M`, liqLong + liqShort > 5e6 ? "warn" : "", "单位：美元。多头爆仓多 = 下跌在清算多头"],
+    ["跨市场（15 分钟）", crossHot ? "有异动" : "平稳", crossHot ? "warn" : "", crossTxt],
+    ["资金费率", pct(S.funding, 4), Math.abs(S.funding) >= 0.03 ? "bad" : "", `下次结算 ${S.nextFunding ? fmtIn(S.nextFunding) : "—"}`],
+    ["持仓量", S.oi.length ? fmt(S.oi.at(-1)[1]) + " BTC" : "—", "", `15 分钟 ${pct(o15)} · 1 小时 ${pct(o60)}`],
+  ];
+  $("status").innerHTML = items.map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
+  $("stUpd").textContent = "更新于 " + new Date().toLocaleTimeString("zh-CN", { hour12: false });
+}
+function renderFC() {
+  const rows = HZ.map(k => {
+    const up = S.prob[k], upL = S.probLive[k], w = WEIGHTS[k], err = ERR[k], conf = Math.abs(up - 50), hi = conf >= 5, valid = w.test_acc - err > 50;
+    const upDir = up >= 50, word = !isFinite(up) ? "数据不足" : conf < 1 ? "看不出方向" : (upDir ? "偏涨" : "偏跌") + (hi ? "" : "（弱）");
+    const col = !isFinite(up) || conf < 1 ? css("--muted") : upDir ? css("--good") : css("--bad");
+    const reli = valid ? `历史准确率 ${w.test_acc}% ±${err}` : `历史准确率 ${w.test_acc}% ±${err}，不显著`;
+    return `<div class="h"><span class="n">${k}</span><span class="d" style="color:${col}">${conf < 1 ? "→" : upDir ? "↑" : "↓"} ${word}</span>
+      <span class="p">上涨概率 ${isFinite(up) ? up.toFixed(1) : "—"}%（收盘）</span><div class="meter" aria-hidden="true"><i style="left:${Math.min(up, 50)}%;width:${Math.max(conf, 0.6)}%;background:${col}"></i><i style="left:50%;width:1px;background:${css("--muted")}"></i></div>
+      <span class="live">盘中预估 ${isFinite(upL) ? upL.toFixed(1) : "—"}%</span><span class="a">${reli}</span></div>`;
+  });
+  $("fc").innerHTML = rows.join("");
+  const sig = HZ.filter(k => WEIGHTS[k].test_acc - ERR[k] > 50), ups = sig.filter(k => S.prob[k] >= 50).length, dns = sig.length - ups;
+  const t = S.closedAt ? new Date(S.closedAt).toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit" }) : "—";
+  $("fcsum").textContent = `依据 ${t} 收盘：有效周期（${sig.join("、")}）中 ${ups} 个偏涨、${dns} 个偏跌。模型方向准确率每年 51–53%，但按真实挂单执行回测，这点准确率扣费后转化不成收益，所以只作方向参考。`;
+}
+
+// ---------------- 做多 / 做空 镜像信号（收盘口径，规则与回测一致） ----------------
+function trend1h(b) {
+  const c = b.map(x => x.c), n = c.length, ma = (i, k) => c.slice(i - k + 1, i + 1).reduce((s, x) => s + x, 0) / k;
+  if (n < 40) return { up: false, dn: false };
+  return { up: c[n - 1] > ma(n - 1, 25) && ma(n - 1, 25) > ma(n - 7, 25), dn: c[n - 1] < ma(n - 1, 25) && ma(n - 1, 25) < ma(n - 7, 25) };
+}
+function filters(nowMs) {
+  const c5 = S.b5.slice(0, -1), n5 = c5.length, v5 = c5.slice(n5 - 288).map(x => x.v).sort((a, b) => a - b);
+  const volLow = n5 > 300 && c5[n5 - 1].v < 0.5 * v5[v5.length >> 1];
+  const weekend = BTCModel.nyParts(nowMs).weekend;
+  const ev = nextEvent(nowMs), evMin = ev ? (ev[1] - nowMs) / 60e3 : Infinity;
+  return { volLow, weekend, ev, evMin, blocked: evMin < SPEC.event_block_min, tr: trend1h((S.b60 || []).slice(0, -1)) };
+}
+function mirror(st) {
+  const tfs = [["5m", S.b5.slice(0, -1)], ["15m", (S.b15 || []).slice(0, -1)], ["1h", (S.b60 || []).slice(0, -1)]];
+  const Z = tfs.map(([n, b]) => [n, b.length >= 130 ? BTCModel.zhang(b) : null]);
+  const F = filters(Date.now()), A = SPEC.rule_a;
+  const ck = ok => `<span class="${ok ? "good" : "mut"}">${ok ? "✓" : "—"}</span>`;
+  const sides = [
+    { key: "long", name: "做多信号", rows: [
+      ["超卖（J<0 且 RSI6<20）", z => z.now.cold], ["动能衰竭（MACD 负柱收敛）", z => z.now.fadeL], ["量能（底背离或连续缩量）", z => z.now.volL],
+      ["之前在 MA7 下方", z => z.now.below7], ["扳机（站上 MA7，MA7 拐头向上）", z => z.now.trigL], ["完整信号（本根收盘）", z => z.now.longB]],
+      prob: k => S.prob[k], counter: F.tr.dn, withTrend: F.tr.up, ruleA: S.prob["4 小时"] / 100 >= A.p_long },
+    { key: "short", name: "做空信号", rows: [
+      ["超买（J>100 且 RSI6>70）", z => z.now.hot], ["动能衰竭（MACD 正柱缩短）", z => z.now.fadeS], ["量能（顶背离或连续缩量）", z => z.now.volS],
+      ["之前在 MA7 上方", z => z.now.above7], ["扳机（跌破 MA7，MA7 拐头向下）", z => z.now.trigS], ["完整信号（本根收盘）", z => z.now.shortB]],
+      prob: k => 100 - S.prob[k], counter: F.tr.up, withTrend: F.tr.dn, ruleA: S.prob["4 小时"] / 100 <= A.p_short },
+  ];
+  $("mirror").innerHTML = sides.map(sd => {
+    const cnt = Z.map(([, z]) => z ? sd.rows.slice(0, 5).filter(([, f]) => f(z)).length : 0);
+    const table = `<table><thead><tr><th>张主任条件（择时，已收盘）</th>${Z.map(([n]) => `<th>${n}</th>`).join("")}</tr></thead><tbody>` +
+      sd.rows.map(([label, f]) => `<tr><td>${label}</td>${Z.map(([, z]) => `<td>${z ? ck(f(z)) : "…"}</td>`).join("")}</tr>`).join("") +
+      `<tr><td>满足项数</td>${cnt.map(c => `<td><b>${c}/5</b></td>`).join("")}</tr></tbody></table>`;
+    const p15 = sd.prob("15 分钟"), p1 = sd.prob("1 小时"), p4 = sd.prob("4 小时");
+    const filt = [
+      [`方向模型 15m / 1h / 4h：${p15.toFixed(1)}% / ${p1.toFixed(1)}% / ${p4.toFixed(1)}%`, (p15 + p1) / 2 >= 50, "该方向的概率（15m 与 1h 平均 ≥ 50% 才算同向）"],
+      [sd.counter ? "逆 1 小时趋势" : sd.withTrend ? "顺 1 小时趋势" : "1 小时无明显趋势", !sd.counter, "逆势时不做"],
+      [F.weekend ? "周末" : F.volLow ? "上一根成交量偏低" : "成交量正常", !F.weekend && !F.volLow, "周末和低量时不做"],
+      [F.blocked ? `${Math.round(F.evMin)} 分钟后${F.ev[0]}` : "1 小时内无重大事件", !F.blocked, "事件前不开新仓"],
+    ];
+    const filtHtml = filt.map(([t, ok, sub]) => `<tr><td colspan="4">${ck(ok)} ${esc(t)}<div class="sub">${sub}</div></td></tr>`).join("");
+    const blockers = filt.filter(x => !x[1]).map(x => x[0]);
+    const zb = Z[0][1], ruleB = zb && (sd.key === "long" ? zb.now.longB : zb.now.shortB) && !blockers.length;
+    let word, cls, why;
+    if (sd.ruleA && !F.blocked) { word = "规则 A 信号"; cls = "warn"; why = `4 小时模型高把握（${p4.toFixed(1)}%）。参考信号：按真实挂单执行回测未通过，模拟盘正在验证。`; }
+    else if (ruleB) { word = "规则 B 信号"; cls = "warn"; why = "5 分钟完整信号收盘确认，四项过滤全部通过。参考信号：回测未通过，模拟盘正在验证。"; }
+    else if (Math.max(...cnt) >= 3) { word = "准备中"; cls = "mut"; why = `张主任条件最多满足 ${Math.max(...cnt)}/5（${Z[cnt.indexOf(Math.max(...cnt))][0]}）${blockers.length ? "；不利因素：" + blockers.join("、") : ""}。`; }
+    else { word = "无信号"; cls = "mut"; why = blockers.length ? "不利因素：" + blockers.join("、") + "。" : "条件不足。"; }
+    return `<div class="side ${sd.key}"><h3><span class="${sd.key === "long" ? "good" : "bad"}">${sd.name}</span></h3>
+      <div class="verdict2"><b class="${cls}">${word}</b>${esc(why)}</div>${table}
+      <table><thead><tr><th colspan="4">过滤条件（与回测、模拟盘一致）</th></tr></thead><tbody>${filtHtml}</tbody></table></div>`;
+  }).join("");
+}
+
+// ---------------- 交易计划（收盘口径，规则来自 rules_spec.json） ----------------
+function plan(st) {
+  if (!st || !S.f5) return;
+  const c5 = S.b5.slice(0, -1), z = BTCModel.zhang(c5);
+  if (!z) return;
+  const A = SPEC.rule_a, B = SPEC.rule_b, F = filters(Date.now()), P = S.price;
+  const p4 = S.prob["4 小时"] / 100, pm = (S.prob["15 分钟"] + S.prob["1 小时"]) / 200, last = c5.at(-1);
+  const t = new Date(S.closedAt).toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit" });
+  $("planBasis").textContent = `依据 ${t} 收盘 · 每 5 分钟更新 · 不是投资建议`;
+  const sigs = [];
+  if (!F.blocked && p4 >= A.p_long) sigs.push(["long", "A", `4 小时模型上涨概率 ${(p4 * 100).toFixed(1)}%（≥ ${Math.round(A.p_long * 100)}%）`]);
+  if (!F.blocked && p4 <= A.p_short) sigs.push(["short", "A", `4 小时模型上涨概率 ${(p4 * 100).toFixed(1)}%（≤ ${Math.round(A.p_short * 100)}%）`]);
+  const okB = !F.weekend && !F.volLow && !F.blocked;
+  if (okB && z.now.longB && !F.tr.dn && pm >= 0.5) sigs.push(["long", "B", "张主任完整做多信号 + 模型同向 + 不逆 1h 趋势"]);
+  if (okB && z.now.shortB && !F.tr.up && pm <= 0.5) sigs.push(["short", "B", "张主任完整做空信号 + 模型同向 + 不逆 1h 趋势"]);
+  let html;
+  if (!sigs.length) {
+    const why = [];
+    if (F.blocked) why.push(`${Math.round(F.evMin)} 分钟后${F.ev[0]}，事件前不开新仓。`);
+    why.push(`4 小时模型上涨概率 ${(p4 * 100).toFixed(1)}%，没到 ${Math.round(A.p_long * 100)}% / ${Math.round(A.p_short * 100)}%。`);
+    why.push(`张主任完整信号：做多 ${z.now.longB ? "✓" : "✗"}，做空 ${z.now.shortB ? "✓" : "✗"}。`);
+    if (F.weekend) why.push("周末不做规则 B。");
+    html = `<span class="act mut">没有信号</span><span class="why">${why.map(esc).join(" ")}</span>`;
+    $("planNow").className = "plan-now wait";
+  } else {
+    const rows = sigs.map(([side, rule, desc]) => {
+      const sgn = side === "long" ? 1 : -1;
+      let lv;
+      if (rule === "A") {
+        lv = `<span><b>挂单</b>${fmt(last.c)}（收盘价，${A.limit_valid_bars * 5} 分钟内未成交就撤）</span><span><b>持有</b>${A.hold_bars * 5 / 60} 小时到期挂单平仓</span>` +
+          (A.use_insurance_stop ? `<span><b>保险止损</b>${fmt(last.c * (1 - sgn * A.insurance_stop_pct / 100))}</span>` : `<span><b>止损</b>回测不设（加了反而更差）</span>`);
+      } else {
+        const atr = (() => { const c = c5.slice(-15); let s = 0; for (let i = 1; i < c.length; i++) s += Math.max(c[i].h - c[i].l, Math.abs(c[i].h - c[i - 1].c), Math.abs(c[i].l - c[i - 1].c)); return s / 14; })();
+        const r = Math.max(sgn > 0 ? P - (z.lo12 - B.stop_atr * atr) : (z.hi12 + B.stop_atr * atr) - P, P * 0.001);
+        lv = `<span><b>市价进场</b>下一根开盘（约 ${fmt(P)}）</span><span><b>止损</b>${fmt(P - sgn * r)}（${fmt(r)} 点）</span><span><b>止盈</b>${fmt(P + sgn * B.tp_R * r)}（${B.tp_R}R）</span><span><b>最长持有</b>${B.max_hold_bars * 5 / 60} 小时</span>`;
+      }
+      return `<div class="pl"><h3><span class="${side === "long" ? "good" : "bad"}">规则 ${rule} · ${side === "long" ? "做多" : "做空"}信号</span><small>参考 · 回测未通过</small></h3><div class="k">${lv}</div><p>${esc(desc)}。</p></div>`;
+    });
+    html = `<span class="act warn">有参考信号</span><span class="why">两条规则在真实挂单口径的回测里都没有通过，模拟盘正在用实时行情验证。现阶段建议只看模拟盘结果，真要下单只用极小仓位。</span>`;
+    $("plans").innerHTML = rows.join("");
+    $("planNow").className = "plan-now wait";
+  }
+  $("planNow").innerHTML = html;
+  if (!sigs.length) {
+    // 关键价位只作参考：「到价再做」在回测中更差（每笔 -0.15%），不作为计划
+    const rounds = []; for (let k = Math.floor((P - 3000) / 1000) * 1000; k <= P + 3000; k += 1000) rounds.push(k);
+    const sup = [[st.lo24, "24h 低点"], ...rounds.map(k => [k, "整数关口"])].filter(([x]) => x < P).sort((a, b) => b[0] - a[0]).slice(0, 2);
+    const res = [[st.hi24, "24h 高点"], ...rounds.map(k => [k, "整数关口"])].filter(([x]) => x > P).sort((a, b) => a[0] - b[0]).slice(0, 2);
+    $("plans").innerHTML = `<div class="pl"><h3><span>关键价位</span><small>只作参考</small></h3><div class="k">${res.reverse().map(([x, n]) => `<span><b>阻力</b>${fmt(x)} ${n}（+${fmt(x - P)}）</span>`).join("")}${sup.map(([x, n]) => `<span><b>支撑</b>${fmt(x)} ${n}（-${fmt(P - x)}）</span>`).join("")}</div>
+      <p>「价格到关键位 + 张主任扳机」再进场，回测每年约 10 笔、每笔 -0.15%，比不挑价位更差，所以不作为等待计划。</p></div>`;
+  }
+  $("ruleText").innerHTML = [
+    `<b>规则 A · ${esc(A.name)}</b>：4 小时模型上涨概率 ≥ ${Math.round(A.p_long * 100)}% 做多、≤ ${Math.round(A.p_short * 100)}% 做空；收盘价挂限价单，${A.limit_valid_bars * 5} 分钟内未被穿过就撤；持有 ${A.hold_bars * 5 / 60} 小时后挂单平仓，${A.limit_valid_bars * 5} 分钟未成交改市价；事件前 ${SPEC.event_block_min} 分钟不开。<br><span class="mut">回测：${esc(A.backtest)}</span>`,
+    `<b>规则 B · ${esc(B.name)}</b>：5 分钟张主任完整信号收盘确认；15m 与 1h 模型平均同向；不逆 1 小时趋势；非周末、非低量、事件前 ${SPEC.event_block_min} 分钟不开；下一根开盘市价进场，止损 = 近 12 根高 / 低点外加 ${B.stop_atr} 个 ATR，止盈 ${B.tp_R}R，最长 ${B.max_hold_bars * 5 / 60} 小时。<br><span class="mut">回测：${esc(B.backtest)}</span>`,
+    `手续费按挂单 ${SPEC.fees.maker_pct}% / 市价 ${SPEC.fees.taker_pct}% 计算。参数文件 rules_spec.json 同时供回测、模拟盘和这个面板使用，改参数后先跑回测。`,
+  ].map(x => `<li>${x}</li>`).join("");
+}
+
+// ---------------- 模拟盘 ----------------
+async function pollPaper() {
+  try { S.paper = await jfetch(PAPER_URL + "?t=" + Date.now()); S.paperErr = ""; }
+  catch (e) { S.paperErr = "模拟盘数据未连接（" + PAPER_URL + "）。模拟盘在后台监控程序里运行。"; }
+  renderPaper();
+}
+function renderPaper() {
+  const box = $("paper");
+  if (!S.paper) { box.innerHTML = `<p class="note">${esc(S.paperErr || "正在读取模拟盘…")}</p>`; return; }
+  const modeTxt = { flat: "空仓等信号", pending: "挂单中", open: "持仓中", exiting: "平仓挂单中" };
+  const fmtT = s => s ? new Date(s).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }) : "—";
+  box.innerHTML = ["A", "B"].map(k => {
+    const r = S.paper.rules[k], p = r.position || {};
+    const pos = r.mode === "flat" ? "" : `<div class="k">${p.side ? `<span><b>方向</b>${p.side === "long" ? "多" : "空"}</span>` : ""}${p.entry ? `<span><b>进场</b>${fmt(p.entry)}</span>` : p.px ? `<span><b>挂单价</b>${fmt(p.px)}</span>` : ""}${p.stop ? `<span><b>止损</b>${fmt(p.stop)}</span>` : ""}${p.tp ? `<span><b>止盈</b>${fmt(p.tp)}</span>` : ""}${p.entry && isFinite(S.price) ? `<span><b>浮动</b>${pct((p.side === "long" ? 1 : -1) * (S.price / p.entry - 1) * 100, 3)}</span>` : ""}</div>`;
+    const trades = (r.recent || []).slice(0, 8);
+    const table = trades.length ? `<div class="tablewrap"><table class="pt"><thead><tr><th>信号</th><th>方向</th><th>进场</th><th>平仓</th><th>收益</th><th>原因</th></tr></thead><tbody>${trades.map(x => `<tr><td>${fmtT(x.signal_time)}</td><td>${x.side === "long" ? "多" : "空"}</td><td>${fmt(x.entry)}</td><td>${fmt(x.exit)}</td><td class="${x.ret_pct > 0 ? "good" : "bad"}">${pct(x.ret_pct, 3)}</td><td>${esc(x.why)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">还没有平仓记录。</p>`;
+    return `<div class="paper-side"><h3><span>规则 ${k} · ${esc(r.name)}</span><small>${modeTxt[r.mode] || r.mode}</small></h3>${pos}
+      <div class="row"><div class="chip"><span>已平仓</span><b>${r.n} 笔</b></div><div class="chip"><span>胜率</span><b>${r.win == null ? "—" : r.win + "%"}</b></div>
+      <div class="chip"><span>每笔平均</span><b class="${r.avg > 0 ? "good" : r.avg < 0 ? "bad" : ""}">${r.avg == null ? "—" : pct(r.avg, 3)}</b></div><div class="chip"><span>累计（不含杠杆）</span><b>${pct(r.cum || 0, 2)}</b></div>${k === "A" ? `<div class="chip"><span>挂单未成交</span><b>${r.missed}</b></div>` : ""}</div>
+      ${table}<span class="bt">回测对照：${esc(r.backtest)}</span></div>`;
+  }).join("");
+  $("paperUpd").textContent = `最后处理到 ${fmtT(S.paper.last_bar)} 的 K 线 · 后台逐根执行`;
+}
+
+// ---------------- 交易日志与风控（localStorage，只在本机） ----------------
+const JKEY = "btc_journal_v1";
+const J = (() => { try { return JSON.parse(localStorage.getItem(JKEY)) || {}; } catch (e) { return {}; } })();
+J.trades = J.trades || []; J.side = J.side || "long";
+function jsave() { try { localStorage.setItem(JKEY, JSON.stringify(J)); } catch (e) { /* 隐私模式等情况下无法保存 */ } }
+function todayKey(ms) { return new Date(ms).toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" }); }
+function jPnl(t, px) { const sgn = t.side === "long" ? 1 : -1; return sgn * (px / t.entry - 1) * t.notional - t.notional * 0.0007; }
+function renderJournal() {
+  const bal = +$("jbal").value || J.balance || 0, riskPct = +$("jrisk").value || 2, now = Date.now();
+  const open = J.trades.filter(t => !t.exit), today = J.trades.filter(t => t.exit && todayKey(t.exitT) === todayKey(now));
+  const realized = today.reduce((s, t) => s + t.pnl, 0), unreal = open.reduce((s, t) => s + (t.sym === "BTCUSDT" && isFinite(S.price) ? jPnl(t, S.price) : 0), 0);
+  const margin = open.reduce((s, t) => s + t.notional / (t.lev || 1), 0);
+  const noStop = open.filter(t => !t.stop).length, nonBtc = J.trades.filter(t => todayKey(t.t) === todayKey(now) && t.sym !== "BTCUSDT").length;
+  const nToday = J.trades.filter(t => todayKey(t.t) === todayKey(now)).length;
+  const dayPct = bal ? (realized + unreal) / bal * 100 : NaN, marginPct = bal ? margin / bal * 100 : NaN;
+  $("risk").innerHTML = [
+    ["今日盈亏（含浮动）", bal ? `${realized + unreal >= 0 ? "+" : ""}${(realized + unreal).toFixed(1)} U` : "先填余额", isFinite(dayPct) && dayPct <= -15 ? "bad" : "", isFinite(dayPct) ? `${pct(dayPct)}，-15% 停止开新仓` : ""],
+    ["保证金占用", bal ? `${marginPct.toFixed(0)}%` : "—", marginPct > 33 ? "bad" : "", "上限 33%"],
+    ["持仓中", `${open.length} 笔`, noStop ? "bad" : "", noStop ? `${noStop} 笔没有止损` : "都设了止损"],
+    ["今日开仓", `${nToday} 笔`, nToday > 5 ? "warn" : "", nonBtc ? `其中 ${nonBtc} 笔不是 BTC` : "只做 BTC"],
+  ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
+  const warn = [];
+  if (isFinite(dayPct) && dayPct <= -15) warn.push("今日亏损已超过 15%，按规则今天停止开新仓。");
+  if (marginPct > 33) warn.push("保证金占用超过三分之一，不要再加仓。");
+  if (noStop) warn.push("有持仓没有设止损。");
+  if (nonBtc) warn.push("今天有非 BTC 的交易，违反「只做 BTC」。");
+  $("riskMsg").className = "verdict " + (warn.length ? "badv" : "goodv");
+  $("riskMsg").textContent = warn.length ? warn.join(" ") : `风控正常。按每笔最多亏 ${riskPct}% 余额来定仓位。`;
+  const fmtT = ms => new Date(ms).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  const rows = J.trades.slice().reverse().slice(0, 30).map(t => {
+    const cur = t.exit ? t.pnl : t.sym === "BTCUSDT" && isFinite(S.price) ? jPnl(t, S.price) : NaN;
+    return `<tr><td>${fmtT(t.t)}</td><td>${esc(t.sym)}</td><td class="${t.side === "long" ? "good" : "bad"}">${t.side === "long" ? "多" : "空"}</td><td>${fmt(t.entry)}</td><td>${t.stop ? fmt(t.stop) : '<span class="bad">无</span>'}</td><td>${fmt(t.notional)}</td><td>${t.lev}x</td>
+      <td class="txt">${esc(t.reason)}${t.note ? " · " + esc(t.note) : ""}</td><td class="${cur > 0 ? "good" : cur < 0 ? "bad" : ""}">${isFinite(cur) ? (cur >= 0 ? "+" : "") + cur.toFixed(1) + " U" : "—"}${t.exit ? "" : "（浮动）"}</td>
+      <td>${t.exit ? fmt(t.exit) : `<input id="x_${t.id}" inputmode="decimal" placeholder="平仓价" aria-label="平仓价"> <button type="button" class="btn sm" data-close="${t.id}">平仓</button>`}</td></tr>`;
+  }).join("");
+  $("jtable").innerHTML = J.trades.length ? `<thead><tr><th>开仓</th><th>品种</th><th>方向</th><th>进场</th><th>止损</th><th>名义 U</th><th>杠杆</th><th>依据 / 备注</th><th>盈亏</th><th>平仓</th></tr></thead><tbody>${rows}</tbody>` : `<tbody><tr><td class="txt">还没有记录。开仓时记一笔，平仓时填平仓价，面板会自动统计盈亏并检查风控。</td></tr></tbody>`;
+}
+function jSetSide(sd) { J.side = sd; $("j-long").setAttribute("aria-pressed", sd === "long"); $("j-short").setAttribute("aria-pressed", sd === "short"); jsave(); }
+function jInit() {
+  if (J.balance) $("jbal").value = J.balance;
+  if (J.riskPct) $("jrisk").value = J.riskPct;
+  jSetSide(J.side);
+  $("j-long").onclick = () => jSetSide("long"); $("j-short").onclick = () => jSetSide("short");
+  ["jbal", "jrisk"].forEach(id => $(id).addEventListener("input", () => { J.balance = +$("jbal").value || 0; J.riskPct = +$("jrisk").value || 2; jsave(); renderJournal(); }));
+  $("jfrom").onclick = () => { jSetSide(S.side); $("jentry").value = $("entry").value; $("jstop").value = $("stop").value; $("jnotional").value = Math.round(+$("margin").value * +$("lev").value); $("jlev").value = $("lev").value; };
+  $("jsize").onclick = () => {
+    const bal = +$("jbal").value, rp = +$("jrisk").value, e = +$("jentry").value || S.price, s = +$("jstop").value;
+    if (!bal || !s) { $("riskMsg").className = "verdict badv"; $("riskMsg").textContent = "先填账户余额和止损价，才能按风险算仓位。"; return; }
+    const dist = Math.abs(e - s) / e, notional = bal * rp / 100 / (dist + 0.0007);
+    $("jnotional").value = Math.round(notional);
+    const lev = Math.max(1, Math.ceil(notional / (bal / 3)));
+    $("jlev").value = lev;
+    $("riskMsg").className = "verdict goodv";
+    $("riskMsg").textContent = `止损距离 ${(dist * 100).toFixed(2)}%，每笔最多亏 ${rp}%（${(bal * rp / 100).toFixed(1)} U），名义仓位约 ${Math.round(notional)} U；保证金不超过余额 1/3 时，杠杆至少 ${lev} 倍。`;
+  };
+  $("jadd").onclick = () => {
+    const t = { id: Date.now().toString(36), t: Date.now(), side: J.side, sym: ($("jsym").value || "BTCUSDT").toUpperCase().trim(), entry: +$("jentry").value, stop: +$("jstop").value || 0,
+      notional: +$("jnotional").value, lev: +$("jlev").value || 1, reason: $("jreason").value, note: $("jnote").value.trim() };
+    if (!t.entry || !t.notional) { $("riskMsg").className = "verdict badv"; $("riskMsg").textContent = "进场价和名义仓位必填。"; return; }
+    J.trades.push(t); jsave(); $("jnote").value = ""; renderJournal();
+  };
+  $("jtable").addEventListener("click", ev => {
+    const id = ev.target.dataset && ev.target.dataset.close; if (!id) return;
+    const t = J.trades.find(x => x.id === id), px = +$("x_" + id).value;
+    if (!t || !px) return;
+    t.exit = px; t.exitT = Date.now(); t.pnl = jPnl(t, px); jsave(); renderJournal();
+  });
+  $("jexport").onclick = () => {
+    const blob = new Blob([JSON.stringify(J, null, 1)], { type: "application/json" }), a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `btc-journal-${todayKey(Date.now())}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $("jimport").onchange = async ev => {
+    const f = ev.target.files[0]; if (!f) return;
+    try { const d = JSON.parse(await f.text()); if (Array.isArray(d.trades)) { Object.assign(J, d); jsave(); jInit(); renderJournal(); } }
+    catch (e) { $("riskMsg").className = "verdict badv"; $("riskMsg").textContent = "导入失败：文件格式不对。"; }
+  };
+}
+async function loadSpec() {
+  try { const s = await jfetch(SPEC_URL + "?t=" + Date.now()); if (s.rule_a && s.rule_b) SPEC = s; } catch (e) { /* 用内置兜底 */ }
+}
+
+// ---------------- 持仓推演 ----------------
+function calc(st) {
+  if (!st) return;
+  const NOW = S.price, H1MED = st.h1;
+  if (!$("entry").value) { $("entry").value = Math.round(NOW); $("stop").value = Math.round(NOW + 1000); $("target").value = Math.round(NOW - 1500); }
+  const e = +$("entry").value, s = +$("stop").value, t = +$("target").value, m = +$("margin").value, L = +$("lev").value, side = S.side;
+  const sgn = side === "long" ? 1 : -1, risk = (e - s) * sgn, reward = (t - e) * sgn;
+  const notional = m * L, qty = notional / e, fee = notional * (($("ordtype").value === "maker" ? 0.0002 : 0.0005) + 0.0005);
+  const liq = side === "long" ? e * (1 - 1 / L + 0.004) : e * (1 + 1 / L - 0.004);
+  // 无方向优势时，先碰到止盈的概率 = 止损距离 / (止损距离 + 止盈距离)（回测胜率与此吻合）
+  const valid = risk > 0 && reward > 0, p = valid ? risk / (risk + reward) : NaN, noise = risk / H1MED;
+  const lossU = risk * qty + fee, winU = reward * qty - fee, liqBeforeStop = side === "long" ? liq > s : liq < s;
+  const pnlNow = (NOW - e) * sgn * qty;
+  $("outs").innerHTML = [
+    ["当前浮动盈亏", `${pnlNow >= 0 ? "+" : ""}${pnlNow.toFixed(1)} U`, `现价 ${fmt(NOW)}`],
+    ["名义仓位", `${fmt(notional)} U`, `${qty.toFixed(4)} BTC`],
+    ["止损 / 止盈距离", `${fmt(risk)} / ${fmt(reward)} 点`, `盈亏比 1 : ${(reward / risk).toFixed(2)}`],
+    ["止损时亏", `-${lossU.toFixed(1)} U`, `占保证金 ${(lossU / m * 100).toFixed(0)}%`],
+    ["止盈时赚", `+${winU.toFixed(1)} U`, `手续费约 ${fee.toFixed(2)} U`],
+    ["逐仓强平价", `≈ ${fmt(liq)}`, liqBeforeStop ? "在止损之前，先被强平" : "止损先于强平"],
+  ].map(([a, b, c]) => `<div class="chip"><span>${a}</span><b>${b}</b><span>${c}</span></div>`).join("");
+  const hzName = reward <= H1MED * 1.2 ? "1 小时" : "4 小时", up = S.prob[hzName], w = WEIGHTS[hzName];
+  const pFavor = side === "long" ? up : 100 - up, agree = pFavor >= 50;
+  // 实盘口径回测：模型的方向准确率扣费后转化不成收益，所以先到止盈的概率只按随机基准估算
+  const pTP0 = valid ? 100 * p : NaN, pTP = pTP0;
+  const ev2 = valid ? (pTP / 100) * reward * qty - (1 - pTP / 100) * risk * qty - fee : NaN;
+  const lo80 = NOW * (1 + CONE[240][0] / 100), hi80 = NOW * (1 + CONE[240][3] / 100);
+  const tpIn = side === "long" ? t <= hi80 : t >= lo80, slIn = side === "long" ? s >= lo80 : s <= hi80;
+  $("pred").innerHTML = valid ? [
+    ["推测方向", `${hzName}模型（收盘）：${up >= 50 ? "偏涨" : "偏跌"}（上涨概率 ${up.toFixed(1)}%），${agree ? "和你的方向一致" : "和你的方向相反"}。方向准确率每年 51–53%，只作参考。`],
+    ["先到止盈的概率", `约 ${pTP0.toFixed(0)}%（= 止损距离 ÷（止损 + 止盈距离）。实盘口径回测里模型的准确率扣费后转化不成收益，所以不加优势）。`],
+    ["这一单的期望", `每次约 ${ev2 >= 0 ? "+" : ""}${ev2.toFixed(1)} U（已扣手续费）。${ev2 > 0 ? "略为正，但优势很薄。" : "为负，不建议这样开。"}`],
+    ["4 小时内会不会碰到", `80% 区间 ${fmt(lo80)} – ${fmt(hi80)}。止盈${tpIn ? "在区间内" : "在区间外，4 小时内大概率到不了"}，止损${slIn ? "在区间内，有被打到的可能" : "在区间外"}。`],
+  ].map(([a, b]) => `<div><b>${a}</b>${b}</div>`).join("") : "";
+  const levels = levelsNear(st, NOW);
+  const msg = []; let cls = "";
+  if (!valid) { cls = "badv"; msg.push("止损或止盈的方向和持仓方向不一致，请检查。"); }
+  else {
+    if (liqBeforeStop) { cls = "badv"; msg.push(`强平价 ${fmt(liq)} 在止损 ${fmt(s)} 之前，止损形同虚设，需降低杠杆。`); }
+    if (noise < 1) { cls = cls || "badv"; msg.push(`止损只有 1h 振幅中位数的 ${noise.toFixed(1)} 倍，很容易被噪音扫掉。`); }
+    else msg.push(`止损是 1h 振幅中位数的 ${noise.toFixed(1)} 倍，留出了正常波动空间。`);
+    const lv = levels.filter(([x]) => side === "short" ? (x > e && x < s) : (x < e && x > s));
+    if (lv.length) msg.push(`止损前方有关键位：${lv.map(([x, n]) => fmt(x) + "（" + n + "）").join("、")}，价格常在这些位置先试探一次。`);
+    cls = cls || "goodv";
+  }
+  $("verdict").className = "verdict " + cls; $("verdict").textContent = msg.join(" ");
+  drawCone(e, s, t, levels);
+}
+function levelsNear(st, p) {
+  const out = [[st.hi24, "24h 高点"], [st.lo24, "24h 低点"]];
+  for (let k = Math.floor((p - 3000) / 1000) * 1000; k <= p + 3000; k += 1000) out.push([k, "整数关口"]);
+  return out;
+}
+function drawCone(e, s, t, levels) {
+  const svg = $("cone"); svg.innerHTML = "";
+  const W = svg.clientWidth, H = svg.clientHeight, m = { l: 54, r: 96, t: 10, b: 24 };
+  if (!W) return;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  // 过去 24h：5 分钟线聚合成 30 分钟
+  const b5 = live(S.b5).slice(-288), PX = [];
+  for (let i = 0; i < b5.length; i += 6) { const g = b5.slice(i, i + 6); PX.push([g[0].t, Math.max(...g.map(x => x.h)), Math.min(...g.map(x => x.l)), g.at(-1).c]); }
+  const NOW = S.price, t0 = PX[0][0], tNow = Date.now(), t1 = tNow + 4 * 3600e3;
+  const vals = [...PX.flatMap(r => [r[1], r[2]]), NOW * (1 + CONE[240][0] / 100), NOW * (1 + CONE[240][3] / 100), e, s, t];
+  const lo = Math.min(...vals) - 150, hi = Math.max(...vals) + 150;
+  const x = v => m.l + (v - t0) / (t1 - t0) * (W - m.l - m.r), y = p => m.t + (hi - p) / (hi - lo) * (H - m.t - m.b);
+  const el = (tag, a) => { const n = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in a) n.setAttribute(k, a[k]); svg.appendChild(n); return n; };
+  const step = (hi - lo) > 3000 ? 1000 : 500;
+  for (let p = Math.ceil(lo / step) * step; p <= hi; p += step) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(p), y2: y(p), stroke: css("--grid") });
+    el("text", { x: m.l - 6, y: y(p) + 4, "text-anchor": "end", "font-size": 11, fill: css("--muted"), "font-family": css("--m") }).textContent = (p / 1000).toFixed(step < 1000 ? 1 : 0) + "k";
+  }
+  el("line", { x1: x(tNow), x2: x(tNow), y1: m.t, y2: H - m.b, stroke: css("--muted"), "stroke-dasharray": "3 3" });
+  el("text", { x: x(tNow) + 4, y: H - 8, "font-size": 11, fill: css("--muted") }).textContent = "现在";
+  el("text", { x: m.l, y: H - 8, "font-size": 11, fill: css("--muted") }).textContent = "24 小时前";
+  el("text", { x: x(t1), y: H - 8, "font-size": 11, fill: css("--muted"), "text-anchor": "end" }).textContent = "+4h";
+  const pts = [[0, 0, 0, 0, 0], ...[30, 60, 120, 240].map(k => [k, ...CONE[k]])];
+  const band = (i, j, fill) => {
+    const upP = pts.map(p => `${x(tNow + p[0] * 60e3)},${y(NOW * (1 + p[j] / 100))}`), dn = pts.slice().reverse().map(p => `${x(tNow + p[0] * 60e3)},${y(NOW * (1 + p[i] / 100))}`);
+    el("path", { d: "M" + upP.concat(dn).join("L") + "Z", fill });
+  };
+  band(1, 4, css("--band2")); band(2, 3, css("--band1"));
+  el("path", { d: "M" + PX.map(r => `${x(r[0] + 15 * 60e3)},${y(r[1])}`).join("L") + "L" + PX.slice().reverse().map(r => `${x(r[0] + 15 * 60e3)},${y(r[2])}`).join("L") + "Z", fill: css("--accent"), opacity: .12 });
+  el("path", { d: "M" + PX.map(r => `${x(r[0] + 30 * 60e3)},${y(r[3])}`).join("L") + `L${x(tNow)},${y(NOW)}`, fill: "none", stroke: css("--accent"), "stroke-width": 1.8 });
+  el("circle", { cx: x(tNow), cy: y(NOW), r: 4, fill: css("--accent"), stroke: css("--card"), "stroke-width": 2 });
+  const lines = [...levels.map(([p, n]) => [p, n, css("--muted"), "2 4"]), [e, "进场 " + fmt(e), css("--fg2"), ""], [s, "止损 " + fmt(s), css("--bad"), ""], [t, "止盈 " + fmt(t), css("--good"), ""]];
+  let lastY = -99;
+  lines.sort((a, b) => b[0] - a[0]).forEach(([p, n, c, d]) => {
+    if (p < lo || p > hi) return;
+    el("line", { x1: m.l, x2: W - m.r, y1: y(p), y2: y(p), stroke: c, "stroke-dasharray": d, "stroke-width": d ? 1 : 1.4 });
+    const ly = Math.max(y(p) + 4, lastY + 12); lastY = ly;
+    el("text", { x: W - m.r + 6, y: ly, "font-size": 10.5, fill: c }).textContent = n;
+  });
+}
+
+// ---------------- 主循环 ----------------
+function everySecond() {
+  renderConn();
+  if (!S.b1.length) return;
+  try {
+    computeProbs();
+    const st = stats();
+    if (st) { $("chg").textContent = pct(st.chg24) + " 24h"; $("chg").className = "chg num " + (st.chg24 >= 0 ? "good" : "bad"); }
+    renderStatus(st); renderFC(); plan(st); renderRuler(st); mirror(st); calc(st); renderJournal();
+  } catch (err) { console.error(err); }
+}
+async function fullRefresh() {
+  const btn = $("refresh"); btn.disabled = true; btn.textContent = "刷新中…";
+  try { await loadSpec(); await bootstrap(); connect(); await pollPaper(); everySecond(); btn.textContent = "已刷新"; }
+  catch (e) { btn.textContent = "刷新失败，重试"; console.error(e); }
+  finally { setTimeout(() => { btn.disabled = false; btn.textContent = "手动刷新"; }, 1200); }
+}
+function setSide(sd) { S.side = sd; $("b-long").setAttribute("aria-pressed", sd === "long"); $("b-short").setAttribute("aria-pressed", sd === "short");
+  const p = S.price; if (isFinite(p)) { $("entry").value = Math.round(p); $("stop").value = Math.round(sd === "long" ? p - 1000 : p + 1000); $("target").value = Math.round(sd === "long" ? p + 1500 : p - 1500); }
+  everySecond(); }
+$("b-long").onclick = () => setSide("long"); $("b-short").onclick = () => setSide("short");
+["entry", "stop", "target", "margin", "lev", "ordtype"].forEach(id => $(id).addEventListener("input", everySecond));
+$("refresh").onclick = fullRefresh;
+document.addEventListener("visibilitychange", () => { if (!document.hidden && (!S.wsOk || !S.ws || S.ws.readyState !== 1)) fullRefresh(); });
+jInit();
+fullRefresh();
+setInterval(everySecond, 1000);
+setInterval(pollPaper, 60000);
+setInterval(loadSpec, 600000);
+setInterval(() => pollOI().catch(() => {}), 10000);
+setInterval(() => pollLS().catch(() => {}), 60000);
+setInterval(() => pollFunding().catch(() => {}), 60000);
+setInterval(pollNews, 60000);
+</script>
+</body>
+</html>
