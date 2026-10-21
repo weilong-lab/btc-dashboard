@@ -259,10 +259,22 @@ const params = new URLSearchParams(location.search);
 // 后台监控程序的输出目录（status.json、paper.json）。部署到 GitHub 时由 Muse 推送到 data/；本机测试用 ?data=../../monitor/out/
 // 托管在 GitHub Pages（<用户>.github.io/<仓库>/）时，自动读取同一仓库 data 分支
 const GH = location.hostname.endsWith(".github.io") ? [location.hostname.split(".")[0], location.pathname.split("/")[1]] : null;
-const DATA = params.get("data") || (GH ? `https://raw.githubusercontent.com/${GH[0]}/${GH[1]}/data/` : "data/");
-const NEWS_URL = params.get("news") || DATA + "status.json";
-const PAPER_URL = DATA + "paper.json";
-const SPEC_URL = params.get("spec") || DATA + "rules_spec.json";
+let DATA = params.get("data") || "data/";
+let NEWS_URL = params.get("news") || DATA + "status.json";
+let PAPER_URL = DATA + "paper.json";
+let SPEC_URL = params.get("spec") || DATA + "rules_spec.json";
+// raw.githubusercontent.com 按分支名读取会缓存 5 分钟，所以先查 data 分支最新提交，再按提交编号读取（内容固定，不会读到旧数据）。
+// 查询带 ETag，数据没变时返回 304，不计入 GitHub 每小时 60 次的匿名限额。
+async function resolveData() {
+  if (!GH || params.get("data")) return;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GH[0]}/${GH[1]}/git/ref/heads/data`, { cache: "no-cache" });
+    if (!r.ok) return;
+    const sha = (await r.json()).object.sha;
+    DATA = `https://raw.githubusercontent.com/${GH[0]}/${GH[1]}/${sha}/`;
+    NEWS_URL = params.get("news") || DATA + "status.json"; PAPER_URL = DATA + "paper.json"; SPEC_URL = params.get("spec") || DATA + "rules_spec.json";
+  } catch (e) { /* 网络问题时沿用上一次的地址 */ }
+}
 // rules_spec.json 读不到时的兜底（和仓库里的文件保持一致）
 const SPEC_DEFAULT = {"fees":{"maker_pct":0.02,"taker_pct":0.05},"event_block_min":60,
   "rule_a":{"name":"4 小时模型高把握","p_long":0.58,"p_short":0.42,"limit_valid_bars":3,"hold_bars":48,"insurance_stop_pct":2.0,"use_insurance_stop":false,"status":"参考","backtest":"2021–2026 按真实挂单执行：每年约 750 笔，胜率 52.5%，每笔扣费 -0.04%，6 年 1 年为正；不计费约 +0.02%。未通过。"},
@@ -841,7 +853,7 @@ function everySecond() {
 }
 async function fullRefresh() {
   const btn = $("refresh"); btn.disabled = true; btn.textContent = "刷新中…";
-  try { await loadSpec(); await bootstrap(); connect(); await pollPaper(); everySecond(); btn.textContent = "已刷新"; }
+  try { await resolveData(); await loadSpec(); await bootstrap(); connect(); await pollPaper(); everySecond(); btn.textContent = "已刷新"; }
   catch (e) { btn.textContent = "刷新失败，重试"; console.error(e); }
   finally { setTimeout(() => { btn.disabled = false; btn.textContent = "手动刷新"; }, 1200); }
 }
@@ -855,12 +867,11 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && (!
 jInit();
 fullRefresh();
 setInterval(everySecond, 1000);
-setInterval(pollPaper, 60000);
 setInterval(loadSpec, 600000);
 setInterval(() => pollOI().catch(() => {}), 10000);
 setInterval(() => pollLS().catch(() => {}), 60000);
 setInterval(() => pollFunding().catch(() => {}), 60000);
-setInterval(pollNews, 60000);
+setInterval(async () => { await resolveData(); pollNews(); pollPaper(); }, 60000);
 </script>
 </body>
 </html>
