@@ -236,6 +236,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
 label.wide{grid-column:1/-1}
 textarea{font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%;resize:vertical;min-height:58px}
 textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.askl{display:block;font-size:13px;color:var(--fg2);margin-bottom:8px} .askl textarea{margin-top:4px;min-height:64px}
+#askOut{margin-top:10px} .askt{min-height:260px;font-family:var(--m);font-size:12.5px;margin-bottom:8px}
 .ct{min-width:1500px}
 .ct th{white-space:nowrap}
 .ct td{vertical-align:top}
@@ -335,6 +337,17 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <div class="tablewrap"><table class="ma" id="ma"></table></div>
     <div class="verdict" id="maSum"></div>
     <p class="note">日线按 UTC 收盘（<span class="tzn">东京时间</span>每天 <span class="tzdc">09:00</span>）。均线排列在回测里没有单独的预测力（加 1 小时趋势过滤并没有让信号变成稳定盈利），这里用来看各周期的趋势是否一致。</p>
+  </section>
+
+  <section class="card span" id="askCard">
+    <h2>AI 问盘 <small>点一下才问 · DeepSeek 先总结盘面，再复制问题去网页版问</small></h2>
+    <label for="askQ" class="askl">我的问题（会记在这台设备上）<textarea id="askQ"></textarea></label>
+    <div class="jbtns"><button type="button" class="btn primary" id="askGen">生成问题</button><button type="button" class="btn sm" id="askKey">设置 DeepSeek Key</button><span class="note" id="askMsg"></span></div>
+    <div id="askOut" hidden>
+      <textarea id="askTxt" class="askt" aria-label="生成好的问题（可以改）"></textarea>
+      <div class="jbtns"><button type="button" class="btn primary" data-ask="https://chat.deepseek.com/">复制并打开 DeepSeek</button><button type="button" class="btn" data-ask="https://chatgpt.com/">复制并打开 ChatGPT</button><button type="button" class="btn" data-ask="https://claude.ai/new">复制并打开 Claude</button><button type="button" class="btn" data-ask="">只复制</button></div>
+    </div>
+    <p class="note">点「生成问题」时，面板把此刻的行情整理成数据：各周期涨跌、最近两天的转折点（按 15 分钟 K 线，走过约 1 个 ATR 才算转折）、1 小时和 15 分钟 K 线、均线排列、资金费率、持仓量、多空比、恐惧贪婪指数。如果设置了 DeepSeek Key，先让 DeepSeek 把这些数据写成一段盘面总结（只描述已经发生的，不预测），每次大约花不到 0.01 元；没设置就只带数据。然后加上你的问题和回答格式，复制后到网页版粘贴发送。网页版不能由面板自动提问，需要你自己粘贴。AI 对形态的预判没有经过任何回测，只能当作参考。Key 只存在这台设备的浏览器里，不会同步到云端。</p>
   </section>
 
   <section class="card span" id="usCard">
@@ -2447,7 +2460,7 @@ function renderMA() {
     }
     const above = [m7, m25, m99].filter(m => P > m).length;
     const pos = above === 3 ? ["三线之上", "good"] : above === 0 ? ["三线之下", "bad"] : [`${above} 条之上`, "mut"];
-    res.push({ name, a: arr[2], dir: dir[0] });
+    res.push({ name, a: arr[2], dir: dir[0], arr: arr[0], pos: pos[0] });
     const cell = m => `${fmt(m)}<small>${pct((P / m - 1) * 100)}</small>`;
     return `<tr><td class="t">${name}</td><td>${cell(m7)}</td><td>${cell(m25)}</td><td>${cell(m99)}</td>
       <td class="t"><span class="${arr[1]}">${arr[0]}</span></td><td class="t"><span class="${dir[1]}">${dir[0]}</span><small>MA7 ${pct(slope, 3)}</small></td>
@@ -2461,9 +2474,117 @@ function renderMA() {
       : short * long < 0 ? `短周期（5 分钟–1 小时）${short > 0 ? "偏多" : "偏空"}，长周期（4 小时–1 天）${long > 0 ? "偏多" : "偏空"}，方向冲突` : "至少一组周期均线交织，方向不明确";
     $("maSum").className = "verdict " + (short * long > 0 ? "goodv" : "");
     $("maSum").textContent = `多头排列：${bull.join("、") || "无"}；空头排列：${bear.join("、") || "无"}。${relation}。`;
-    S.maRel = relation;
+    S.maRel = relation; S.maRes = res;
   }
 }
+// ---------------- AI 问盘：点一下把此刻盘面整理成数据 →（可选）DeepSeek 写总结 → 拼成问题，复制去网页版问 ----------------
+const ASK_Q = "btc_ask_q", DSKEY = "btc_ds_key";
+const ASK_DEFAULT = "BTC 涨跌过程里常见的就那几种形态：急涨急跌的深 V 或倒 V；正在形成的 U 型；在一个区间里震荡，重心向上或向下；一路单边上涨或单边下跌。现在走的是哪一种？接下来最可能演变成哪一种？";
+const lsGet = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+const lsSet = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) { /* 存不了就只在本次有效 */ } };
+// 15 分钟 K 线的转折点：从上一个转折点反向走过 th 美元才算新转折
+function zigzag(bars, th) {
+  const pv = [], H = i => ({ t: bars[i].t, p: bars[i].h, k: "高" }), Lo = i => ({ t: bars[i].t, p: bars[i].l, k: "低" });
+  let dir = 0, hiI = 0, loI = 0;
+  for (let i = 1; i < bars.length; i++) {
+    const b = bars[i];
+    if (dir >= 0 && b.h > bars[hiI].h) hiI = i;
+    if (dir <= 0 && b.l < bars[loI].l) loI = i;
+    if (dir >= 0 && hiI < i && bars[hiI].h - b.l >= th) { pv.push(H(hiI)); dir = -1; loI = i; }
+    else if (dir <= 0 && loI < i && b.h - bars[loI].l >= th) { pv.push(Lo(loI)); dir = 1; hiI = i; }
+  }
+  if (dir === 1) pv.push({ ...H(hiI), k: "高（还在延伸）" });
+  if (dir === -1) pv.push({ ...Lo(loI), k: "低（还在延伸）" });
+  return pv;
+}
+function askSnapshot() {
+  const P = S.price, b60 = S.b60 || [], b15 = S.b15 || [], b5 = S.b5 || [];
+  if (!isFinite(P) || b60.length < 48 || b15.length < 192) return null;
+  const chgAt = (bars, n) => pct((P / bars.at(-1 - n).c - 1) * 100);
+  const rng = b => b.h - b.l, atr = b60.slice(-25, -1).reduce((t, b) => t + rng(b), 0) / 24;
+  const day = b60.slice(-24), hi = Math.max(...day.map(b => b.h)), lo = Math.min(...day.map(b => b.l));
+  const r0 = x => Math.round(x);
+  const pv = zigzag(b15.slice(-192), Math.max(atr, P * 0.004)).slice(-10);
+  const L = [];
+  L.push(`时间：${fmtDT(Date.now())}（${TZNAME[TZ]}）  币安 BTCUSDT 永续  现价 ${r0(P)}`);
+  L.push(`涨跌：15 分钟 ${chgAt(b5, 3)} · 1 小时 ${chgAt(b5, 12)} · 4 小时 ${chgAt(b60, 4)} · 24 小时 ${chgAt(b60, 24)} · 7 天 ${chgAt(b60, 168)}`);
+  L.push(`24 小时最高 ${r0(hi)}、最低 ${r0(lo)}，现价在这个区间的 ${((P - lo) / (hi - lo || 1) * 100).toFixed(0)}% 位置；1 小时 K 线平均振幅（ATR）约 ${r0(atr)} 美元`);
+  L.push(`最近两天的转折点（15 分钟 K 线，反向走过 ${r0(Math.max(atr, P * 0.004))} 美元才算）：` +
+    pv.map((x, i) => `${fmtDT(x.t)} ${x.k} ${r0(x.p)}${i ? `（${pct((x.p / pv[i - 1].p - 1) * 100)}）` : ""}`).join(" → "));
+  if (S.maRes && S.maRes.length) L.push(`均线（MA7/25/99）：` + S.maRes.map(x => `${x.name} ${x.arr}、MA7 ${x.dir.replace(/^\S+ /, "")}、现价在${x.pos}`).join("；") + (S.maRel ? `。${S.maRel}` : ""));
+  if (isFinite(S.funding)) L.push(`资金费率 ${S.funding.toFixed(4)}%`);
+  const oi = [...(S.oiHist || []), ...(S.oi || []).map(x => [x[0], x[1]])].sort((x, y) => x[0] - y[0]);
+  if (oi.length) {
+    const a = oi.find(x => Date.now() - x[0] <= 65 * 6e4), mins = a ? Math.round((oi.at(-1)[0] - a[0]) / 6e4) : 0;
+    L.push(`持仓量 ${(oi.at(-1)[1] / 1000).toFixed(1)} 千 BTC` + (mins >= 10 ? `，最近 ${mins} 分钟变化 ${pct((oi.at(-1)[1] / a[1] - 1) * 100)}` : ""));
+  }
+  const m = S.mood;
+  if (m) {
+    const v = a => a && a.length ? a.at(-1).v.toFixed(2) : "—";
+    L.push(`多空比（1 小时）：大户账户 ${v(m.topA)}、大户持仓 ${v(m.topP)}、全体账户 ${v(m.retail)}；主动买卖比 ${v(m.taker)}` + (m.fng && m.fng[0] ? `；恐惧贪婪指数 ${m.fng[0].value}（${FNG_ZH[m.fng[0].value_classification] || m.fng[0].value_classification}）` : ""));
+  }
+  if (S.fm) L.push(`急动：最近 ${S.fm.N} 分钟${S.fm.dir > 0 ? "急涨" : "急跌"}了 ${fmt(Math.abs(S.fm.mv))} 美元（超过 1 个 ATR）`);
+  const bar = b => `${fmtDT(b.t)} ${r0(b.o)}/${r0(b.h)}/${r0(b.l)}/${r0(b.c)}`;
+  L.push(`1 小时 K 线（最近 36 根，时间 开/高/低/收，最后一根未收盘）：\n` + b60.slice(-36).map(bar).join("\n"));
+  L.push(`15 分钟 K 线（最近 24 根，同上）：\n` + b15.slice(-24).map(bar).join("\n"));
+  return L.join("\n");
+}
+async function dsSummary(key, data) {
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 45000);
+  try {
+    const r = await fetch("https://api.deepseek.com/chat/completions", { method: "POST", signal: ctl.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: "deepseek-chat", temperature: 0.2, max_tokens: 500, messages: [
+        { role: "system", content: "你是加密货币盘面记录员。根据用户给的 BTC 行情数据，用中文写一段 200 字以内的盘面总结：按时间顺序讲最近一两天价格怎么走过来的（关键高低点和时间）、现在处在什么位置、各周期均线和资金面（资金费率、持仓量、多空比）说明了什么。相邻两个转折点之间是一整段走势，要写成「几点到几点从多少涨 / 跌到多少」，不要说成某个时刻突然发生。只写数据里有的内容（比如数据里没有成交量，就不要提放量缩量），只描述已经发生的事实，不要预测，不要给交易建议，不要用 Markdown。" },
+        { role: "user", content: data }] }) });
+    if (r.status === 401) throw new Error("Key 无效（401），请重新设置");
+    if (r.status === 402) throw new Error("DeepSeek 账户余额不足（402）");
+    if (!r.ok) throw new Error(`DeepSeek 返回 ${r.status}`);
+    return ((await r.json()).choices?.[0]?.message?.content || "").trim();
+  } finally { clearTimeout(to); }
+}
+function askKeyUI() { $("askKey").textContent = lsGet(DSKEY) ? "DeepSeek Key 已设置 · 更换" : "设置 DeepSeek Key"; }
+(function initAsk() {
+  $("askQ").value = lsGet(ASK_Q) || ASK_DEFAULT;
+  $("askQ").addEventListener("change", () => lsSet(ASK_Q, $("askQ").value.trim() === ASK_DEFAULT ? "" : $("askQ").value.trim()));
+  askKeyUI();
+  $("askKey").addEventListener("click", () => {
+    const v = prompt("粘贴 DeepSeek 的 API Key（platform.deepseek.com → API keys）。只存在这台设备的浏览器里，不会同步到云端。清空 = 删除。", "");
+    if (v === null) return;
+    lsSet(DSKEY, v.trim()); askKeyUI();
+    $("askMsg").textContent = v.trim() ? "已保存" : "已删除";
+  });
+  $("askGen").addEventListener("click", async () => {
+    const data = askSnapshot();
+    if (!data) { $("askMsg").textContent = "行情还没加载完，稍等再点"; return; }
+    const q = $("askQ").value.trim() || ASK_DEFAULT, key = lsGet(DSKEY);
+    $("askGen").disabled = true;
+    let sum = "", note = "";
+    if (key) {
+      $("askMsg").textContent = "DeepSeek 正在总结盘面…";
+      try { sum = await dsSummary(key, data); } catch (e) { note = `DeepSeek 总结失败：${e.name === "AbortError" ? "超时" : e.message}，只带数据`; }
+    } else note = "没设置 DeepSeek Key，只带数据（不影响提问）";
+    $("askGen").disabled = false;
+    $("askTxt").value = `我在看币安 BTCUSDT 永续合约，想请你根据下面的数据判断走势形态。\n\n` +
+      (sum ? `【盘面总结（DeepSeek 根据下面的数据写的）】\n${sum}\n\n` : "") +
+      `【数据】\n${data}\n\n【我的问题】\n${q}\n\n` +
+      `请这样回答：\n1. 现在属于哪种形态（深 V / 倒 V / U 型 / 区间震荡重心向上 / 区间震荡重心向下 / 单边上涨 / 单边下跌 / 其他），依据数据里的哪些点；\n2. 接下来 1–4 小时最可能演变成哪种形态，给几种可能和大致概率；\n3. 出现什么价格或情况，说明你的判断错了。`;
+    $("askOut").hidden = false;
+    $("askMsg").textContent = note || `已生成（${fmtClock(Date.now())}）· 选一个网页版，复制后粘贴发送`;
+  });
+  $("askOut").addEventListener("click", async e => {
+    const b = e.target.closest("[data-ask]"); if (!b) return;
+    const url = b.dataset.ask, txt = $("askTxt").value;
+    // 先在本页还有焦点时开始复制，再在点击的同一刻打开网页（晚了会被当成弹窗拦掉）
+    const cp = navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject();
+    if (url) window.open(url, "_blank", "noopener");
+    let ok = false;
+    try { await cp; ok = true; } catch (err) {
+      $("askTxt").select(); try { ok = document.execCommand("copy"); } catch (e2) { ok = false; }
+    }
+    $("askMsg").textContent = ok ? `已复制${url ? "，在新打开的页面里粘贴（⌘V）发送" : ""}` : "复制失败：在上面的框里全选后手动复制";
+  });
+})();
 // ---------------- 持仓推演 ----------------
 function calc(st) {
   if (!st) return;
