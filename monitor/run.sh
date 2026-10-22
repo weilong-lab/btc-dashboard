@@ -6,6 +6,16 @@ mkdir -p out
 PY="${PYTHON:-}"
 if [ -z "$PY" ] && [ -x ../backtest/.venv/bin/python ]; then PY=../backtest/.venv/bin/python; fi
 PY="${PY:-python3}"
+# Key 和令牌不写进任何文件：DeepSeek Key 从 macOS 钥匙串读（服务名 btc-dashboard-deepseek）；
+# 配了 GITHUB_REPO / RECORDS_REPO 但没给 GITHUB_TOKEN 时，用本机 gh 登录的令牌
+if [ -z "${DEEPSEEK_API_KEY:-}" ] && command -v security >/dev/null 2>&1; then
+  k=$(security find-generic-password -s btc-dashboard-deepseek -w 2>/dev/null || true)
+  if [ -n "$k" ]; then export DEEPSEEK_API_KEY="$k"; fi
+fi
+if [ -z "${GITHUB_TOKEN:-}" ] && { [ -n "${GITHUB_REPO:-}" ] || [ -n "${RECORDS_REPO:-}" ]; } && command -v gh >/dev/null 2>&1; then
+  t=$(gh auth token 2>/dev/null || true)
+  if [ -n "$t" ]; then export GITHUB_TOKEN="$t"; fi
+fi
 while true; do
   "$PY" -W ignore monitor.py "$@" >> out/monitor.log 2>&1
   echo "$(date) monitor 退出，30 秒后重启" >> out/monitor.log

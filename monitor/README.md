@@ -46,9 +46,17 @@ export LABEL_MODEL=claude-opus-5-5      # 默认值；换成更便宜的模型�
 
 **方式 1b：DeepSeek API（不需要安装任何包）**
 
+在本机运行时，把 Key 存进 macOS 钥匙串，`run.sh` 启动时自动读取，不写进任何文件：
+
+```bash
+security add-generic-password -s btc-dashboard-deepseek -a btc -w
+```
+
+（回车后粘贴 Key，输入时不显示。换 Key 时先 `security delete-generic-password -s btc-dashboard-deepseek` 再加。）在服务器上运行时改用环境变量：
+
 ```bash
 export DEEPSEEK_API_KEY=你的Key          # 在 platform.deepseek.com 创建并充值
-export DEEPSEEK_MODEL=deepseek-flash     # 默认值
+export DEEPSEEK_MODEL=deepseek-flash     # 默认值（DeepSeek V4.1 Flash）
 ```
 
 设置了 `DEEPSEEK_API_KEY` 就自动使用 DeepSeek。它的 JSON 模式不强制格式，程序会逐条校验，漏掉或格式不对的下一轮重试。Key 无效或余额不足时自动退回关键词规则。
