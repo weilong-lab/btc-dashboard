@@ -175,6 +175,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
   </dl>
   <span class="sp"></span>
   <span class="conn" id="conn"><i></i><span>连接中</span></span>
+  <span class="acctsw" id="mcSw" role="group" aria-label="涨跌配色"><button type="button" data-mc="green-up">绿涨红跌</button><button type="button" data-mc="red-up">红涨绿跌</button></span>
   <span class="acctsw" id="acctSw" role="group" aria-label="账户"></span>
   <button type="button" class="lnk mobonly" id="chartTog">K 线</button>
   <a class="lnk" href="./">← 作战面板</a>
@@ -1196,6 +1197,16 @@ async function fromCall() {
   $("fMsg").textContent = `已按 ${c.who} ${fmtT(c.t, false)} 的喊单填好：${long ? "看多" : "看空"}，${limit ? `到 ${p1(+c.ref)} 再进` : "现价进"}，${c.amt ? `${c.amt} U` : `${amt} U（默认）`} × ${lev} 倍 ≈ ${q3(qty)} BTC${c.stop ? `，止损 ${p1(+c.stop)}` : ""}${c.target ? `，止盈 ${p1(+c.target)}` : ""}。确认没问题就点「${long ? "买入 / 开多" : "卖出 / 开空"}」。`;
   dirty = true;
 }
+
+// 涨跌配色：和作战面板同一个设置，切换后 K 线、按钮、盈亏颜色一起换
+(function mcInit() {
+  const apply = () => { document.querySelectorAll("#mcSw [data-mc]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mc === document.documentElement.dataset.marketColors)); };
+  apply();
+  $("mcSw").onclick = e => { const b = e.target.closest("[data-mc]"); if (!b) return;
+    document.documentElement.dataset.marketColors = b.dataset.mc; lsSet("btc_market_colors", b.dataset.mc); apply();
+    buildChart(); dirty = true; tblKey = ""; };
+  addEventListener("storage", e => { if (e.key === "btc_market_colors" && e.newValue) { document.documentElement.dataset.marketColors = e.newValue; apply(); buildChart(); dirty = true; tblKey = ""; } });
+})();
 
 // 账户切换：先存好、传到云端，再换账户重新载入
 (function acctInit() {
