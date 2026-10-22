@@ -287,6 +287,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <h2>此刻结论 <small id="sumBasis">依据已收盘 K 线 · 不是投资建议</small></h2>
     <p class="sum-line" id="sumNow">正在读取行情…</p>
     <div class="status" id="sumState"></div>
+    <p class="note" id="sumStrat"></p>
     <form class="sum-in" onsubmit="return false">
       <label for="samt">买入金额（保证金 U）<input id="samt" inputmode="decimal" value="100"></label>
       <label for="slev" class="levl">杠杆（倍）<span class="levrow"><input id="slevr" type="range" min="1" max="150" step="1" value="10" aria-label="杠杆滑块"><input id="slev" type="number" min="1" max="150" step="1" value="10" inputmode="numeric"></span></label>
@@ -1273,8 +1274,9 @@ function renderSummary(st) {
   const pr = S.paper && S.paper.rules, mine = C.calls.filter(c => c.who === MODEL_WHO && c.exit), mineU = mine.reduce((s2, c) => s2 + pnlU(c, c.exit.pnl), 0);
   $("sumState").innerHTML = [
     ["市场状态", `4 小时 ${pct(mv4)} · 波动${v.state}`, "", `${S.maRel || "均线读取中"}${cx && cx.key ? "；刚" + (cx.down ? "急跌超卖" : "急涨超买") : ""}`],
-    ["策略状态", "参考，未通过验证", "warn", `规则 A / B 扣费回测都没有稳定赚钱${pr ? `；模型严格执行 A ${pr.A.n} 笔累计 ${pct(pr.A.cum || 0)}、B ${pr.B.n} 笔累计 ${pct(pr.B.cum || 0)}` : ""}${mine.length ? `；模型自动记单已卖 ${mine.length} 笔，${uTxt(mineU)}（按默认金额）` : ""}`],
   ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
+  // 策略状态：一行小字，提醒参考信号还没被验证过
+  $("sumStrat").textContent = `策略状态：参考，未通过验证——规则 A / B 扣费回测都没有稳定赚钱${pr ? `；模型严格执行 A ${pr.A.n} 笔累计 ${pct(pr.A.cum || 0)}、B ${pr.B.n} 笔累计 ${pct(pr.B.cum || 0)}` : ""}${mine.length ? `；模型自动记单已卖 ${mine.length} 笔，${uTxt(mineU)}（按默认金额）` : ""}。出现信号也别下重注。`;
   { const amt = J.defAmt || 100, lev = J.defLev || 10; $("sinfo").textContent = `${fmt(amt * lev)} U · 反向 ${(Math.max(0, 1 / lev - 0.004) * 100).toFixed(2)}% 强平`; }
   const L = side("long"), Sh = side("short");
   $("sumSides").innerHTML = L.html + Sh.html + (S.sumMsg && Date.now() - S.sumMsg.t < 15e3 ? `<p class="sum-line good" style="grid-column:1/-1">${S.sumMsg.html}</p>` : "");
