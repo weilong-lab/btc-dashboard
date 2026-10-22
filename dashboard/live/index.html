@@ -340,14 +340,14 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
   </section>
 
   <section class="card span" id="askCard">
-    <h2>AI 问盘 <small>点一下才问 · DeepSeek 先总结盘面，再复制问题去网页版问</small></h2>
+    <h2>AI 问盘 <small>点一下才整理 · 复制问题去网页版问 · 不用 Key、不花钱</small></h2>
     <label for="askQ" class="askl">我的问题（会记在这台设备上）<textarea id="askQ"></textarea></label>
-    <div class="jbtns"><button type="button" class="btn primary" id="askGen">生成问题</button><button type="button" class="btn sm" id="askKey">设置 DeepSeek Key</button><span class="note" id="askMsg"></span></div>
+    <div class="jbtns"><button type="button" class="btn primary" id="askGen">AI 问盘</button><span class="note" id="askMsg"></span></div>
     <div id="askOut" hidden>
       <textarea id="askTxt" class="askt" aria-label="生成好的问题（可以改）"></textarea>
       <div class="jbtns"><button type="button" class="btn primary" data-ask="https://chat.deepseek.com/">复制并打开 DeepSeek</button><button type="button" class="btn" data-ask="https://chatgpt.com/">复制并打开 ChatGPT</button><button type="button" class="btn" data-ask="https://claude.ai/new">复制并打开 Claude</button><button type="button" class="btn" data-ask="">只复制</button></div>
     </div>
-    <p class="note">点「生成问题」时，面板把此刻的行情整理成数据：各周期涨跌、最近两天的转折点（按 15 分钟 K 线，走过约 1 个 ATR 才算转折）、1 小时和 15 分钟 K 线、均线排列、资金费率、持仓量、多空比、恐惧贪婪指数。如果设置了 DeepSeek Key，先让 DeepSeek 把这些数据写成一段盘面总结（只描述已经发生的，不预测），每次大约花不到 0.01 元；没设置就只带数据。然后加上你的问题和回答格式，复制后到网页版粘贴发送。网页版不能由面板自动提问，需要你自己粘贴。AI 对形态的预判没有经过任何回测，只能当作参考。Key 只存在这台设备的浏览器里，不会同步到云端。</p>
+    <p class="note">点「AI 问盘」时，面板把此刻的行情整理成数据：各周期涨跌、最近两天的转折点（按 15 分钟 K 线，走过约 1 个 ATR 才算转折）、1 小时和 15 分钟 K 线、均线排列、资金费率、持仓量、多空比、恐惧贪婪指数，再加上你的问题和回答格式（先概括走势，再判断形态和接下来的演变）。点下面的按钮会复制问题并打开网页版，你粘贴（⌘V）发送就行；同一个问题可以分别问 DeepSeek、ChatGPT、Claude 对比着看。网页版不能由面板自动提问。AI 对形态的预判没有经过任何回测，只能当作参考。</p>
   </section>
 
   <section class="card span" id="usCard">
@@ -2477,8 +2477,8 @@ function renderMA() {
     S.maRel = relation; S.maRes = res;
   }
 }
-// ---------------- AI 问盘：点一下把此刻盘面整理成数据 →（可选）DeepSeek 写总结 → 拼成问题，复制去网页版问 ----------------
-const ASK_Q = "btc_ask_q", DSKEY = "btc_ds_key";
+// ---------------- AI 问盘：点一下把此刻盘面整理成数据，拼成问题，复制去网页版问 ----------------
+const ASK_Q = "btc_ask_q";
 const ASK_DEFAULT = "BTC 涨跌过程里常见的就那几种形态：急涨急跌的深 V 或倒 V；正在形成的 U 型；在一个区间里震荡，重心向上或向下；一路单边上涨或单边下跌。现在走的是哪一种？接下来最可能演变成哪一种？";
 const lsGet = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
 const lsSet = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) { /* 存不了就只在本次有效 */ } };
@@ -2529,48 +2529,18 @@ function askSnapshot() {
   L.push(`15 分钟 K 线（最近 24 根，同上）：\n` + b15.slice(-24).map(bar).join("\n"));
   return L.join("\n");
 }
-async function dsSummary(key, data) {
-  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 45000);
-  try {
-    const r = await fetch("https://api.deepseek.com/chat/completions", { method: "POST", signal: ctl.signal,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: "deepseek-chat", temperature: 0.2, max_tokens: 500, messages: [
-        { role: "system", content: "你是加密货币盘面记录员。根据用户给的 BTC 行情数据，用中文写一段 200 字以内的盘面总结：按时间顺序讲最近一两天价格怎么走过来的（关键高低点和时间）、现在处在什么位置、各周期均线和资金面（资金费率、持仓量、多空比）说明了什么。相邻两个转折点之间是一整段走势，要写成「几点到几点从多少涨 / 跌到多少」，不要说成某个时刻突然发生。只写数据里有的内容（比如数据里没有成交量，就不要提放量缩量），只描述已经发生的事实，不要预测，不要给交易建议，不要用 Markdown。" },
-        { role: "user", content: data }] }) });
-    if (r.status === 401) throw new Error("Key 无效（401），请重新设置");
-    if (r.status === 402) throw new Error("DeepSeek 账户余额不足（402）");
-    if (!r.ok) throw new Error(`DeepSeek 返回 ${r.status}`);
-    return ((await r.json()).choices?.[0]?.message?.content || "").trim();
-  } finally { clearTimeout(to); }
-}
-function askKeyUI() { $("askKey").textContent = lsGet(DSKEY) ? "DeepSeek Key 已设置 · 更换" : "设置 DeepSeek Key"; }
 (function initAsk() {
   $("askQ").value = lsGet(ASK_Q) || ASK_DEFAULT;
   $("askQ").addEventListener("change", () => lsSet(ASK_Q, $("askQ").value.trim() === ASK_DEFAULT ? "" : $("askQ").value.trim()));
-  askKeyUI();
-  $("askKey").addEventListener("click", () => {
-    const v = prompt("粘贴 DeepSeek 的 API Key（platform.deepseek.com → API keys）。只存在这台设备的浏览器里，不会同步到云端。清空 = 删除。", "");
-    if (v === null) return;
-    lsSet(DSKEY, v.trim()); askKeyUI();
-    $("askMsg").textContent = v.trim() ? "已保存" : "已删除";
-  });
-  $("askGen").addEventListener("click", async () => {
+  $("askGen").addEventListener("click", () => {
     const data = askSnapshot();
     if (!data) { $("askMsg").textContent = "行情还没加载完，稍等再点"; return; }
-    const q = $("askQ").value.trim() || ASK_DEFAULT, key = lsGet(DSKEY);
-    $("askGen").disabled = true;
-    let sum = "", note = "";
-    if (key) {
-      $("askMsg").textContent = "DeepSeek 正在总结盘面…";
-      try { sum = await dsSummary(key, data); } catch (e) { note = `DeepSeek 总结失败：${e.name === "AbortError" ? "超时" : e.message}，只带数据`; }
-    } else note = "没设置 DeepSeek Key，只带数据（不影响提问）";
-    $("askGen").disabled = false;
-    $("askTxt").value = `我在看币安 BTCUSDT 永续合约，想请你根据下面的数据判断走势形态。\n\n` +
-      (sum ? `【盘面总结（DeepSeek 根据下面的数据写的）】\n${sum}\n\n` : "") +
-      `【数据】\n${data}\n\n【我的问题】\n${q}\n\n` +
-      `请这样回答：\n1. 现在属于哪种形态（深 V / 倒 V / U 型 / 区间震荡重心向上 / 区间震荡重心向下 / 单边上涨 / 单边下跌 / 其他），依据数据里的哪些点；\n2. 接下来 1–4 小时最可能演变成哪种形态，给几种可能和大致概率；\n3. 出现什么价格或情况，说明你的判断错了。`;
+    const q = $("askQ").value.trim() || ASK_DEFAULT;
+    $("askTxt").value = `我在看币安 BTCUSDT 永续合约，想请你根据下面的数据判断走势形态。\n\n【数据】\n${data}\n\n【我的问题】\n${q}\n\n` +
+      `请这样回答（只根据上面的数据，数据里没有的不要编）：\n0. 先用两三句话概括最近一两天价格怎么走过来的（按时间顺序，带关键高低点和时间）；\n` +
+      `1. 现在属于哪种形态（深 V / 倒 V / U 型 / 区间震荡重心向上 / 区间震荡重心向下 / 单边上涨 / 单边下跌 / 其他），依据数据里的哪些点；\n2. 接下来 1–4 小时最可能演变成哪种形态，给几种可能和大致概率；\n3. 出现什么价格或情况，说明你的判断错了。`;
     $("askOut").hidden = false;
-    $("askMsg").textContent = note || `已生成（${fmtClock(Date.now())}）· 选一个网页版，复制后粘贴发送`;
+    $("askMsg").textContent = `已整理好（${fmtClock(Date.now())} 的行情）· 选一个网页版，复制后粘贴发送`;
   });
   $("askOut").addEventListener("click", async e => {
     const b = e.target.closest("[data-ask]"); if (!b) return;
