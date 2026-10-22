@@ -17,6 +17,9 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+TZ = ZoneInfo(os.environ.get("DISPLAY_TZ", "Asia/Tokyo"))      # 提醒时间按东京时间写，Muse 推送时直接可读
 
 from publish import Publisher
 
@@ -114,7 +117,7 @@ class Outbox:
 
     def add(self, level, kind, title, body):
         t = time.time()
-        a = dict(id=f"{int(t * 1000)}-{hashlib.md5((title + body).encode()).hexdigest()[:6]}", time=datetime.fromtimestamp(t).astimezone().isoformat(),
+        a = dict(id=f"{int(t * 1000)}-{hashlib.md5((title + body).encode()).hexdigest()[:6]}", time=datetime.fromtimestamp(t, TZ).isoformat(timespec="seconds"),
                  level=level, kind=kind, title=title, body=body)
         self.items.append(a)
         self.items = self.items[-300:]
@@ -130,7 +133,7 @@ class Outbox:
         for _ in range(3):
             try:
                 self._load()
-                body = {"message": "新提醒", "content": base64.b64encode(json.dumps({"updated": datetime.now().astimezone().isoformat(), "alerts": self.items},
+                body = {"message": "新提醒", "content": base64.b64encode(json.dumps({"updated": datetime.now(TZ).isoformat(timespec="seconds"), "alerts": self.items},
                                                                                   ensure_ascii=False, indent=1).encode()).decode()}
                 if self.sha:
                     body["sha"] = self.sha
