@@ -482,15 +482,18 @@ let PAPER_URL = DATA + "paper.json";
 let SPEC_URL = params.get("spec") || (LOCAL ? "../../rules_spec.json" : DATA + "rules_spec.json");
 // raw.githubusercontent.com 按分支名读取会缓存 5 分钟，所以先查 data 分支最新提交，再按提交编号读取（内容固定，不会读到旧数据）。
 // 查询带 ETag，数据没变时返回 304，不计入 GitHub 每小时 60 次的匿名限额。
+// 连了云端就带上令牌查（每小时 5000 次）；查不到时（比如同一网络下匿名限额用完）改按分支名读，最多晚 5 分钟
 async function resolveData() {
   if (!GH || params.get("data")) return;
+  const setData = base => { DATA = base; NEWS_URL = params.get("news") || DATA + "status.json"; PAPER_URL = DATA + "paper.json"; SPEC_URL = params.get("spec") || DATA + "rules_spec.json"; };
   try {
-    const r = await fetch(`https://api.github.com/repos/${GH[0]}/${GH[1]}/git/ref/heads/data`, { cache: "no-cache" });
-    if (!r.ok) return;
-    const sha = (await r.json()).object.sha;
-    DATA = `https://raw.githubusercontent.com/${GH[0]}/${GH[1]}/${sha}/`;
-    NEWS_URL = params.get("news") || DATA + "status.json"; PAPER_URL = DATA + "paper.json"; SPEC_URL = params.get("spec") || DATA + "rules_spec.json";
-  } catch (e) { /* 网络问题时沿用上一次的地址 */ }
+    const tok = typeof CLOUD !== "undefined" && CLOUD.token;
+    const r = await fetch(`https://api.github.com/repos/${GH[0]}/${GH[1]}/git/ref/heads/data`, { cache: "no-cache", ...(tok ? { headers: { Authorization: `Bearer ${tok}` } } : {}) });
+    if (!r.ok) throw new Error(r.status);
+    setData(`https://raw.githubusercontent.com/${GH[0]}/${GH[1]}/${(await r.json()).object.sha}/`);
+  } catch (e) {
+    if (!DATA.startsWith("https://raw.githubusercontent.com/")) setData(`https://raw.githubusercontent.com/${GH[0]}/${GH[1]}/data/`);   // 还没解析成功过：先按分支名读
+  }
 }
 // rules_spec.json 读不到时的兜底（和仓库里的文件保持一致）
 const SPEC_DEFAULT = {"fees":{"maker_pct":0.02,"taker_pct":0.05},"event_block_min":60,
