@@ -38,10 +38,44 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .conn i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .conn.ok i{background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
 .conn.bad i{background:var(--bad)}
-.refresh{margin-left:auto;font:inherit;font-size:13px;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+/* 盘口、成交数字位数变化时不要让顶栏忽高忽低 */
+.top .conn{white-space:nowrap}
+.tzseg{margin-left:auto;flex:none}
+.tzseg button{font-size:12.5px;padding:5px 9px;white-space:nowrap}
+.tzseg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.refresh{font:inherit;font-size:13px;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
 .refresh:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .refresh[disabled]{opacity:.6}
 .wrap{max-width:1100px;margin:12px auto 0;display:grid;grid-template-columns:1fr;gap:12px}
+/* 目录：窄屏在顶栏下面横向滚动，宽屏固定在左侧 */
+.toc{flex-basis:100%;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:2px 0 -2px}
+.toc::-webkit-scrollbar{display:none}
+.toc a{flex:none;font-size:12.5px;color:var(--fg2);text-decoration:none;padding:3px 9px;border-radius:999px;background:var(--chip);white-space:nowrap}
+.toc a.on{background:var(--accent);color:#fff}
+.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.toc button.tedit{flex:none;font:inherit;font-size:12.5px;padding:3px 9px;border-radius:999px;border:1px dashed var(--line);background:none;color:var(--muted);cursor:pointer;white-space:nowrap}
+/* 调整卡片顺序 */
+.lay{position:fixed;z-index:20;right:max(12px,env(safe-area-inset-right,0px));top:70px;width:min(340px,calc(100vw - 24px));max-height:calc(100vh - 90px);overflow:auto;
+  background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.18);padding:12px;display:flex;flex-direction:column;gap:8px}
+.lay[hidden]{display:none}
+.lay h3{margin:0;font-size:14px}
+.lay ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.lay li{display:flex;align-items:center;gap:6px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-size:13.5px}
+.lay li.drag{opacity:.4}
+.lay li.over{border-color:var(--accent)}
+.lay li .h{cursor:grab;color:var(--muted);user-select:none;padding:0 2px}
+.lay li span.n{flex:1;min-width:0}
+.lay li button{font:inherit;font-size:13px;width:28px;height:26px;border:1px solid var(--line);border-radius:5px;background:var(--chip);color:var(--fg);cursor:pointer}
+.lay li button:disabled{opacity:.35;cursor:default}
+.lay .row2{display:flex;gap:8px;justify-content:flex-end}
+.card{scroll-margin-top:calc(var(--toph,110px) + 10px)}
+@media(min-width:1260px){
+  .toc{position:fixed;left:max(12px,calc((100vw - 1100px) / 2 - 172px));top:76px;width:150px;flex-direction:column;gap:2px;margin:0;overflow:visible}
+  .toc a{background:none;border-radius:6px;padding:5px 10px;font-size:13px}
+  .toc a:hover{background:var(--chip)}
+  .toc a.on{background:var(--chip);color:var(--accent);font-weight:500}
+  .wrap{margin-left:max(180px,calc((100vw - 1100px) / 2))}
+}
 @media(min-width:900px){.wrap{grid-template-columns:1fr 1fr}.span{grid-column:1/-1}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .card h2{margin:0;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:.04em;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
@@ -59,6 +93,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .fc .h .d{font-size:18px;font-weight:600}
 .fc .h .p{font-family:var(--m);font-size:13px}
 .fc .h .a{font-size:11.5px;color:var(--muted)}
+.fc .h .ctx{font-size:11.5px;color:var(--warn)}
+.moved{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin-bottom:8px;font-size:13.5px}
+.moved b{font-size:16px}
 .meter{height:5px;border-radius:99px;background:var(--grid);position:relative;overflow:hidden}
 .meter i{position:absolute;top:0;bottom:0}
 .verdict{border-left:3px solid var(--warn);padding:8px 12px;background:var(--chip);border-radius:0 6px 6px 0;font-size:13.5px}
@@ -100,6 +137,48 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
 .plans .pl .k{font-family:var(--m);font-size:13.5px;display:flex;flex-wrap:wrap;gap:4px 14px}
 .plans .pl .k span b{font-family:var(--f);font-weight:500;color:var(--muted);font-size:12px;margin-right:4px}
 .plans .pl p{margin:0;font-size:13px;color:var(--fg2)}
+/* 规则说明 */
+.rdoc{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px 18px}
+.rdoc details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-width:0}
+.rdoc details[open]{background:var(--card)}
+.rdoc summary{cursor:pointer;font-weight:600;font-size:14px}
+.rdoc ul,.rdoc ol{margin:6px 0 2px;padding-left:20px;font-size:13.5px;color:var(--fg2)}
+.rdoc li{margin:3px 0}
+.rdoc b{color:var(--fg)}
+.rdoc .bt{font-size:12.5px;color:var(--muted)}
+/* 盯盘时间表 */
+.hv{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:2px}
+.hv div{height:34px;border-radius:3px;position:relative;display:flex;align-items:flex-end;justify-content:center;font-size:10px;color:var(--fg2);padding-bottom:1px}
+.hv div.now{outline:2px solid var(--fg);outline-offset:1px}
+.hv div.hot{color:#fff}
+@media(max-width:600px){.hv{grid-template-columns:repeat(12,minmax(0,1fr))}}
+/* 持仓与卖出 */
+.sub-h{margin:4px 0 0;font-size:13px;font-weight:500;color:var(--muted)}
+.jt tr.sell td{background:color-mix(in srgb,var(--bad) 10%,transparent)}
+/* 急动提醒 */
+.fm-now{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;padding:10px 12px;border-radius:8px;background:var(--chip);border-left:4px solid var(--muted)}
+.fm-now.on{border-color:var(--bad)}
+.fm-now b{font-size:18px}
+.fm-wins{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.fm-wins div{border:1px solid var(--line);border-radius:6px;padding:6px 10px;display:flex;flex-direction:column;min-width:0}
+.fm-wins div.live{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent)}
+.fm-wins span{font-size:12px;color:var(--muted)}
+.fm-wins b{font-size:14px}
+/* 顶部「此刻结论」 */
+.sum-in{grid-template-columns:repeat(2,minmax(0,170px))}
+.sum-sides{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:10px}
+.sum-side{border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.sum-side.long{border-top:4px solid var(--good)} .sum-side.short{border-top:4px solid var(--bad)}
+.sum-side .hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sum-side .hd h3{margin:0;font-size:15px}
+.sum-side .vd{font-size:22px;font-weight:700}
+.sum-side ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--fg2)}
+.sum-side .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px}
+.sum-side .grid div{background:var(--chip);border-radius:6px;padding:5px 9px;display:flex;flex-direction:column;min-width:0}
+.sum-side .grid span{font-size:11.5px;color:var(--muted)}
+.sum-side .grid b{font-family:var(--m);font-size:14.5px;font-weight:600}
+.sum-side .if{font-size:12.5px;color:var(--muted)}
+.sum-line{font-size:14px;margin:0}
 .mirror{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
 .side{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .side.long{border-top:3px solid var(--good)} .side.short{border-top:3px solid var(--bad)}
@@ -134,6 +213,19 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
 .btn.sm{padding:3px 8px;font-size:12px}
 .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 label.wide{grid-column:1/-1}
+textarea{font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%;resize:vertical;min-height:58px}
+textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.ct{min-width:1180px}
+.ct th{white-space:nowrap}
+.ct td.txt{font-family:var(--f);white-space:normal;min-width:140px;max-width:260px}
+.ct .tag{display:inline-block;font-family:var(--f);font-size:11px;padding:0 6px;border-radius:999px;background:var(--chip);margin:1px 2px 0 0}
+.ma{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+.ma th{font-weight:500;color:var(--muted);text-align:right;padding:5px 8px;font-size:11.5px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ma th:first-child,.ma td:first-child{text-align:left}
+.ma td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:right;font-family:var(--m);white-space:nowrap}
+.ma td.t{font-family:var(--f);text-align:left}
+.ma svg.spark{display:block;margin-left:auto}
+.ma td small{display:block;font-size:10.5px;color:var(--muted);font-family:var(--f)}
 </style>
 </head>
 <body>
@@ -143,21 +235,91 @@ label.wide{grid-column:1/-1}
   <span class="chg num" id="chg">—</span>
   <span class="conn num" id="book"></span>
   <span class="conn" id="conn"><i></i><span id="connText">连接中…</span></span>
+  <div class="seg tzseg" role="group" aria-label="时区">
+    <button type="button" data-tz="Asia/Tokyo" aria-pressed="true">东京时间</button>
+    <button type="button" data-tz="Asia/Shanghai" aria-pressed="false">北京时间</button>
+  </div>
   <button class="refresh" id="refresh" type="button">手动刷新</button>
+  <nav class="toc" id="toc" aria-label="目录"></nav>
+</div>
+<div class="lay" id="lay" role="dialog" aria-label="调整卡片顺序" hidden>
+  <h3>调整卡片顺序</h3>
+  <p class="note">拖动左边的 ⠿，或点 ↑ ↓ 移动。顺序只保存在这台设备的浏览器里，每个人可以不一样。</p>
+  <ol id="layList"></ol>
+  <div class="row2"><button type="button" class="btn" id="layReset">恢复默认顺序</button><button type="button" class="btn primary" id="layDone">完成</button></div>
 </div>
 
 <div class="wrap">
 
-  <section class="card span">
+  <section class="card span" id="summaryCard">
+    <h2>此刻结论 <small id="sumBasis">依据已收盘 K 线 · 不是投资建议</small></h2>
+    <p class="sum-line" id="sumNow">正在读取行情…</p>
+    <form class="sum-in" onsubmit="return false">
+      <label for="sbal">账户余额 (U)<input id="sbal" inputmode="decimal" placeholder="例如 1000"></label>
+      <label for="srisk">每笔最多亏 (% 余额)<input id="srisk" inputmode="decimal" value="2"></label>
+    </form>
+    <div class="sum-sides" id="sumSides"></div>
+    <p class="note">判断顺序：先看硬性禁止（重大数据前 60 分钟、今日亏损超 15%、保证金占用超三分之一），再看规则 A / B 有没有触发，最后看是不是在急涨急跌后逆势进场。规则 A / B 在扣手续费的真实挂单回测里都没有稳定赚钱，所以即使出现信号也只叫「有参考信号」，建议小仓位。仓位 = 余额 × 每笔最多亏 % ÷ 止损幅度；杠杆只决定占用多少保证金，按「强平价离进场至少是止损距离的 2 倍」封顶。余额和比例与「交易日志与风控」共用，只存在这台设备上。</p>
+  </section>
+
+  <section class="card span" id="fastCard">
+    <h2>急动提醒 <small>快速行情出现时不要追 · 大行情高发时段</small></h2>
+    <div class="fm-now" id="fmNow">正在读取行情…</div>
+    <div class="fm-wins" id="fmWins"></div>
+    <h3 class="sub-h">盯盘时间表（<span class="tzn">东京时间</span> · <span id="hvDay">—</span>）</h3>
+    <div class="hv" id="hv" role="img" aria-label="今天每小时的波动大小"></div>
+    <div class="verdict" id="hvSum"></div>
+    <p class="note">「急动」= 最近 5 分钟或 15 分钟已经走了 1 个 ATR 以上（ATR 是过去 24 小时 1 小时 K 线的平均振幅，现在约 <span id="fmAtr">—</span> 美元）。提醒会保留 30 分钟，因为这段时间最容易冲动追单。下面的历史结果来自 2021–2026 年 1 分钟数据：急动后下一分钟顺势市价追进，之后继续同方向的比例，以及「止盈 1 ATR、止损 0.5 ATR、最长 30 分钟」这个打法扣掉 0.10% 往返手续费后的每笔平均。盯盘时间表：2021–2026 年每个小时（东京时间）的振幅和「30 分钟走 3 个 ATR 以上」大行情的频率，相对全天平均的倍数，颜色越深越活跃，当前小时有框；工作日、周六、周日分开，美国夏令时和冬令时分开（美国相关的时段差 1 小时）。时段卡片里的倍数，是那一小时出现「30 分钟内走 3 个 ATR 以上」大行情的频率和平时相比（美东 8:30 那一小时包括没有数据公布的日子，真正有数据的日子会更高）。</p>
+  </section>
+
+  <section class="card span" id="posCard">
+    <h2>持仓与卖出 <small>喊单记录里每一单的进场、卖出计划和卖出记录 · 只做记录和提示，不会下单</small></h2>
+    <div class="verdict" id="pAlert">读取中…</div>
+    <div class="jbtns"><button type="button" class="btn" id="pNotify">开启桌面提醒</button><span class="note" id="pNotifyMsg"></span></div>
+    <div class="tablewrap"><table class="jt" id="pOpen"></table></div>
+    <h3 class="sub-h">最近卖出</h3>
+    <div class="tablewrap"><table class="jt" id="pDone"></table></div>
+    <p class="note">每一单进场时就写好卖出计划：止损价、止盈价和最长持有时间（模型的单按「此刻结论」当时给出的；人工喊单按你填的，没填止损止盈就只按时间）。价格碰到止损或止盈、或者到了最长持有时间，这里马上标「该卖了」并发提醒，同时记下卖出时间、价格、原因和盈亏，喊单记录同步显示。你自己提前卖了，可以点「手动卖出」按当前价记一笔。持有期间面板一直盯着盘面：出现急动（5 或 15 分钟走 1 个 ATR 以上）、离止损不到 0.3 个 ATR、15 分钟内进入美股开盘或数据公布时段、出现红色新闻警报，都会在「状态 / 盘面提醒」里标出来并发提醒。回测（2021–2026，4613 笔）里，这些时候马上卖都没有比按原计划拿着更好（平均差 0.05%–0.27%），所以提醒告诉你发生了什么、该检查什么，卖不卖仍按止损、止盈和时间。盈亏是按价格算的百分比，没扣手续费和资金费，也没乘杠杆。后台监控程序运行时，模型的单在浏览器关着时也会记录卖出，并发 Mac 通知。</p>
+  </section>
+
+  <section id="statusCard" class="card span">
     <h2>当前状态 <small id="stUpd">—</small></h2>
     <div class="status" id="status"></div>
   </section>
 
-  <section class="card span">
+  <section class="card span" id="maCard">
+    <h2>多周期均线 <small>MA7 / MA25 / MA99 · 均线按已收盘 K 线计算，现价实时</small></h2>
+    <div class="tablewrap"><table class="ma" id="ma"></table></div>
+    <div class="verdict" id="maSum"></div>
+    <p class="note">日线按 UTC 收盘（<span class="tzn">东京时间</span>每天 <span class="tzdc">09:00</span>）。均线排列在回测里没有单独的预测力（加 1 小时趋势过滤并没有让信号变成稳定盈利），这里用来看各周期的趋势是否一致。</p>
+  </section>
+
+  <section class="card span" id="usCard">
+    <h2>美股联动 <small id="usSess">—</small></h2>
+    <div class="tablewrap"><table class="ma" id="us"></table></div>
+    <div class="verdict" id="usSum"></div>
+    <p class="note">「实时价」是币安的美股永续合约，一周 7 天 24 小时交易，毫秒级推送，盘前、盘中、盘后、夜盘、周末都有价格。夜盘和周末的价格是币圈交易者定的，成交比正股少，开盘时可能和正股有差距。「官方价」来自 Yahoo（由后台监控程序每分钟抓取）：常规收盘价、盘前盘后最后一笔、含夜盘的全时段最新价，用来对照。相关性和贝塔用过去约 20 天的 1 小时涨跌计算；贝塔 1.7 表示 BTC 涨跌 1% 时，这只股票通常涨跌 1.7%。「24 小时走势」是币安永续过去 24 小时的 5 分钟收盘价，最右端是实时价，虚线是美股收盘参考价。「相对 BTC」= 这只股票 1 小时涨跌 − 贝塔 × BTC 1 小时涨跌，正数表示比 BTC 强。回测（约 60 天，1 小时和 5 分钟）里这些股票都不领先 BTC，所以它用来判断这波涨跌是大盘带的还是币圈自己的，不用来预测。</p>
+  </section>
+
+  <section id="fcCard" class="card span">
     <h2>方向判断 <small>结论按已收盘 K 线 · 盘中预估另列 · 准确率来自模型没见过的数据</small></h2>
+    <div class="moved" id="moved"></div>
     <div class="fc" id="fc"></div>
     <div class="verdict" id="fcsum"></div>
-    <p class="note">「上涨概率」越偏离 50%，模型把握越大。「历史准确率」减去「±」误差后仍高于 50%，才算这个周期真的有效。大字是收盘结论，只在 K 线收盘时变化；「盘中预估」用最新成交价补全正在走的那根，会来回跳，只作参考。</p>
+    <p class="note">上面一行是<b>已经走出来的行情</b>；下面的格子是<b>接下来</b>那段时间收盘比现在高的概率，两者不是一回事。这个模型的主要依据是 RSI、KDJ 和 24 小时高低位置，本质是「跌多了押反弹、涨多了押回落」，所以急跌时它会偏涨、急涨时会偏跌，这时面板会改标为「超卖反弹倾向 / 超买回落倾向」，并给出同类情况的历史结果。「上涨概率」越偏离 50%，模型把握越大。「历史准确率」减去「±」误差后仍高于 50%，才算这个周期真的有效。大字是收盘结论，只在 K 线收盘时变化；「盘中预估」用最新成交价补全正在走的那根，会来回跳，只作参考。</p>
+  </section>
+
+  <section class="card span" id="volCard">
+    <h2>波动与扛单 <small>止损和仓位按现在的波动算，不按固定点数 · 不是投资建议</small></h2>
+    <div class="status" id="volState"></div>
+    <form id="volForm" onsubmit="return false">
+      <label for="volHold">打算持有<select id="volHold"><option>1 小时</option><option selected>4 小时</option><option>24 小时</option></select></label>
+      <label for="volFixed">对照：固定止损（美元）<input id="volFixed" inputmode="decimal" value="500"></label>
+    </form>
+    <div class="tablewrap"><table class="ma" id="volTbl"></table></div>
+    <div class="verdict" id="volSize"></div>
+    <div class="verdict badv" id="volFade"></div>
+    <p class="note">「逆向」= 进场后、不管最后对不对，价格先朝反方向走的最远距离。2021–2026 年的数据里，这个距离和「过去 24 小时 1 小时 K 线平均振幅」（ATR）成正比：无论行情平静还是剧烈，换算成 ATR 的倍数几乎一样。所以止损和仓位应该跟着 ATR 变，而不是沿用上周的固定点数。建议止损取所选持有时间的 P80 逆向（五次里有四次不会被正常波动扫掉），仓位 = 余额 × 每笔最多亏 % ÷ 止损幅度，余额和比例在「交易日志与风控」里设置。</p>
   </section>
 
   <section class="card span" id="planCard">
@@ -169,7 +331,7 @@ label.wide{grid-column:1/-1}
     </details>
   </section>
 
-  <section class="card span">
+  <section id="mirrorCard" class="card span">
     <h2>做多信号 / 做空信号 <small>完全镜像 · 5 分钟 / 15 分钟 / 1 小时同时看</small></h2>
     <div class="mirror" id="mirror"></div>
     <details class="rules"><summary>为什么结论不只看张主任的条件</summary>
@@ -183,7 +345,7 @@ label.wide{grid-column:1/-1}
     <p class="note">模拟盘和回测用同一套代码逻辑（已逐笔核对一致），挂单只有被价格穿过才算成交，手续费按挂单 0.02% / 市价 0.05% 计算。攒够几十笔后，和回测对比，就知道规则在真实行情里是否成立。</p>
   </section>
 
-  <section class="card span">
+  <section id="calcCard" class="card span">
     <h2>我的持仓 · 推演 <small>只做计算，不会下单</small></h2>
     <form id="pos" onsubmit="return false">
       <label>方向
@@ -207,7 +369,8 @@ label.wide{grid-column:1/-1}
   </section>
 
   <section class="card span" id="journalCard">
-    <h2>交易日志与风控 <small>只保存在这台设备的浏览器里，可导出备份</small></h2>
+    <h2>交易日志与风控 <small>连接云端后存在私有 GitHub 仓库，可导出备份</small></h2>
+    <div class="jbtns"><button type="button" class="btn cloud-on">连接云端</button><button type="button" class="btn cloud-now cloud-off">立即同步</button><button type="button" class="btn cloud-off">断开云端</button><span class="cloud-st note"></span></div>
     <div class="status" id="risk"></div>
     <div class="verdict" id="riskMsg"></div>
     <form id="jform" onsubmit="return false">
@@ -237,21 +400,59 @@ label.wide{grid-column:1/-1}
     <div class="tablewrap"><table class="jt" id="jtable"></table></div>
   </section>
 
-  <section class="card">
+  <section class="card span" id="callsCard">
+    <h2>喊单记录与验证 <small>到期自动按币安行情核对 · 连接云端后存在私有 GitHub 仓库</small></h2>
+    <div class="jbtns"><button type="button" class="btn cloud-on">连接云端</button><button type="button" class="btn cloud-now cloud-off">立即同步</button><button type="button" class="btn cloud-off">断开云端</button><span class="cloud-st note"></span></div>
+    <div class="status" id="cStats"></div>
+    <div class="tablewrap"><table class="ma" id="cHzTbl"></table></div>
+    <div class="verdict" id="cSum">还没有记录。把张主任（或任何人、包括你自己）的喊单原话贴进来，识别后确认保存，到期面板会自动核对。</div>
+    <label for="cText" class="wide">粘贴喊单原话<textarea id="cText" placeholder="例如：84300 空，止损 84800，目标 83000，今晚看"></textarea></label>
+    <div class="jbtns"><button type="button" class="btn" id="cParse">识别</button><span class="note" id="cParseMsg"></span></div>
+    <form id="cform" onsubmit="return false">
+      <label for="cWho">谁喊的<input id="cWho" list="cWhoList" value="张主任"><datalist id="cWhoList"></datalist></label>
+      <label for="cTime">喊单时间（<span class="tzn">东京时间</span>）<input id="cTime" type="datetime-local"></label>
+      <label>方向
+        <div class="seg" role="group" aria-label="喊单方向">
+          <button type="button" class="long" id="c-long" aria-pressed="false">看多</button>
+          <button type="button" class="short" id="c-short" aria-pressed="false">看空</button>
+        </div>
+      </label>
+      <label for="cRef">参考价（空着 = 喊单时的市价）<input id="cRef" inputmode="decimal"></label>
+      <label for="cTarget">目标价<input id="cTarget" inputmode="decimal"></label>
+      <label for="cStop">止损价<input id="cStop" inputmode="decimal"></label>
+      <label for="cHz">多久验证<select id="cHz"><option value="15">15 分钟</option><option value="60">1 小时</option><option value="120">2 小时</option><option value="240" selected>4 小时</option><option value="720">12 小时</option><option value="1440">24 小时</option><option value="4320">3 天</option><option value="10080">7 天</option></select></label>
+      <label for="cFilter">统计范围<select id="cFilter"><option value="">全部人</option></select></label>
+    </form>
+    <div class="jbtns">
+      <button type="button" class="btn primary" id="cAdd">保存这条喊单</button>
+      <button type="button" class="btn" id="cExport">导出</button>
+      <label class="btn" for="cImport">导入<input type="file" id="cImport" accept="application/json" hidden></label>
+    </div>
+    <div class="tablewrap"><table class="jt ct" id="cTable"></table></div>
+    <p class="note">核对方法：从喊单时间到验证时间，逐根取币安 BTCUSDT 永续 K 线（24 小时内用 1 分钟，3 天内用 5 分钟，更长用 1 小时）。到期价比参考价朝喊单方向走了 0.1% 以上算「对」，反方向 0.1% 以上算「错」，其余算「平」。目标价和止损价按 K 线最高 / 最低判断谁先到，同一根里两个都碰到按先打止损算。上方的对比表不管每条喊单自己的验证周期，统一看进场后 1 小时、4 小时、24 小时的方向，用来判断方向判断在多长时间内最准、止盈该放多远。「中途最大逆向」是到期前价格朝反方向走的最远距离，用来看「方向对了但拿不住」：止损如果比它小，就会在方向兑现之前被扫掉。喊的价位离当时市价超过 0.15% 时当作挂单：价格碰到这个价才算进场，进场前的波动不计，到期都没碰到记「未成交」，不算对错。「模型·此刻结论」是自动记录的：顶部「此刻结论」每出现一次参考信号（规则 A 或 B），就按当时给出的进场价、止损、止盈和持有时间记一条，同一规则同方向 60 分钟内只记一次。浏览器开着时面板自己记；后台监控程序运行时，浏览器关着也会记，打开面板后自动合并。在「统计范围」里选它，就能看到模型自己的成绩。同一个人在上一条还没到期时喊了反方向，上一条标「改口」，照常核对，单独计数。</p>
+  </section>
+
+  <section id="rulerCard" class="card">
     <h2>预期振幅 <small id="rulerTag">—</small></h2>
     <div class="row" id="ruler"></div>
     <p class="note">止损小于 1h 振幅中位数，被正常波动扫掉的概率很高。</p>
   </section>
 
-  <section class="card span">
+  <section id="newsCard" class="card span">
     <h2>新闻与异动 <small id="newsUpd">点击标题看原文</small></h2>
     <ul class="list" id="news"><li><span class="t">—</span><span>正在读取新闻源…</span></li></ul>
     <p class="note">每条新闻都标利多 / 利空 / 中性：「AI判断」来自 Claude 或 Muse，「规则判断」是 AI 结果回来前的关键词初判。新闻由后台监控程序每分钟更新，事件日志会记录每条新闻之后的实际涨跌，用来检验这些判断。</p>
   </section>
 
+  <section class="card span" id="rulesCard">
+    <h2>规则说明 <small>面板上每个结论是怎么来的 · 参数随 rules_spec.json 自动更新</small></h2>
+    <div class="rdoc" id="rulesDoc"></div>
+  </section>
+
 </div>
 
 <script src="weights.js"></script>
+<script src="context.js"></script>
 <script src="model.js"></script>
 <script>
 // ---------------- 配置 ----------------
@@ -259,10 +460,12 @@ const params = new URLSearchParams(location.search);
 // 后台监控程序的输出目录（status.json、paper.json）。部署到 GitHub 时由 Muse 推送到 data/；本机测试用 ?data=../../monitor/out/
 // 托管在 GitHub Pages（<用户>.github.io/<仓库>/）时，自动读取同一仓库 data 分支
 const GH = location.hostname.endsWith(".github.io") ? [location.hostname.split(".")[0], location.pathname.split("/")[1]] : null;
-let DATA = params.get("data") || "data/";
+// 在本机（localhost）打开时，直接读本机监控程序的输出和仓库里的规则文件
+const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
+let DATA = params.get("data") || (LOCAL ? "../../monitor/out/" : "data/");
 let NEWS_URL = params.get("news") || DATA + "status.json";
 let PAPER_URL = DATA + "paper.json";
-let SPEC_URL = params.get("spec") || DATA + "rules_spec.json";
+let SPEC_URL = params.get("spec") || (LOCAL ? "../../rules_spec.json" : DATA + "rules_spec.json");
 // raw.githubusercontent.com 按分支名读取会缓存 5 分钟，所以先查 data 分支最新提交，再按提交编号读取（内容固定，不会读到旧数据）。
 // 查询带 ETag，数据没变时返回 304，不计入 GitHub 每小时 60 次的匿名限额。
 async function resolveData() {
@@ -286,7 +489,7 @@ const US_HOLIDAYS = new Set(["2026-11-26","2026-12-25","2027-01-01","2027-01-18"
 const EVENTS = [["FOMC 利率决议","2026-10-28T14:00:00-04:00"],["美国 CPI（10 月）","2026-11-10T08:30:00-05:00"]];
 const FAPI = "https://fapi.binance.com";
 // 币安合约推送已拆分：/market = 成交、K 线、标记价格；/public = 盘口（毫秒级）
-const WS = "wss://fstream.binance.com/market/stream?streams=btcusdt@aggTrade/btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_15m/btcusdt@kline_1h/btcusdt@markPrice@1s/btcusdt@forceOrder";
+const WS = "wss://fstream.binance.com/market/stream?streams=btcusdt@aggTrade/btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_15m/btcusdt@kline_30m/btcusdt@kline_1h/btcusdt@kline_4h/btcusdt@kline_1d/btcusdt@markPrice@1s/btcusdt@forceOrder";
 const WS_BOOK = "wss://fstream.binance.com/public/ws/btcusdt@bookTicker";
 // 样本外误差（95%），随模型参数一起导出
 const ERR = Object.fromEntries(Object.entries(WEIGHTS).map(([k, v]) => [k, v.err]));
@@ -303,6 +506,16 @@ const S = { b1: [], b5: [], price: NaN, lastPrice: NaN, mark: NaN, funding: NaN,
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const fmt = n => isFinite(n) ? Math.round(n).toLocaleString() : "—";
+// 时区：右上角切换东京 / 北京时间，页面上所有时间都按它显示（保存在本机浏览器）
+const TZNAME = { "Asia/Tokyo": "东京时间", "Asia/Shanghai": "北京时间" }, TZOFF = { "Asia/Tokyo": 540, "Asia/Shanghai": 480 };
+let TZ = (() => { try { const v = localStorage.getItem("btc_tz"); return TZNAME[v] ? v : "Asia/Tokyo"; } catch (e) { return "Asia/Tokyo"; } })();
+const tzName = () => TZNAME[TZ];
+const fmtClock = (ms, sec) => new Date(ms).toLocaleTimeString("zh-CN", { timeZone: TZ, hour12: false, hour: "2-digit", minute: "2-digit", ...(sec ? { second: "2-digit" } : {}) });
+const fmtDT = ms => new Date(ms).toLocaleString("zh-CN", { timeZone: TZ, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+const tzHour = ms => +new Date(ms).toLocaleString("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }) % 24;
+const tzDay = ms => new Date(ms + TZOFF[TZ] * 6e4);              // 用 getUTC* 读出所选时区的日期
+// 监控程序给的新闻时间是东京时间字符串「MM-DD HH:MM」，换成时间戳再按所选时区显示
+const jstStr = s => { const m = /^(\d\d)-(\d\d) (\d\d):(\d\d)/.exec(s || ""); if (!m) return NaN; const y = new Date().getUTCFullYear(); let t = Date.parse(`${y}-${m[1]}-${m[2]}T${m[3]}:${m[4]}:00+09:00`); if (t > Date.now() + 864e5) t = Date.parse(`${y - 1}-${m[1]}-${m[2]}T${m[3]}:${m[4]}:00+09:00`); return t; };
 const pct = (x, d = 2) => isFinite(x) ? (x >= 0 ? "+" : "") + x.toFixed(d) + "%" : "—";
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const jfetch = (u) => fetch(u, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
@@ -310,12 +523,16 @@ const toBar = k => ({ t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], v: +k[5]
 
 // ---------------- 数据 ----------------
 async function bootstrap() {
-  const [k1, k5, k15, k60] = await Promise.all([
+  const [k1, k5, k15, k60, k30, k240, k1d] = await Promise.all([
     jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=1m&limit=1500`),
     jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=5m&limit=1500`),
     jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=15m&limit=500`),
-    jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=500`)]);
+    jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=1000`),
+    jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=30m&limit=200`),
+    jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=4h&limit=200`),
+    jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=1d&limit=200`)]);
   S.b1 = k1.map(toBar); S.b5 = k5.map(toBar); S.b15 = k15.map(toBar); S.b60 = k60.map(toBar);
+  S.b30 = k30.map(toBar); S.b240 = k240.map(toBar); S.b1d = k1d.map(toBar);
   S.price = S.lastPrice = S.b1.at(-1).c;
   await Promise.allSettled([pollOI(), pollLS(), pollFunding(), pollNews()]);
 }
@@ -365,7 +582,7 @@ function connect() {
       S.price = +d.p; S.lag = Date.now() - d.T; S.ticks.push(Date.now()); scheduleTick();
     } else if (stream.includes("@kline_")) {
       const k = d.k, bar = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.v, tb: +k.V };
-      upsert({ "1m": S.b1, "5m": S.b5, "15m": S.b15, "1h": S.b60 }[k.i], bar);
+      upsert({ "1m": S.b1, "5m": S.b5, "15m": S.b15, "30m": S.b30, "1h": S.b60, "4h": S.b240, "1d": S.b1d }[k.i], bar);
     } else if (stream.endsWith("@forceOrder")) {
       const o = d.o; S.liq.push({ t: o.T, side: o.S, usd: +o.ap * +o.z });
     } else if (stream.endsWith("@markPrice@1s")) {
@@ -435,13 +652,190 @@ function renderNews() {
   const lean = s => !s ? "" : `<em class="lean ${s.startsWith("利多") ? "bull" : s.startsWith("利空") ? "bear" : "neu"}">${esc(s)}</em>`;
   const color = { red: css("--bad"), yellow: css("--warn"), gray: css("--muted") };
   const alerts = (S.news.alerts || []).filter(a => a.kind !== "新闻").slice(0, 3).map(a =>
-    `<li><span class="t">${esc(a.time_local.slice(6))}</span><span><i class="dot" style="background:${color[a.level]}"></i>${esc(a.title)}<small>${esc(a.kind)} · ${esc((a.body || "").split("\n")[0])}</small></span></li>`);
+    `<li><span class="t">${esc(fmtClock(Date.parse(a.time)))}</span><span><i class="dot" style="background:${color[a.level]}"></i>${esc(a.title)}<small>${esc(a.kind)} · ${esc((a.body || "").split("\n")[0])}</small></span></li>`);
   const news = (S.news.news || []).slice(0, 15).map(x =>
-    `<li><span class="t">${esc(x.time.slice(6))}</span><span><i class="dot" style="background:${color[x.level] || color.gray}"></i><a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title_zh || x.title)}</a> ${lean(x.lean || "中性")}<small>${x.reason ? esc(x.reason) + " · " : ""}${esc(x.source)} · ${esc(x.relevance)}相关 · ${esc(x.lean_src || "规则")}判断</small></span></li>`);
+    `<li><span class="t">${esc(isFinite(jstStr(x.time)) ? fmtClock(jstStr(x.time)) : x.time.slice(6))}</span><span><i class="dot" style="background:${color[x.level] || color.gray}"></i><a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title_zh || x.title)}</a> ${lean(x.lean || "中性")}<small>${x.reason ? esc(x.reason) + " · " : ""}${esc(x.source)} · ${esc(x.relevance)}相关 · ${esc(x.lean_src || "规则")}判断</small></span></li>`);
   ul.innerHTML = alerts.concat(news).join("") || `<li><span class="t">—</span><span>暂无新闻</span></li>`;
-  $("newsUpd").textContent = `新闻源更新于 ${S.news.updated || "—"} · 点击标题看原文`;
+  $("newsUpd").textContent = `新闻源更新于 ${isFinite(jstStr(S.news.updated)) ? fmtDT(jstStr(S.news.updated)) : S.news.updated || "—"}（${tzName()}）· 点击标题看原文`;
 }
 
+
+// ---------------- 美股联动 ----------------
+// 名单与 monitor/sources.py 的 US_STOCKS 一致
+const STOCKS = [["QQQ", "纳指 100 ETF", "大盘"], ["SPY", "标普 500 ETF", "大盘"], ["IWM", "罗素 2000 ETF", "大盘"], ["NVDA", "英伟达", "大盘"],
+  ["MSTR", "Strategy（持 BTC）", "加密股"], ["COIN", "Coinbase", "加密股"], ["BMNR", "BitMine（持 ETH）", "加密股"], ["CRCL", "Circle（USDC）", "加密股"],
+  ["HOOD", "Robinhood", "加密股"], ["MARA", "MARA（矿企）", "加密股"], ["IREN", "IREN（矿企）", "加密股"], ["BITO", "BITO（BTC 期货 ETF）", "加密股"]];
+const WS_US = "wss://fstream.binance.com/market/stream?streams=" + STOCKS.map(([s]) => s.toLowerCase() + "usdt@aggTrade").join("/");
+S.stk = {};
+const NYD = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+function nyClock(ms) {
+  const p = Object.fromEntries(NYD.formatToParts(new Date(ms)).map(x => [x.type, x.value]));
+  return { day: `${p.year}-${p.month}-${p.day}`, wd: p.weekday, min: (+p.hour % 24) * 60 + +p.minute };
+}
+// 美股时段（美东时间）：盘前 4:00–9:30、盘中 9:30–16:00、盘后 16:00–20:00、夜盘 20:00–次日 4:00（周日晚到周五晚）
+function usSession(ms) {
+  const c = nyClock(ms), wk = !["Sat", "Sun"].includes(c.wd), open = wk && !US_HOLIDAYS.has(c.day);
+  if (open && c.min >= 570 && c.min < 960) return "盘中";
+  if (open && c.min >= 240 && c.min < 570) return "盘前";
+  if (open && c.min >= 960 && c.min < 1200) return "盘后";
+  if ((c.wd === "Sun" && c.min >= 1200) || (["Mon", "Tue", "Wed", "Thu"].includes(c.wd) && c.min >= 1200) || (["Tue", "Wed", "Thu", "Fri"].includes(c.wd) && c.min < 240)) return "夜盘";
+  return "休市";
+}
+// 永续 1h K 线里最近一个已经走完的美股常规收盘（16:00 美东 = 开盘 15:00 那根的收盘）
+function perpClose(b) {
+  for (let i = b.length - 1; i >= 0; i--) {
+    const c = nyClock(b[i].t);
+    if (c.min === 900 && b[i].t + 3600e3 <= Date.now() && !["Sat", "Sun"].includes(c.wd) && !US_HOLIDAYS.has(c.day)) return b[i].c;
+  }
+  return NaN;
+}
+function corrBeta(x, y) {   // x = BTC 收益，y = 股票收益
+  const n = x.length; if (n < 50) return [NaN, NaN];
+  const mx = x.reduce((a, v) => a + v, 0) / n, my = y.reduce((a, v) => a + v, 0) / n;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < n; i++) { const a = x[i] - mx, b = y[i] - my; sxy += a * b; sxx += a * a; syy += b * b; }
+  return [sxy / Math.sqrt(sxx * syy), sxy / sxx];
+}
+async function pollStocks(full) {
+  const btc = new Map(S.b60.slice(0, -1).map(b => [b.t, b.c]));
+  await Promise.allSettled(STOCKS.map(async ([sym]) => {
+    const o = S.stk[sym] = S.stk[sym] || {};
+    const [h1, m5] = await Promise.all([
+      full || !o.h1 ? jfetch(`${FAPI}/fapi/v1/klines?symbol=${sym}USDT&interval=1h&limit=500`).then(k => k.map(toBar)) : Promise.resolve(o.h1),
+      jfetch(`${FAPI}/fapi/v1/klines?symbol=${sym}USDT&interval=5m&limit=288`).then(k => k.map(toBar))]);
+    o.h1 = h1; o.m5 = m5; o.ago1h = m5[m5.length - 13].o;
+    if (!isFinite(o.price)) o.price = m5.at(-1).c;
+    if (full || !isFinite(o.corr)) {
+      const x = [], y = [];
+      for (let i = 1; i < h1.length - 1; i++) {
+        const a = btc.get(h1[i].t), b = btc.get(h1[i - 1].t);
+        if (a && b && h1[i].c !== h1[i - 1].c) { x.push(Math.log(a / b)); y.push(Math.log(h1[i].c / h1[i - 1].c)); }
+      }
+      [o.corr, o.beta] = corrBeta(x, y);
+    }
+    o.close = perpClose(h1);
+  }));
+}
+function connectStocks() {
+  if (S.wsUS) { S.wsUS.onclose = null; S.wsUS.close(); }
+  const ws = new WebSocket(WS_US); S.wsUS = ws;
+  ws.onclose = () => setTimeout(connectStocks, 5000);
+  ws.onerror = () => ws.close();
+  ws.onmessage = ev => {
+    const { stream, data: d } = JSON.parse(ev.data), sym = stream.split("usdt@")[0].toUpperCase(), o = S.stk[sym];
+    if (o) { o.price = +d.p; o.t = d.T; if (!usQueued) { usQueued = true; requestAnimationFrame(renderUSPrices); } }
+  };
+}
+let usQueued = false;
+function renderUSPrices() {   // 实时价随推送更新，其余列每秒重算
+  usQueued = false;
+  for (const [sym] of STOCKS) { const el = document.getElementById("usp-" + sym), o = S.stk[sym]; if (el && o && isFinite(o.price)) el.textContent = o.price.toFixed(2); }
+}
+// 过去 24 小时 5 分钟收盘价的小折线，最后一点用实时价；虚线 = 美股收盘参考价
+function spark(o, ref) {
+  if (!o.m5 || o.m5.length < 2) return "";
+  const W = 120, H = 30, v = o.m5.map(b => b.c);
+  if (isFinite(o.price)) v[v.length - 1] = o.price;
+  const lo = Math.min(...v, isFinite(ref) ? ref : Infinity), hi = Math.max(...v, isFinite(ref) ? ref : -Infinity), sp = hi - lo || 1;
+  const y = x => (H - 2 - (x - lo) / sp * (H - 4)).toFixed(1), X = i => (i / (v.length - 1) * (W - 2) + 1).toFixed(1);
+  const col = css(v.at(-1) >= (isFinite(ref) ? ref : v[0]) ? "--good" : "--bad");
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">${isFinite(ref) ? `<line x1="0" x2="${W}" y1="${y(ref)}" y2="${y(ref)}" stroke="${css("--muted")}" stroke-dasharray="2 3" stroke-width="1"/>` : ""}<polyline fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" points="${v.map((x, i) => X(i) + "," + y(x)).join(" ")}"/><circle cx="${X(v.length - 1)}" cy="${y(v.at(-1))}" r="2" fill="${col}"/></svg>`;
+}
+function renderUS() {
+  if (!$("us")) return;
+  const now = Date.now(), sess = usSession(now), off = S.news && S.news.market && S.news.market.stocks;
+  const offD = off && now - off.updated_ms < 15 * 60e3 ? off.data : null;
+  const b5 = S.b5, btc1h = b5.length > 13 && isFinite(S.price) ? (S.price / b5[b5.length - 12].o - 1) * 100 : NaN;
+  const et = new Date(now).toLocaleTimeString("zh-CN", { timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit" });
+  const sessTxt = { 盘中: "美股盘中", 盘前: "美股盘前", 盘后: "美股盘后", 夜盘: "美股夜盘", 休市: "美股休市（只有币安永续在交易）" }[sess];
+  $("usSess").textContent = `${sessTxt} · 美东 ${et} · 实时价为币安股票永续`;
+  const tm = ms => fmtClock(ms);
+  const rows = [], grp = { 大盘: [], 加密股: [] };
+  for (const [sym, name, g] of STOCKS) {
+    const o = S.stk[sym] || {}, y = offD && offD[sym];
+    // 收盘参考：优先 Yahoo 官方收盘（盘中用前收），没有监控数据时用永续在 16:00 的价格
+    const ref = y ? (sess === "盘中" ? y.prev_close : y.regular) : o.close;
+    const vsClose = (o.price / ref - 1) * 100, r1 = (o.price / o.ago1h - 1) * 100, rel = r1 - o.beta * btc1h;
+    if (isFinite(r1)) grp[g].push({ sym, r1, rel, corr: o.corr });
+    let offTxt = "—";
+    if (y) {
+      const parts = [`收 ${(+y.regular).toFixed(2)}`];
+      if (y.ext) parts.push(`${y.ext.session} ${(+y.ext.price).toFixed(2)}（${tm(y.ext.at_ms)}）`);
+      if (y.fullday && sess !== "盘中") parts.push(`全时段 ${(+y.fullday).toFixed(2)}`);
+      offTxt = parts.join(" · ");
+    }
+    const cls = x => !isFinite(x) ? "" : x >= 0 ? "good" : "bad";
+    rows.push(`<tr><td class="t">${sym}<small>${name}</small></td><td id="usp-${sym}">${isFinite(o.price) ? o.price.toFixed(2) : "—"}</td>
+      <td class="${cls(vsClose)}">${pct(vsClose)}</td><td class="${cls(r1)}">${pct(r1)}</td><td class="${cls(rel)}">${isFinite(o.beta) ? pct(rel) : "—"}</td>
+      <td>${isFinite(o.corr) ? o.corr.toFixed(2) : "—"}</td><td>${isFinite(o.beta) ? o.beta.toFixed(2) : "—"}</td><td class="t"><small>${offTxt}</small></td><td>${spark(o, ref)}</td></tr>`);
+  }
+  $("us").innerHTML = `<thead><tr><th>股票</th><th>实时价</th><th>相对收盘</th><th>1 小时</th><th>相对 BTC</th><th>相关性</th><th>贝塔</th><th>官方价（Yahoo）</th><th>24 小时走势</th></tr></thead><tbody>${rows.join("")}</tbody>`;
+  // 结论：BTC 这 1 小时的涨跌，大盘有没有跟；加密股相对 BTC 强还是弱
+  const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN;
+  const idx = avg(grp.大盘.filter(x => x.sym !== "NVDA").map(x => x.r1)), cs = grp.加密股.filter(x => x.corr >= 0.5), csRel = avg(cs.map(x => x.rel));
+  const out = [`BTC 1 小时 ${pct(btc1h)}，大盘（QQQ/SPY/IWM）平均 ${pct(idx)}。`];
+  if (isFinite(btc1h) && Math.abs(btc1h) >= 0.5) {
+    out.push(Math.sign(idx) === Math.sign(btc1h) && Math.abs(idx) >= 0.25
+      ? `大盘同方向在${btc1h < 0 ? "跌" : "涨"}，这波更像整体风险情绪${btc1h < 0 ? "转弱" : "转强"}，先看美股和宏观消息。`
+      : `大盘基本没跟，这波主要是币圈自身的${btc1h < 0 ? "抛压" : "买盘"}，先看币圈新闻、爆仓和持仓量。`);
+  } else out.push("BTC 这 1 小时波动不大。");
+  if (isFinite(csRel) && cs.length) out.push(Math.abs(csRel) < 0.3 ? `高相关加密股（${cs.map(x => x.sym).join("、")}）按贝塔折算后和 BTC 同步。` : `高相关加密股按贝塔折算后比 BTC ${csRel > 0 ? "强" : "弱"} ${Math.abs(csRel).toFixed(2)}%，${csRel > 0 ? "股票端承接比币价好" : "股票端卖得比币价更狠"}。`);
+  if (sess === "夜盘" || sess === "休市") out.push("现在不是美股正式交易时段，永续价格成交较少，参考意义比盘中弱。");
+  if (!offD) out.push("官方价未连接（需要后台监控程序在运行）。");
+  $("usSum").textContent = out.join("");
+}
+
+// ---------------- 波动与扛单（口径与 backtest/vol_regime.py 一致） ----------------
+function volNow() {
+  const b = S.b60.slice(0, -1), n = b.length, rng = x => x.h - x.l;
+  if (n < 24) return null;
+  const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
+  const atr = mean(b.slice(n - 24).map(rng));
+  const ratio = n >= 168 + 720 ? mean(b.slice(n - 168).map(rng)) / mean(b.slice(n - 888, n - 168).map(rng)) : NaN;
+  const state = !isFinite(ratio) ? "正常" : ratio > 1.3 ? "扩张" : ratio < 0.77 ? "收缩" : "正常";
+  // 按所选时区分天的振幅：本周（周一起）和上周
+  const day = tzDay, days = new Map();
+  for (const x of b) { const d = day(x.t).toISOString().slice(0, 10), v = days.get(d); days.set(d, v ? { h: Math.max(v.h, x.h), l: Math.min(v.l, x.l) } : { h: x.h, l: x.l }); }
+  const now = day(Date.now()), dow = (now.getUTCDay() + 6) % 7, mon = new Date(now - dow * 864e5).toISOString().slice(0, 10), mon0 = new Date(now - (dow + 7) * 864e5).toISOString().slice(0, 10);
+  const wk = (a, z) => [...days].filter(([d]) => d >= a && d < z).map(([, v]) => v.h - v.l);
+  return { atr, ratio, state, thisWk: wk(mon, "9999"), lastWk: wk(mon0, mon) };
+}
+// 逆向超过 x 个 ATR 的概率：在 0 / P50 / P80 / P95 之间对数插值，超过 P95 后按同样斜率外推
+function pExceed(x, q) {
+  const pts = [[0, 1], [q.p50, 0.5], [q.p80, 0.2], [q.p95, 0.05]];
+  if (x <= 0) return 1;
+  for (let i = 1; i < pts.length; i++) if (x <= pts[i][0]) {
+    const [x0, p0] = pts[i - 1], [x1, p1] = pts[i];
+    return Math.exp(Math.log(p0) + (Math.log(p1) - Math.log(p0)) * (x - x0) / (x1 - x0));
+  }
+  return 0.05 * Math.pow(0.25, (x - q.p95) / (q.p95 - q.p80));
+}
+function renderVol() {
+  const v = volNow(), P = S.price;
+  if (!v || !isFinite(P) || typeof VOLSTAT === "undefined") return;
+  const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN, M = VOLSTAT.mae_atr;
+  const stCls = { 扩张: "bad", 收缩: "good", 正常: "" }[v.state];
+  $("volState").innerHTML = [
+    ["现在的 ATR", `${fmt(v.atr)} 美元`, "", `过去 24 小时 1h K 线平均振幅 · ${(v.atr / P * 100).toFixed(2)}%`],
+    ["波动状态", v.state, stCls, `最近 7 天 ÷ 之前 30 天 = ${isFinite(v.ratio) ? v.ratio.toFixed(2) : "—"}`],
+    ["本周日均振幅", `${fmt(avg(v.thisWk))} 美元`, "", `最大 ${fmt(Math.max(...v.thisWk))} · 共 ${v.thisWk.length} 天（${tzName()}）`],
+    ["上周日均振幅", `${fmt(avg(v.lastWk))} 美元`, "", `最大 ${v.lastWk.length ? fmt(Math.max(...v.lastWk)) : "—"} · 共 ${v.lastWk.length} 天`],
+  ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
+  const fixed = +$("volFixed").value || 0, hold = $("volHold").value;
+  $("volTbl").innerHTML = `<thead><tr><th>持有</th><th>逆向中位</th><th>P80</th><th>P95（20 次里 1 次）</th><th>${fixed ? `${fmt(fixed)} 美元止损被扫概率` : "固定止损被扫概率"}</th></tr></thead><tbody>` +
+    Object.entries(M).map(([k, q]) => `<tr${k === hold ? ' style="font-weight:600"' : ""}><td class="t">${k}</td><td>${fmt(q.p50 * v.atr)}</td><td>${fmt(q.p80 * v.atr)}</td><td>${fmt(q.p95 * v.atr)}</td><td>${fixed ? "约 " + Math.round(pExceed(fixed / v.atr, q) * 100) + "%" : "—"}</td></tr>`).join("") + "</tbody>";
+  // 仓位
+  const q = M[hold], stop = q.p80 * v.atr, bal = J.balance || +$("jbal").value || 0, riskPct = J.riskPct || +$("jrisk").value || 2;
+  const notional = bal ? bal * riskPct / 100 / (stop / P) : NaN;
+  $("volSize").innerHTML = `持有 ${hold}：建议止损距离约 <b>${fmt(stop)}</b> 美元（${(stop / P * 100).toFixed(2)}%）——做多止损 ${fmt(P - stop)}，做空止损 ${fmt(P + stop)}。` +
+    (bal ? `按余额 ${fmt(bal)} U、每笔最多亏 ${riskPct}%（${fmt(bal * riskPct / 100)} U），名义仓位最多约 <b>${fmt(notional)}</b> U（${(notional / P).toFixed(3)} BTC，相当于 ${(notional / bal).toFixed(1)} 倍杠杆）。` : "在「交易日志与风控」填上账户余额，这里会算出仓位上限。") +
+    (fixed ? ` 如果还用 ${fmt(fixed)} 美元的固定止损，持有 ${hold} 被正常波动扫掉的概率约 ${Math.round(pExceed(fixed / v.atr, q) * 100)}%。` : "");
+  // 逆势单：当前波动状态下，急跌后买 / 急涨后空的历史结果
+  const R = VOLSTAT.regime, d = R.drop[v.state] && R.drop[v.state]["1 小时"], r = R.rally[v.state] && R.rally[v.state]["1 小时"];
+  const line = (x, what, rev, dir) => x ? `${what}：1 小时后${rev} ${x.rev}% ±${x.err}${x.rev - x.err > 50 ? "" : "（不显著）"}，期间先再${dir}中位 ${x.adv50}%（约 ${fmt(x.adv50 / 100 * P)} 美元），五分之一超过 ${x.adv80}%（约 ${fmt(x.adv80 / 100 * P)} 美元）` : "";
+  $("volFade").textContent = `「跌多了买、涨多了空」在${v.state}波动下的历史结果——` + [line(d, "急跌超卖后买", "收高", "跌"), line(r, "急涨超买后空", "收低", "涨")].filter(Boolean).join("；") +
+    "。也就是说，逆势进场接近抛硬币，而且进场后通常还要先扛一段。要么等扳机确认（见「做多 / 做空信号」：跌破或站上 MA7、MA7 拐头）再进，要么按上面的止损距离把仓位降下来，否则很容易在反转前被迫割肉。";
+}
 
 function computeProbs() {
   // 收盘口径：去掉正在走的那一根，结论只在 K 线收盘时变化
@@ -483,7 +877,7 @@ function renderStatus(st) {
   const regime = !isFinite(tr) ? ["—", ""] : tr > 1 ? ["偏上涨", "good"] : tr < -1 ? ["偏下跌", "bad"] : ["震荡", "warn"];
   const evs = calendar(nowMs);
   const fmtIn = ms => { const m = Math.round((ms - nowMs) / 60e3); return m <= 0 ? "进行中" : m < 90 ? `${m} 分钟后` : `${(m / 60).toFixed(1)} 小时后`; };
-  const fmtJ = ms => new Date(ms).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  const fmtJ = fmtDT;
   const o15 = oiChange(15), o60 = oiChange(60), ls = S.ls, lsNow = ls.at(-1), ls1h = ls[0];
   const p1h = (() => { const b = live(S.b1); return b.length > 61 ? (S.price / b.at(-61).c - 1) * 100 : NaN; })();
   let squeeze = ["中性", ""];
@@ -501,7 +895,7 @@ function renderStatus(st) {
   const crossHot = cross && Object.values(cross).some(v => v && Math.abs(v.ch15) >= 0.5);
   const ev0 = evs[0], ev1 = evs.find(e => e[0] !== "美股开盘");
   const items = [
-    ["行情状态（4h）", regime[0], regime[1], `价格相对 4h MA25 ${pct(tr)}`],
+    ["大结构（4h 均线）", regime[0], regime[1], `价格相对 4h MA25 ${pct(tr)} · 短线涨跌看「方向判断」`],
     ["下一个事件", ev0 ? ev0[0] : "—", ev0 && ev0[1] - nowMs < 3600e3 ? "bad" : "", ev0 ? `${fmtJ(ev0[1])} · ${fmtIn(ev0[1])}` : ""],
     ["重大数据", ev1 ? ev1[0] : "本周暂无", ev1 && ev1[1] - nowMs < 3600e3 ? "bad" : "", ev1 ? `${fmtJ(ev1[1])} · ${fmtIn(ev1[1])}` : "来自 ForexFactory 日历"],
     ["挤压雷达（未验证）", squeeze[0], squeeze[1], `1h 价格 ${pct(p1h)} · 持仓 ${pct(o60)} · 多空比 ${ls1h ? ls1h.toFixed(2) : "—"}→${lsNow ? lsNow.toFixed(2) : "—"}`],
@@ -511,22 +905,57 @@ function renderStatus(st) {
     ["持仓量", S.oi.length ? fmt(S.oi.at(-1)[1]) + " BTC" : "—", "", `15 分钟 ${pct(o15)} · 1 小时 ${pct(o60)}`],
   ];
   $("status").innerHTML = items.map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
-  $("stUpd").textContent = "更新于 " + new Date().toLocaleTimeString("zh-CN", { hour12: false });
+  $("stUpd").textContent = `更新于 ${fmtClock(Date.now(), true)}（${tzName()}）`;
+}
+// 急涨急跌情境（与 backtest/selloff_check.py 同口径：已收盘 5m 的 4h 涨跌 + RSI6）
+function marketContext() {
+  if (!S.f5) return null;
+  const r4 = Math.expm1(S.f5.ret_48) * 100, rsi = (S.f5.rsi6 + 0.5) * 100;
+  const key = r4 <= -3 && rsi <= 20 ? "drop3" : r4 <= -1.5 && rsi <= 20 ? "drop" : r4 >= 3 && rsi >= 80 ? "rally3" : r4 >= 1.5 && rsi >= 80 ? "rally" : null;
+  return { key, r4, rsi, down: key && key.startsWith("drop"), stats: key && typeof CONTEXT !== "undefined" ? CONTEXT[key] : null };
+}
+// 已经走出来的行情：实时价相对 1h / 4h / 24h 前，以及离 12h 高低点多远
+function renderMoved() {
+  const b5 = S.b5, n = b5.length, P = S.price;
+  if (n < 290 || !isFinite(P)) { $("moved").textContent = ""; return; }
+  const ch = k => (P / b5[n - 1 - k].o - 1) * 100;
+  const c1 = ch(11), c4 = ch(47), c24 = ch(287), w = b5.slice(n - 144);
+  const hi = w.reduce((a, x) => x.h > a.h ? x : a), lo = w.reduce((a, x) => x.l < a.l ? x : a);
+  const tm = t => fmtClock(t);
+  const word = c4 <= -1 ? ["正在下跌", "bad"] : c4 >= 1 ? ["正在上涨", "good"] : c1 <= -0.5 ? ["短线走弱", "bad"] : c1 >= 0.5 ? ["短线走强", "good"] : ["横盘", "warn"];
+  const span = (l, x) => `<span>${l} <b class="${x < 0 ? "bad" : "good"}">${pct(x)}</b></span>`;
+  $("moved").innerHTML = `<span>已经走出来的行情：<b class="${word[1]}">${word[0]}</b></span>${span("1 小时", c1)}${span("4 小时", c4)}${span("24 小时", c24)}
+    <span>离 12h 高点 ${fmt(hi.h)}（${tm(hi.t)}）<b class="bad">${pct((P / hi.h - 1) * 100)}</b></span><span>离 12h 低点 ${fmt(lo.l)}（${tm(lo.t)}）<b class="good">${pct((P / lo.l - 1) * 100)}</b></span>`;
 }
 function renderFC() {
+  renderMoved();
+  const cx = marketContext();
   const rows = HZ.map(k => {
     const up = S.prob[k], upL = S.probLive[k], w = WEIGHTS[k], err = ERR[k], conf = Math.abs(up - 50), hi = conf >= 5, valid = w.test_acc - err > 50;
-    const upDir = up >= 50, word = !isFinite(up) ? "数据不足" : conf < 1 ? "看不出方向" : (upDir ? "偏涨" : "偏跌") + (hi ? "" : "（弱）");
-    const col = !isFinite(up) || conf < 1 ? css("--muted") : upDir ? css("--good") : css("--bad");
+    const upDir = up >= 50;
+    // 急跌中偏涨 / 急涨中偏跌：模型在押反转，不是说趋势已经变了
+    const rev = cx && cx.key && conf >= 1 && upDir === cx.down;
+    let word = !isFinite(up) ? "数据不足" : conf < 1 ? "看不出方向" : rev ? (cx.down ? "超卖反弹倾向" : "超买回落倾向") : (upDir ? "偏涨" : "偏跌") + (hi ? "" : "（弱）");
+    const col = !isFinite(up) || conf < 1 ? css("--muted") : rev ? css("--warn") : upDir ? css("--good") : css("--bad");
     const reli = valid ? `历史准确率 ${w.test_acc}% ±${err}` : `历史准确率 ${w.test_acc}% ±${err}，不显著`;
+    const st = rev && cx.stats && cx.stats[k];
+    const ctx = st ? `<span class="ctx">同类情况（${st.n} 次）：${cx.down ? "反弹" : "回落"} ${st.rev}% ±${st.err}${st.rev - st.err > 50 ? "" : "，不显著"}；期间先再${cx.down ? "跌" : "涨"}中位 ${Math.abs(st.mae).toFixed(2)}%，五分之一超过 ${Math.abs(st.mae80).toFixed(2)}%</span>` : "";
     return `<div class="h"><span class="n">${k}</span><span class="d" style="color:${col}">${conf < 1 ? "→" : upDir ? "↑" : "↓"} ${word}</span>
       <span class="p">上涨概率 ${isFinite(up) ? up.toFixed(1) : "—"}%（收盘）</span><div class="meter" aria-hidden="true"><i style="left:${Math.min(up, 50)}%;width:${Math.max(conf, 0.6)}%;background:${col}"></i><i style="left:50%;width:1px;background:${css("--muted")}"></i></div>
-      <span class="live">盘中预估 ${isFinite(upL) ? upL.toFixed(1) : "—"}%</span><span class="a">${reli}</span></div>`;
+      <span class="live">盘中预估 ${isFinite(upL) ? upL.toFixed(1) : "—"}%</span><span class="a">${reli}</span>${ctx}</div>`;
   });
   $("fc").innerHTML = rows.join("");
   const sig = HZ.filter(k => WEIGHTS[k].test_acc - ERR[k] > 50), ups = sig.filter(k => S.prob[k] >= 50).length, dns = sig.length - ups;
-  const t = S.closedAt ? new Date(S.closedAt).toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit" }) : "—";
-  $("fcsum").textContent = `依据 ${t} 收盘：有效周期（${sig.join("、")}）中 ${ups} 个偏涨、${dns} 个偏跌。模型方向准确率每年 51–53%，但按真实挂单执行回测，这点准确率扣费后转化不成收益，所以只作方向参考。`;
+  const t = S.closedAt ? fmtClock(S.closedAt) : "—";
+  let head = "";
+  if (cx && cx.key) {
+    const h1 = cx.stats && cx.stats["1 小时"];
+    head = cx.down
+      ? `当前是急跌后的超卖（4h ${pct(cx.r4)}，RSI6 ${cx.rsi.toFixed(0)}）。模型偏涨只是在押超卖反弹，不代表跌势结束${h1 ? `；同类情况 1 小时后收高的只有 ${h1.rev}%，而且期间通常还会先再跌 ${Math.abs(h1.mae).toFixed(2)}% 左右` : ""}。不要把它当成抄底信号。`
+      : `当前是急涨后的超买（4h ${pct(cx.r4)}，RSI6 ${cx.rsi.toFixed(0)}）。模型偏跌只是在押超买回落，不代表涨势结束${h1 ? `；同类情况 1 小时后收低的只有 ${h1.rev}%，而且期间通常还会先再涨 ${Math.abs(h1.mae).toFixed(2)}% 左右` : ""}。不要把它当成摸顶信号。`;
+  }
+  $("fcsum").className = "verdict" + (cx && cx.key ? " badv" : "");
+  $("fcsum").textContent = head + `依据 ${t} 收盘：有效周期（${sig.join("、")}）中 ${ups} 个偏涨、${dns} 个偏跌。模型方向准确率每年 51–53%，但按真实挂单执行回测，这点准确率扣费后转化不成收益，所以只作方向参考。`;
 }
 
 // ---------------- 做多 / 做空 镜像信号（收盘口径，规则与回测一致） ----------------
@@ -583,21 +1012,181 @@ function mirror(st) {
   }).join("");
 }
 
+// ---------------- 急动提醒（口径与 backtest/fast_move.py 一致） ----------------
+function usOpenNow(ms) { const c = nyClock(ms); return usSession(ms) === "盘中" && c.min < 630; }
+function fastMove() {
+  const b = live(S.b1), n = b.length, v = volNow(), P = S.price;
+  if (n < 20 || !v || !isFinite(P)) return null;
+  const now = Date.now(), m5 = P - b[n - 5].o, m15 = P - b[n - 15].o, k5 = Math.abs(m5) / v.atr, k15 = Math.abs(m15) / v.atr;
+  const N = k5 >= 1 ? 5 : k15 >= 1 ? 15 : 0;
+  if (N) {
+    const mv = N === 5 ? m5 : m15, k = N === 5 ? k5 : k15, key = [3, 2, 1.5, 1].find(x => k >= x);
+    if (!S.fm || now - S.fm.t > 30 * 60e3 || k > S.fm.k || Math.sign(mv) !== S.fm.dir)
+      S.fm = { t: S.fm && now - S.fm.t <= 30 * 60e3 && Math.sign(mv) === S.fm.dir ? S.fm.t : now, dir: Math.sign(mv), N, k, key, mv, open: usOpenNow(now) };
+  }
+  if (S.fm && now - S.fm.t > 30 * 60e3) S.fm = null;
+  return { atr: v.atr, m5, m15, k5, k15, fm: S.fm };
+}
+// 未来 48 小时的大行情高发时段：数据公布（前 10 分钟到后 50 分钟）、美股开盘后 1 小时
+function riskWindows(now) {
+  const W = typeof FASTMOVE !== "undefined" ? FASTMOVE.window : {};
+  return calendar(now).filter(([, t]) => t < now + 48 * 3600e3).map(([name, t]) => {
+    const open = name === "美股开盘", a = open ? t : t - 10 * 60e3, z = open ? t + 60 * 60e3 : t + 50 * 60e3;
+    const c = nyClock(t), ratio = open ? W.open : c.min === 510 ? W.data : null;
+    return { name, t, a, z, ratio };
+  }).filter(w => w.z > now).slice(0, 4);
+}
+// 今天每小时的波动（按所选时区显示）：颜色越深越活跃；数字来自 backtest/hour_vol.py，分美国夏令时 / 冬令时
+function renderHours() {
+  if (typeof HOURVOL === "undefined" || !$("hv")) return;
+  const now = new Date(), shift = (TZOFF["Asia/Tokyo"] - TZOFF[TZ]) / 60, curH = tzHour(now.getTime());   // 统计按东京时间，显示时换到所选时区
+  const wd = now.toLocaleString("en-US", { timeZone: "Asia/Tokyo", weekday: "short" }), grp = wd === "Sat" ? "周六" : wd === "Sun" ? "周日" : "工作日";
+  const dst = !/EST/.test(now.toLocaleString("en-US", { timeZone: "America/New_York", timeZoneName: "short" }));
+  const T0 = HOURVOL[dst ? "夏令时" : "冬令时"][grp];
+  if (!T0) return;
+  const T = Object.fromEntries(Array.from({ length: 24 }, (_, h) => [h, T0[(h + shift) % 24]]).filter(([, v]) => v));
+  $("hvDay").textContent = `${grp} · 美国${dst ? "夏令时" : "冬令时"}`;
+  const acc = css("--accent");
+  $("hv").innerHTML = Array.from({ length: 24 }, (_, h) => {
+    const [amp, big] = T[h] || [1, 1], a = Math.max(0.08, Math.min(1, (amp - 0.55) / 1.2));
+    return `<div class="${h === curH ? "now" : ""} ${a > 0.55 ? "hot" : ""}" style="background:color-mix(in srgb,${acc} ${Math.round(a * 100)}%,transparent)" title="${h}:00–${h + 1}:00 振幅是平时的 ${amp} 倍，大行情是平时的 ${big} 倍">${h}</div>`;
+  }).join("");
+  const hrs = Object.entries(T).map(([h, [amp, big]]) => ({ h: +h, amp, big }));
+  const busy = hrs.filter(x => x.amp >= 1.15 || x.big >= 1.8).map(x => x.h).sort((a, b) => a - b), calm = hrs.filter(x => x.amp <= 0.9 && x.big <= 0.6).map(x => x.h).sort((a, b) => a - b);
+  const ranges = a => { const r = []; a.forEach(h => { const l = r.at(-1); if (l && (l[1] + 1) % 24 === h) l[1] = h; else r.push([h, h]); }); if (r.length > 1 && r[0][0] === 0 && r.at(-1)[1] === 23) { r[0][0] = r.at(-1)[0]; r.pop(); } return r.map(([a, b]) => `${a}:00–${(b + 1) % 24}:00`).join("、"); };
+  $("hvSum").innerHTML = `<b>重点盯：</b>${ranges(busy) || "—"}。<b>可以少盯：</b>${ranges(calm) || "—"}（振幅不到平时的 9 成，大行情不到平时的 6 成）。离开前把止损单挂在交易所。`;
+}
+function renderFast() {
+  renderHours();
+  const f = fastMove(), now = Date.now();
+  if (!f || typeof FASTMOVE === "undefined") return;
+  $("fmAtr").textContent = fmt(f.atr);
+  const k1 = x => `${pct(x / S.price * 100)}（${(Math.abs(x) / f.atr).toFixed(1)} ATR）`;
+  if (f.fm) {
+    const m = f.fm, st = (m.open && FASTMOVE.usopen[`${m.N}_${Math.min(m.key, m.N === 5 ? 1.5 : 2)}`]) || FASTMOVE.all[`${m.N}_${m.key}`];
+    const up = m.dir > 0, ago = Math.round((now - m.t) / 60e3);
+    $("fmNow").className = "fm-now on";
+    $("fmNow").innerHTML = `<b class="${up ? "good" : "bad"}">${up ? "急涨" : "急跌"}</b><span>${ago ? ago + " 分钟前" : "刚刚"}：${m.N} 分钟内${up ? "涨" : "跌"} ${fmt(Math.abs(m.mv))} 美元（${m.k.toFixed(1)} ATR）${m.open ? " · 美股开盘时段" : ""}</span>` +
+      (st ? `<span>历史上这时${up ? "追多" : "追空"}（${st.n} 次）：30 分钟后继续${up ? "涨" : "跌"}的只有 <b>${st.c30}%</b>，先顺势 0.5 ATR 的 ${st.first}%；按「止盈 1 ATR / 止损 0.5 ATR」打，每笔平均 <b class="bad">${pct(st.pnl, 2)}</b>，胜率 ${st.win}%。</span>` : "") +
+      `<span>不要追。手里有${up ? "多" : "空"}单的，这时可以考虑先止盈一部分；有反向单的，确认止损在不在。</span>`;
+  } else {
+    $("fmNow").className = "fm-now";
+    $("fmNow").innerHTML = `<b class="mut">没有急动</b><span>最近 5 分钟 ${k1(f.m5)} · 15 分钟 ${k1(f.m15)}，走到 1 个 ATR（约 ${fmt(f.atr)} 美元）会提醒。</span>`;
+  }
+  const tm = fmtDT;
+  const ws = riskWindows(now);
+  $("fmWins").innerHTML = ws.length ? ws.map(w => {
+    const on = now >= w.a, left = Math.round((w.a - now) / 60e3);
+    return `<div class="${on ? "live" : ""}"><span>${on ? "进行中" : left < 90 ? left + " 分钟后" : (left / 60).toFixed(1) + " 小时后"} · ${tm(w.a)}–${tm(w.z).slice(-5)}</span><b>${esc(w.name)}</b><span>${w.ratio ? `大行情是平时的 ${w.ratio} 倍` : "重大事件，波动通常放大"}；事件前不开新仓，持仓先设好止损</span></div>`;
+  }).join("") : `<div><span>未来 48 小时</span><b>没有已知的高发时段</b><span>日历来自后台监控程序，未连接时只显示美股开盘和内置日程</span></div>`;
+}
+
+// ---------------- 此刻结论：做多 / 做空各给一个结论和具体仓位 ----------------
+// 给定止损距离，算仓位、杠杆、保证金（逐仓）
+function sizing(P, stop, bal, riskPct) {
+  const sp = stop / P, maxLev = Math.max(1, Math.min(20, Math.floor(1 / (2 * sp + 0.004))));   // 强平距离 ≈ 1/杠杆 − 维持保证金 0.4%
+  if (!bal) return { sp, maxLev };
+  let notional = bal * riskPct / 100 / sp;
+  const lev = Math.min(maxLev, Math.max(1, Math.ceil(notional / (bal / 3))));            // 保证金不超过余额三分之一
+  notional = Math.min(notional, lev * bal / 3);
+  return { sp, maxLev, lev, notional, margin: notional / lev, loss: notional * sp + notional * 0.0007, qty: notional / P };
+}
+function renderSummary(st) {
+  if (!st || !S.f5 || !isFinite(S.price)) return;
+  const c5 = S.b5.slice(0, -1), z = BTCModel.zhang(c5), v = volNow();
+  if (!z || !v || typeof VOLSTAT === "undefined") return;
+  const P = S.price, F = filters(Date.now()), sigs = ruleSigs(z, F), cx = marketContext(), A = SPEC.rule_a, B = SPEC.rule_b;
+  recordModelCalls(c5, z, F, v);
+  const bal = J.balance || 0, riskPct = J.riskPct || 2;
+  // 账户层面的硬性禁止（与「交易日志与风控」同口径）
+  const open = J.trades.filter(t => !t.exit), today = J.trades.filter(t => t.exit && todayKey(t.exitT) === todayKey(Date.now()));
+  const dayPnl = today.reduce((s, t) => s + t.pnl, 0) + open.reduce((s, t) => s + (t.sym === "BTCUSDT" ? jPnl(t, P) : 0), 0);
+  const usedMargin = open.reduce((s, t) => s + t.notional / (t.lev || 1), 0);
+  const hard = [];
+  if (F.blocked) hard.push(`${Math.round(F.evMin)} 分钟后${F.ev[0]}，数据前 ${SPEC.event_block_min} 分钟不开新仓`);
+  if (bal && dayPnl / bal * 100 <= -15) hard.push("今日亏损已超过 15%，今天停止开新仓");
+  if (bal && usedMargin / bal > 1 / 3) hard.push("保证金占用已超过三分之一，不要再加仓");
+  const m7 = c5.slice(-7).reduce((s, x) => s + x.c, 0) / 7;
+  const hold = $("volHold") ? $("volHold").value : "4 小时", volStop = VOLSTAT.mae_atr[hold].p80 * v.atr;
+  const side = key => {
+    const sgn = key === "long" ? 1 : -1, sig = sigs.find(x => x[0] === key);
+    const fade = cx && cx.key && (key === "long" ? cx.down : !cx.down);        // 急跌后做多 / 急涨后做空
+    const chase = cx && cx.key && !fade;                                          // 急跌后追空 / 急涨后追多
+    const against = key === "long" ? F.tr.dn : F.tr.up;
+    const cnt = [z.now[key === "long" ? "cold" : "hot"], z.now[key === "long" ? "fadeL" : "fadeS"], z.now[key === "long" ? "volL" : "volS"], z.now[key === "long" ? "below7" : "above7"], z.now[key === "long" ? "trigL" : "trigS"]].filter(Boolean).length;
+    let vd, cls, why = [], pl = null;
+    if (hard.length) { vd = "不要开"; cls = "bad"; why = hard.slice(); }
+    else if (sig) {
+      vd = "有参考信号"; cls = "warn";
+      why.push(`规则 ${sig[1]}：${sig[2]}`, "回测扣费后没有稳定赚钱，只用小仓位");
+      if (sig[1] === "B") pl = { entry: `市价 ≈ ${fmt(P)}`, ref: P, stop: ruleBStop(c5, z, sgn, P), tpR: B.tp_R, hold: `最长 ${B.max_hold_bars * 5 / 60} 小时（到止盈或止损先平）` };
+      else pl = { entry: `挂限价 ${fmt(c5.at(-1).c)}，${A.limit_valid_bars * 5} 分钟内不成交就撤`, ref: c5.at(-1).c, stop: VOLSTAT.mae_atr["4 小时"].p80 * v.atr, hold: `${A.hold_bars * 5 / 60} 小时后平仓`, stopNote: "规则 A 回测不设止损，这里按 4 小时 P80 逆向放一个保险止损" };
+    } else if (fade && !z.now[key === "long" ? "trigL" : "trigS"]) {
+      vd = "不建议"; cls = "bad";
+      why.push(`${key === "long" ? "刚急跌（4h " + pct(cx.r4) + "）就抄底" : "刚急涨（4h " + pct(cx.r4) + "）就摸顶"}，历史上 1 小时后${key === "long" ? "反弹" : "回落"}只有 ${cx.stats && cx.stats["1 小时"] ? cx.stats["1 小时"].rev : "≈53"}%，而且通常先再${key === "long" ? "跌" : "涨"}一段`,
+        `至少等 5 分钟收盘${key === "long" ? "站上" : "跌破"} MA7（现在 ${fmt(m7)}）并且 MA7 拐头`);
+    } else if (against) {
+      vd = "不建议"; cls = "bad";
+      why.push(`逆 1 小时趋势（1 小时价格在 MA25 ${key === "long" ? "下方且 MA25 向下" : "上方且 MA25 向上"}）`, "规则 B 在逆势时不做");
+    } else {
+      vd = "等待"; cls = "mut";
+      why.push(cnt >= 3 ? `张主任条件 5 分钟已满足 ${cnt}/5，差扳机：5 分钟收盘${key === "long" ? "站上" : "跌破"} MA7（现在 ${fmt(m7)}）且 MA7 拐头${key === "long" ? "向上" : "向下"}` : `张主任条件 5 分钟只满足 ${cnt}/5，没有成形`,
+        `4 小时模型的${key === "long" ? "上涨" : "下跌"}概率 ${(key === "long" ? S.prob["4 小时"] : 100 - S.prob["4 小时"]).toFixed(1)}%，规则 A 要 ≥ ${Math.round((key === "long" ? A.p_long : 1 - A.p_short) * 100)}%`);
+      if (chase) why.push(`现在是急${cx.down ? "跌" : "涨"}后，顺势追${key === "long" ? "多" : "空"}要防反抽，止损不能太近`);
+    }
+    const cell = (k, x) => `<div><span>${k}</span><b>${x}</b></div>`;
+    let body;
+    if (pl) {
+      const z2 = sizing(pl.ref, pl.stop, bal, riskPct);
+      body = `<div class="grid">${cell("进场", pl.entry)}${cell("止损", `${fmt(pl.ref - sgn * pl.stop)}（${(z2.sp * 100).toFixed(2)}%）`)}${pl.tpR ? cell("止盈", `${fmt(pl.ref + sgn * pl.tpR * pl.stop)}（${pl.tpR}R）`) : ""}${cell("拿多久", pl.hold)}` +
+        (bal ? `${cell("名义仓位", `${fmt(z2.notional)} U（${z2.qty.toFixed(3)} BTC）`)}${cell("杠杆", `${z2.lev} 倍（上限 ${z2.maxLev}）`)}${cell("保证金", `${fmt(z2.margin)} U`)}${cell("打到止损约亏", `${fmt(z2.loss)} U`)}`
+          : cell("杠杆上限", `${z2.maxLev} 倍`)) + `</div>` + (bal ? "" : `<p class="if">填上账户余额才能算仓位。</p>`) + (pl.stopNote ? `<p class="if">${pl.stopNote}。</p>` : "");
+    } else if (vd !== "不要开") {
+      const z2 = sizing(P, volStop, bal, riskPct);
+      body = `<p class="if">如果你还是要现在${key === "long" ? "做多" : "做空"}（持有 ${hold}）：止损放 ${fmt(P - sgn * volStop)}（${(z2.sp * 100).toFixed(2)}%，五次里有四次不会被正常波动扫掉）` +
+        (bal ? `，名义仓位最多 ${fmt(z2.notional)} U（${z2.qty.toFixed(3)} BTC），${z2.lev} 倍杠杆、保证金 ${fmt(z2.margin)} U，打到止损约亏 ${fmt(z2.loss)} U。` : `，杠杆不超过 ${z2.maxLev} 倍；填上余额可以算出仓位。`) + `</p>`;
+    } else body = "";
+    return { key, vd, cls, html: `<div class="sum-side ${key}"><div class="hd"><h3 class="${key === "long" ? "good" : "bad"}">${key === "long" ? "做多" : "做空"}</h3><span class="vd ${cls}">${vd}</span></div><ul>${why.map(x => `<li>${esc(x)}</li>`).join("")}</ul>${body}</div>` };
+  };
+  const L = side("long"), Sh = side("short");
+  $("sumSides").innerHTML = L.html + Sh.html;
+  const mv = (() => { const b = S.b5, n = b.length; return n > 50 ? (P / b[n - 48].o - 1) * 100 : NaN; })();
+  const ev = F.ev ? `${F.ev[0]} ${F.evMin < 90 ? Math.round(F.evMin) + " 分钟后" : (F.evMin / 60).toFixed(1) + " 小时后"}` : "近期无重大事件";
+  const head = [L, Sh].some(x => x.vd === "有参考信号") ? `${[L, Sh].filter(x => x.vd === "有参考信号").map(x => x.key === "long" ? "做多" : "做空").join("、")}有参考信号（小仓位）` :
+    [L, Sh].every(x => x.vd === "不要开") ? "现在不要开新仓" : "两边都没有信号，建议观望";
+  const fmA = S.fm ? ` <span class="bad">· 刚出现${S.fm.dir > 0 ? "急涨" : "急跌"}，不要追（见「急动提醒」）</span>` : "", wNow = riskWindows(Date.now()).find(w => Date.now() >= w.a);
+  $("sumNow").innerHTML = `<b>${esc(head)}。</b> BTC ${fmt(P)} · 4 小时 ${pct(mv)} · 波动${v.state}（ATR ${fmt(v.atr)}）· ${esc(ev)}${fmA}${wNow ? ` <span class="bad">· 正处于${esc(wNow.name)}大行情高发时段</span>` : ""}${S.sellCount ? ` <span class="bad">· 有 ${S.sellCount} 单该卖了（见「持仓与卖出」）</span>` : ""}`;
+  const t = S.closedAt ? fmtClock(S.closedAt) : "—";
+  $("sumBasis").textContent = `依据 ${t} 收盘 · 每秒刷新 · 不是投资建议`;
+}
+
 // ---------------- 交易计划（收盘口径，规则来自 rules_spec.json） ----------------
-function plan(st) {
-  if (!st || !S.f5) return;
-  const c5 = S.b5.slice(0, -1), z = BTCModel.zhang(c5);
-  if (!z) return;
-  const A = SPEC.rule_a, B = SPEC.rule_b, F = filters(Date.now()), P = S.price;
-  const p4 = S.prob["4 小时"] / 100, pm = (S.prob["15 分钟"] + S.prob["1 小时"]) / 200, last = c5.at(-1);
-  const t = new Date(S.closedAt).toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit" });
-  $("planBasis").textContent = `依据 ${t} 收盘 · 每 5 分钟更新 · 不是投资建议`;
-  const sigs = [];
+// 规则 A / B 是否触发（交易计划和顶部「此刻结论」共用，保证两处一致）
+function ruleSigs(z, F) {
+  const A = SPEC.rule_a, p4 = S.prob["4 小时"] / 100, pm = (S.prob["15 分钟"] + S.prob["1 小时"]) / 200, sigs = [];
   if (!F.blocked && p4 >= A.p_long) sigs.push(["long", "A", `4 小时模型上涨概率 ${(p4 * 100).toFixed(1)}%（≥ ${Math.round(A.p_long * 100)}%）`]);
   if (!F.blocked && p4 <= A.p_short) sigs.push(["short", "A", `4 小时模型上涨概率 ${(p4 * 100).toFixed(1)}%（≤ ${Math.round(A.p_short * 100)}%）`]);
   const okB = !F.weekend && !F.volLow && !F.blocked;
   if (okB && z.now.longB && !F.tr.dn && pm >= 0.5) sigs.push(["long", "B", "张主任完整做多信号 + 模型同向 + 不逆 1h 趋势"]);
   if (okB && z.now.shortB && !F.tr.up && pm <= 0.5) sigs.push(["short", "B", "张主任完整做空信号 + 模型同向 + 不逆 1h 趋势"]);
+  return sigs;
+}
+// 规则 B 止损距离：近 12 根高 / 低点外加 stop_atr 个 ATR（5 分钟）
+function ruleBStop(c5, z, sgn, P) {
+  const c = c5.slice(-15); let s = 0;
+  for (let i = 1; i < c.length; i++) s += Math.max(c[i].h - c[i].l, Math.abs(c[i].h - c[i - 1].c), Math.abs(c[i].l - c[i - 1].c));
+  const atr = s / 14, B = SPEC.rule_b;
+  return Math.max(sgn > 0 ? P - (z.lo12 - B.stop_atr * atr) : (z.hi12 + B.stop_atr * atr) - P, P * 0.001);
+}
+function plan(st) {
+  if (!st || !S.f5) return;
+  const c5 = S.b5.slice(0, -1), z = BTCModel.zhang(c5);
+  if (!z) return;
+  const A = SPEC.rule_a, B = SPEC.rule_b, F = filters(Date.now()), P = S.price;
+  const p4 = S.prob["4 小时"] / 100, last = c5.at(-1);
+  const t = fmtClock(S.closedAt);
+  $("planBasis").textContent = `依据 ${t} 收盘 · 每 5 分钟更新 · 不是投资建议`;
+  const sigs = ruleSigs(z, F);
   let html;
   if (!sigs.length) {
     const why = [];
@@ -615,8 +1204,7 @@ function plan(st) {
         lv = `<span><b>挂单</b>${fmt(last.c)}（收盘价，${A.limit_valid_bars * 5} 分钟内未成交就撤）</span><span><b>持有</b>${A.hold_bars * 5 / 60} 小时到期挂单平仓</span>` +
           (A.use_insurance_stop ? `<span><b>保险止损</b>${fmt(last.c * (1 - sgn * A.insurance_stop_pct / 100))}</span>` : `<span><b>止损</b>回测不设（加了反而更差）</span>`);
       } else {
-        const atr = (() => { const c = c5.slice(-15); let s = 0; for (let i = 1; i < c.length; i++) s += Math.max(c[i].h - c[i].l, Math.abs(c[i].h - c[i - 1].c), Math.abs(c[i].l - c[i - 1].c)); return s / 14; })();
-        const r = Math.max(sgn > 0 ? P - (z.lo12 - B.stop_atr * atr) : (z.hi12 + B.stop_atr * atr) - P, P * 0.001);
+        const r = ruleBStop(c5, z, sgn, P);
         lv = `<span><b>市价进场</b>下一根开盘（约 ${fmt(P)}）</span><span><b>止损</b>${fmt(P - sgn * r)}（${fmt(r)} 点）</span><span><b>止盈</b>${fmt(P + sgn * B.tp_R * r)}（${B.tp_R}R）</span><span><b>最长持有</b>${B.max_hold_bars * 5 / 60} 小时</span>`;
       }
       return `<div class="pl"><h3><span class="${side === "long" ? "good" : "bad"}">规则 ${rule} · ${side === "long" ? "做多" : "做空"}信号</span><small>参考 · 回测未通过</small></h3><div class="k">${lv}</div><p>${esc(desc)}。</p></div>`;
@@ -651,7 +1239,7 @@ function renderPaper() {
   const box = $("paper");
   if (!S.paper) { box.innerHTML = `<p class="note">${esc(S.paperErr || "正在读取模拟盘…")}</p>`; return; }
   const modeTxt = { flat: "空仓等信号", pending: "挂单中", open: "持仓中", exiting: "平仓挂单中" };
-  const fmtT = s => s ? new Date(s).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }) : "—";
+  const fmtT = s => s ? fmtDT(Date.parse(s)) : "—";
   box.innerHTML = ["A", "B"].map(k => {
     const r = S.paper.rules[k], p = r.position || {};
     const pos = r.mode === "flat" ? "" : `<div class="k">${p.side ? `<span><b>方向</b>${p.side === "long" ? "多" : "空"}</span>` : ""}${p.entry ? `<span><b>进场</b>${fmt(p.entry)}</span>` : p.px ? `<span><b>挂单价</b>${fmt(p.px)}</span>` : ""}${p.stop ? `<span><b>止损</b>${fmt(p.stop)}</span>` : ""}${p.tp ? `<span><b>止盈</b>${fmt(p.tp)}</span>` : ""}${p.entry && isFinite(S.price) ? `<span><b>浮动</b>${pct((p.side === "long" ? 1 : -1) * (S.price / p.entry - 1) * 100, 3)}</span>` : ""}</div>`;
@@ -669,8 +1257,8 @@ function renderPaper() {
 const JKEY = "btc_journal_v1";
 const J = (() => { try { return JSON.parse(localStorage.getItem(JKEY)) || {}; } catch (e) { return {}; } })();
 J.trades = J.trades || []; J.side = J.side || "long";
-function jsave() { try { localStorage.setItem(JKEY, JSON.stringify(J)); } catch (e) { /* 隐私模式等情况下无法保存 */ } }
-function todayKey(ms) { return new Date(ms).toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" }); }
+function jsave() { try { localStorage.setItem(JKEY, JSON.stringify(J)); } catch (e) { /* 隐私模式等情况下无法保存 */ } cloudSoon(); }
+function todayKey(ms) { return new Date(ms).toLocaleDateString("en-CA", { timeZone: TZ }); }
 function jPnl(t, px) { const sgn = t.side === "long" ? 1 : -1; return sgn * (px / t.entry - 1) * t.notional - t.notional * 0.0007; }
 function renderJournal() {
   const bal = +$("jbal").value || J.balance || 0, riskPct = +$("jrisk").value || 2, now = Date.now();
@@ -693,7 +1281,7 @@ function renderJournal() {
   if (nonBtc) warn.push("今天有非 BTC 的交易，违反「只做 BTC」。");
   $("riskMsg").className = "verdict " + (warn.length ? "badv" : "goodv");
   $("riskMsg").textContent = warn.length ? warn.join(" ") : `风控正常。按每笔最多亏 ${riskPct}% 余额来定仓位。`;
-  const fmtT = ms => new Date(ms).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  const fmtT = fmtDT;
   const rows = J.trades.slice().reverse().slice(0, 30).map(t => {
     const cur = t.exit ? t.pnl : t.sym === "BTCUSDT" && isFinite(S.price) ? jPnl(t, S.price) : NaN;
     return `<tr><td>${fmtT(t.t)}</td><td>${esc(t.sym)}</td><td class="${t.side === "long" ? "good" : "bad"}">${t.side === "long" ? "多" : "空"}</td><td>${fmt(t.entry)}</td><td>${t.stop ? fmt(t.stop) : '<span class="bad">无</span>'}</td><td>${fmt(t.notional)}</td><td>${t.lev}x</td>
@@ -708,7 +1296,12 @@ function jInit() {
   if (J.riskPct) $("jrisk").value = J.riskPct;
   jSetSide(J.side);
   $("j-long").onclick = () => jSetSide("long"); $("j-short").onclick = () => jSetSide("short");
-  ["jbal", "jrisk"].forEach(id => $(id).addEventListener("input", () => { J.balance = +$("jbal").value || 0; J.riskPct = +$("jrisk").value || 2; jsave(); renderJournal(); }));
+  // 余额和每笔风险：顶部「此刻结论」和这里是同一份设置，任一处改动两边同步
+  if (J.balance) $("sbal").value = J.balance;
+  if (J.riskPct) $("srisk").value = J.riskPct;
+  [["jbal", "jrisk", "sbal", "srisk"], ["sbal", "srisk", "jbal", "jrisk"]].forEach(([bal, risk, ob, or]) => [bal, risk].forEach(id => $(id).addEventListener("input", () => {
+    J.balance = +$(bal).value || 0; J.riskPct = +$(risk).value || 2; J.u = Date.now(); $(ob).value = $(bal).value; $(or).value = $(risk).value; jsave(); renderJournal(); everySecond();
+  })));
   $("jfrom").onclick = () => { jSetSide(S.side); $("jentry").value = $("entry").value; $("jstop").value = $("stop").value; $("jnotional").value = Math.round(+$("margin").value * +$("lev").value); $("jlev").value = $("lev").value; };
   $("jsize").onclick = () => {
     const bal = +$("jbal").value, rp = +$("jrisk").value, e = +$("jentry").value || S.price, s = +$("jstop").value;
@@ -724,13 +1317,13 @@ function jInit() {
     const t = { id: Date.now().toString(36), t: Date.now(), side: J.side, sym: ($("jsym").value || "BTCUSDT").toUpperCase().trim(), entry: +$("jentry").value, stop: +$("jstop").value || 0,
       notional: +$("jnotional").value, lev: +$("jlev").value || 1, reason: $("jreason").value, note: $("jnote").value.trim() };
     if (!t.entry || !t.notional) { $("riskMsg").className = "verdict badv"; $("riskMsg").textContent = "进场价和名义仓位必填。"; return; }
-    J.trades.push(t); jsave(); $("jnote").value = ""; renderJournal();
+    t.u = Date.now(); J.trades.push(t); jsave(); $("jnote").value = ""; renderJournal();
   };
   $("jtable").addEventListener("click", ev => {
     const id = ev.target.dataset && ev.target.dataset.close; if (!id) return;
     const t = J.trades.find(x => x.id === id), px = +$("x_" + id).value;
     if (!t || !px) return;
-    t.exit = px; t.exitT = Date.now(); t.pnl = jPnl(t, px); jsave(); renderJournal();
+    t.exit = px; t.exitT = Date.now(); t.pnl = jPnl(t, px); t.u = Date.now(); jsave(); renderJournal();
   });
   $("jexport").onclick = () => {
     const blob = new Blob([JSON.stringify(J, null, 1)], { type: "application/json" }), a = document.createElement("a");
@@ -742,10 +1335,524 @@ function jInit() {
     catch (e) { $("riskMsg").className = "verdict badv"; $("riskMsg").textContent = "导入失败：文件格式不对。"; }
   };
 }
-async function loadSpec() {
-  try { const s = await jfetch(SPEC_URL + "?t=" + Date.now()); if (s.rule_a && s.rule_b) SPEC = s; } catch (e) { /* 用内置兜底 */ }
+// 时区切换：重画所有带时间的地方；喊单时间输入框保持同一时刻
+function tzApply() {
+  document.querySelectorAll(".tzseg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.tz === TZ));
+  document.querySelectorAll(".tzn").forEach(el => el.textContent = tzName());
+  document.querySelectorAll(".tzdc").forEach(el => el.textContent = fmtClock(Date.UTC(2026, 0, 1)));
+}
+function tzInit() {
+  document.querySelectorAll(".tzseg button").forEach(b => b.onclick = () => {
+    if (b.dataset.tz === TZ) return;
+    const keep = parseDT($("cTime").value);
+    TZ = b.dataset.tz; try { localStorage.setItem("btc_tz", TZ); } catch (e) { /* 只在本次有效 */ }
+    tzApply();
+    if (isFinite(keep)) $("cTime").value = localDT(keep);
+    everySecond(); renderNews(); renderPaper(); renderCloud();
+  });
+  tzApply();
 }
 
+// ---------------- 云端记录：喊单和交易日志存在私有 GitHub 仓库，任何设备填一次令牌就能读写 ----------------
+// 本机浏览器只留一份缓存（断网时也能用），每分钟和改动后 3 秒与云端合并：按 id 合并，同一条取最后修改（u）的，删除的留墓碑
+const REC_REPO = params.get("records") || "weilong-lab/btc-records", TKEY = "btc_gh_token";
+const CLOUD = { token: (() => { try { return localStorage.getItem(TKEY) || ""; } catch (e) { return ""; } })(), sha: {}, busy: false, timer: 0, last: 0, err: "" };
+const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), ch => ch.charCodeAt(0)));
+async function ghGet(path) {
+  const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${path}?t=${Date.now()}`, { headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" }, cache: "no-store" });
+  if (r.status === 404) return { obj: null, sha: null };
+  if (!r.ok) throw new Error(r.status === 401 ? "令牌无效或过期" : r.status === 403 ? "令牌没有这个仓库的权限" : "读取失败 " + r.status);
+  const j = await r.json();
+  return { obj: JSON.parse(b64d(j.content)), sha: j.sha };
+}
+async function ghPut(path, obj, sha) {
+  const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${path}`, { method: "PUT", headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" },
+    body: JSON.stringify({ message: `面板同步 ${path}`, content: b64e(JSON.stringify(obj, null, 1)), ...(sha ? { sha } : {}) }) });
+  if (r.status === 409 || r.status === 422) return null;          // 别的设备刚改过，重新合并再写
+  if (!r.ok) throw new Error("写入失败 " + r.status);
+  return (await r.json()).content.sha;
+}
+// 只同步人填写的内容；核对结果（res / exit / hzRes / flip）每台设备自己算
+const CALL_FIELDS = ["id", "t", "who", "side", "text", "ref", "refGiven", "target", "stop", "hz", "manualExit", "u"];
+const pickCall = c => Object.fromEntries(CALL_FIELDS.filter(k => c[k] !== undefined).map(k => [k, c[k]]));
+const callsDoc = () => ({ calls: C.calls.map(pickCall).sort((a, b) => a.t - b.t || (a.id < b.id ? -1 : 1)), deleted: [...new Set(C.deleted || [])].sort() });
+const journalDoc = () => ({ balance: J.balance || 0, riskPct: J.riskPct || 2, u: J.u || 0, trades: J.trades.slice().sort((a, b) => a.t - b.t), deleted: [...new Set(J.deleted || [])].sort() });
+function mergeById(local, remote, deleted) {
+  const m = new Map();
+  for (const x of [...remote, ...local]) { const o = m.get(x.id); if (!o || (x.u || 0) > (o.u || 0)) m.set(x.id, o ? { ...o, ...x } : x); }
+  return [...m.values()].filter(x => !deleted.has(x.id));
+}
+async function cloudSync() {
+  if (!CLOUD.token || CLOUD.busy) return;
+  CLOUD.busy = true;
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const [rc, rj] = await Promise.all([ghGet("calls.json"), ghGet("journal.json")]);
+      // 喊单
+      const delC = new Set([...(C.deleted || []), ...((rc.obj && rc.obj.deleted) || [])]);
+      const keep = new Map(C.calls.map(c => [c.id, c]));
+      C.calls = mergeById(C.calls.map(pickCall), (rc.obj && rc.obj.calls) || [], delC).map(x => Object.assign(keep.get(x.id) || {}, x));
+      C.deleted = [...delC];
+      // 交易日志
+      const delJ = new Set([...(J.deleted || []), ...((rj.obj && rj.obj.deleted) || [])]);
+      J.trades = mergeById(J.trades, (rj.obj && rj.obj.trades) || [], delJ); J.deleted = [...delJ];
+      if (rj.obj && (rj.obj.u || 0) > (J.u || 0)) { J.balance = rj.obj.balance; J.riskPct = rj.obj.riskPct; J.u = rj.obj.u; if ($("jbal")) { $("jbal").value = $("sbal").value = J.balance || ""; $("jrisk").value = $("srisk").value = J.riskPct; } }
+      try { localStorage.setItem(CKEY, JSON.stringify(C)); localStorage.setItem(JKEY, JSON.stringify(J)); } catch (e) { /* 只是缓存 */ }
+      markFlips();
+      const cd = callsDoc(), jd = journalDoc();
+      const sc = JSON.stringify(cd) === JSON.stringify(rc.obj) ? rc.sha : await ghPut("calls.json", cd, rc.sha);
+      const sj = JSON.stringify(jd) === JSON.stringify(rj.obj) ? rj.sha : await ghPut("journal.json", jd, rj.sha);
+      if (sc !== null && sj !== null) break;
+    }
+    CLOUD.last = Date.now(); CLOUD.err = "";
+    cNames(); renderCalls(); renderJournal(); verifyCalls();
+  } catch (e) { CLOUD.err = e.message || String(e); }
+  finally { CLOUD.busy = false; renderCloud(); }
+}
+function cloudSoon() { if (!CLOUD.token) return; clearTimeout(CLOUD.timer); CLOUD.timer = setTimeout(cloudSync, 3000); }
+function renderCloud() {
+  const t = CLOUD.last ? fmtClock(CLOUD.last, true) : "—";
+  const txt = !CLOUD.token ? `云端未连接：记录只在这台设备的浏览器里。点「连接云端」填一次 GitHub 令牌，就会存到私有仓库 ${REC_REPO}，换设备也能读到。`
+    : CLOUD.err ? `云端同步出错：${CLOUD.err}（记录先存在本机，恢复后自动补传）` : `云端已连接 ${REC_REPO} · 最近同步 ${t} · 每分钟自动同步`;
+  document.querySelectorAll(".cloud-st").forEach(el => { el.textContent = txt; el.className = "cloud-st note " + (CLOUD.err ? "bad" : CLOUD.token ? "good" : ""); });
+  document.querySelectorAll(".cloud-on").forEach(el => el.hidden = !!CLOUD.token);
+  document.querySelectorAll(".cloud-off").forEach(el => el.hidden = !CLOUD.token);
+}
+function cloudInit() {
+  document.querySelectorAll(".cloud-on").forEach(b => b.onclick = () => {
+    const v = prompt(`粘贴 GitHub 细粒度令牌（只勾 ${REC_REPO} 这一个仓库，权限 Contents：Read and write）。令牌只存在这台设备的浏览器里。`);
+    if (!v) return;
+    CLOUD.token = v.trim(); try { localStorage.setItem(TKEY, CLOUD.token); } catch (e) { /* 存不了就只在本次有效 */ }
+    renderCloud(); cloudSync();
+  });
+  document.querySelectorAll(".cloud-off").forEach(b => b.onclick = () => {
+    if (!confirm("断开云端？这台设备上的令牌会删除，云端的记录不受影响。")) return;
+    CLOUD.token = ""; try { localStorage.removeItem(TKEY); } catch (e) { /* 忽略 */ } renderCloud();
+  });
+  document.querySelectorAll(".cloud-now").forEach(b => b.onclick = () => cloudSync());
+  renderCloud();
+}
+
+// ---------------- 喊单记录与验证（本机缓存 + 云端同步） ----------------
+const CKEY = "btc_calls_v1";
+const C = (() => { try { return JSON.parse(localStorage.getItem(CKEY)) || {}; } catch (e) { return {}; } })();
+C.calls = C.calls || [];
+function csave() { try { localStorage.setItem(CKEY, JSON.stringify(C)); } catch (e) { /* 隐私模式等情况下无法保存 */ } cloudSoon(); }
+const HZTXT = { 15: "15 分钟", 60: "1 小时", 120: "2 小时", 240: "4 小时", 720: "12 小时", 1440: "24 小时", 4320: "3 天", 10080: "7 天" };
+// 从中文原话里识别方向、价位、周期；识别不出的留空，由人确认
+function parseCall(text) {
+  const t = text.replace(/，|。|；|、/g, " "), out = {};
+  const hardS = /做空|空单|开空|进空|追空|反手空/.test(t), hardL = /做多|多单|开多|进多|追多|反手多/.test(t);
+  const softS = /看空|看跌|砸|跌破|下跌|跌到|回落|下看|空一点|空一些|空点|short/i.test(t), softL = /看多|看涨|拉升|上涨|涨到|反弹|上看|多一点|多一些|上车|long/i.test(t);
+  if (hardS !== hardL) out.side = hardS ? "short" : "long";
+  else if (!hardS && softS !== softL) out.side = softS ? "short" : "long";
+  else if (/(^|\s|\d)空(\s|$)/.test(t) !== /(^|\s|\d)多(\s|$)/.test(t)) out.side = /(^|\s|\d)空(\s|$)/.test(t) ? "short" : "long";
+  // 价格：8.4万 / 84k / 84300；只认 BTC 合理区间
+  const nums = [];
+  const re = /(\d+(?:\.\d+)?)\s*(万|w|W|k|K)?/g; let m;
+  while ((m = re.exec(t))) {
+    let v = +m[1]; if (/万|w|W/.test(m[2] || "")) v *= 1e4; else if (/k|K/.test(m[2] || "")) v *= 1e3;
+    if (v >= 1e4 && v <= 5e5) nums.push({ v, i: m.index });
+  }
+  for (const n of nums) {
+    const before = t.slice(Math.max(0, n.i - 8), n.i), after = t.slice(n.i, n.i + 12).replace(/^[\d.\s万wWkK]+/, "").slice(0, 4);
+    if ((/止损|损|防守|破/.test(before) || /^止损|^损/.test(after)) && !out.stop) out.stop = n.v;
+    else if (/目标|止盈|看到|到|上看|下看|tp/i.test(before) && !out.target) out.target = n.v;
+    else if (!out.ref) out.ref = n.v;
+  }
+  const hm = t.match(/(\d+(?:\.\d+)?)\s*(分钟|分|小时|个小时|h|H|天|日)/);
+  if (hm) { const k = /分/.test(hm[2]) ? 1 : /天|日/.test(hm[2]) ? 1440 : 60, mins = +hm[1] * k; out.hz = Object.keys(HZTXT).map(Number).reduce((a, b) => Math.abs(b - mins) < Math.abs(a - mins) ? b : a); }
+  else if (/今晚|今夜|晚上/.test(t)) out.hz = 720;
+  else if (/今天|日内|明天|明早/.test(t)) out.hz = 1440;
+  else if (/这周|本周|下周/.test(t)) out.hz = 10080;
+  return out;
+}
+function cSetSide(sd) { C.side = sd; $("c-long").setAttribute("aria-pressed", sd === "long"); $("c-short").setAttribute("aria-pressed", sd === "short"); }
+const localDT = ms => new Date(ms + TZOFF[TZ] * 6e4).toISOString().slice(0, 16);         // 喊单时间输入框按所选时区
+const parseDT = v => { const t = Date.parse(v + ":00Z"); return isFinite(t) ? t - TZOFF[TZ] * 6e4 : NaN; };
+// 逐根 K 线核对一条喊单（到期前也会算，用来显示进行中的状态）
+async function verifyCall(c) {
+  const now = Date.now(), exp = c.t + c.hz * 6e4, iv = c.hz <= 1440 ? ["1m", 6e4] : c.hz <= 7200 ? ["5m", 3e5] : ["1h", 36e5];
+  const start = Math.floor(c.t / iv[1]) * iv[1], end = Math.min(exp, now);
+  const k = (await jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=${iv[0]}&startTime=${start}&endTime=${end}&limit=1500`)).map(toBar);
+  if (!k.length) return;
+  if (!c.ref) c.ref = k[0].o;
+  const sgn = c.side === "long" ? 1 : -1, m0 = k[0].o;
+  // 喊的价位离当时市价超过 0.15%，当作挂单：价格碰到才算进场，到期都没碰到算「未成交」
+  const limit = c.refGiven && Math.abs(c.ref / m0 - 1) > 0.0015;
+  let adv = 0, fav = 0, tHit = null, sHit = null, both = false, filled = limit ? null : c.t;
+  for (const b of k) {
+    if (b.t >= exp) break;
+    if (!filled) { if (b.l <= c.ref && b.h >= c.ref) filled = b.t; else continue; }
+    const a = sgn > 0 ? c.ref - b.l : b.h - c.ref, f = sgn > 0 ? b.h - c.ref : c.ref - b.l;
+    const hitT = c.target && !tHit && (sgn > 0 ? b.h >= c.target : b.l <= c.target), hitS = c.stop && !sHit && (sgn > 0 ? b.l <= c.stop : b.h >= c.stop);
+    if (hitT && hitS && !tHit && !sHit) both = true;
+    if (hitS) sHit = b.t;
+    if (hitT) tHit = b.t;
+    adv = Math.max(adv, a); fav = Math.max(fav, f);
+  }
+  const last = k.filter(b => b.t < exp).at(-1), done = now >= exp + iv[1];
+  const endPx = done ? last.c : S.price;
+  const chg = filled ? sgn * (endPx / c.ref - 1) * 100 : NaN;
+  const first = tHit && sHit ? (both || sHit <= tHit ? "stop" : "target") : tHit ? "target" : sHit ? "stop" : null;
+  c.res = { done, endPx, chg, m0, limit, filled, grade: !filled ? "未成交" : chg >= 0.1 ? "对" : chg <= -0.1 ? "错" : "平", adv, fav, tHit, sHit, first, at: now };
+  // 卖出：止损 / 止盈先碰到哪个就在哪个卖；都没碰到就在验证周期结束时卖；手动卖出更早的话按手动
+  let ex = null;
+  if (filled && first === "stop") ex = { t: sHit, px: c.stop, why: "止损" };
+  else if (filled && first === "target") ex = { t: tHit, px: c.target, why: "止盈" };
+  else if (filled && done) ex = { t: exp, px: last.c, why: "到时间" };
+  if (filled && c.manualExit && (!ex || c.manualExit.t < ex.t)) ex = { ...c.manualExit, why: "手动卖出" };
+  if (ex) ex.pnl = sgn * (ex.px / c.ref - 1) * 100;
+  c.exit = ex;
+  await horizonCheck(c);
+}
+// 不管这条喊单自己的验证周期，统一看进场后 1h / 4h / 24h 的方向，用来比较方向判断在多长时间内最准
+const HZ_CMP = [[60, "1 小时"], [240, "4 小时"], [1440, "24 小时"]];
+async function horizonCheck(c) {
+  const r = c.res, start = r && r.filled; if (!start) return;
+  c.hzRes = c.hzRes || {};
+  for (const [m] of HZ_CMP) {
+    const at = Math.floor(start / 6e4) * 6e4 + m * 6e4;
+    if (c.hzRes[m] != null || at > Date.now() - 6e4) continue;
+    const k = await jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=1m&startTime=${at}&limit=1`);
+    if (k.length) c.hzRes[m] = (c.side === "long" ? 1 : -1) * (+k[0][1] / c.ref - 1) * 100;
+  }
+}
+let cBusy = false;
+async function verifyCalls() {
+  if (cBusy) return; cBusy = true;
+  try {
+    for (const c of C.calls) {
+      try {
+        if (!c.res || !c.res.done) await verifyCall(c);
+        else if (!c.hzRes || HZ_CMP.some(([m]) => c.hzRes[m] == null)) await horizonCheck(c);
+      } catch (e) { /* 网络问题，下一轮再试 */ }
+    }
+    csave(); renderCalls();
+  } finally { cBusy = false; }
+}
+// ---------------- 持仓与卖出 ----------------
+// 实时判断：已进场、还没卖出的单，现价碰到止损 / 止盈或到了最长持有时间就是「该卖了」
+function posState(c, now, P) {
+  if (!c.res || !c.res.filled || c.exit) return null;
+  const sgn = c.side === "long" ? 1 : -1, exp = c.t + c.hz * 6e4;
+  let why = null;
+  if (c.stop && (sgn > 0 ? P <= c.stop : P >= c.stop)) why = "触及止损";
+  else if (c.target && (sgn > 0 ? P >= c.target : P <= c.target)) why = "触及止盈";
+  else if (now >= exp && now - exp < 10 * 60e3) why = "到了最长持有时间";
+  else if (now >= exp) return { stale: true, exp };      // 早就到期、只是还没核对（比如面板刚打开），不提醒，等核对写入
+  return { why, exp, pnl: sgn * (P / c.ref - 1) * 100, toStop: c.stop ? Math.abs(P - c.stop) : NaN, toTgt: c.target ? Math.abs(c.target - P) : NaN };
+}
+// 持仓中盘面盯防：急动、接近止损、高发时段将至、红色新闻。回测（backtest/inplay_check.py）里这些时候马上卖都没有比按计划更好，
+// 所以这里只提醒「发生了什么、历史上怎么样、该检查什么」，真正卖出仍按止损 / 止盈 / 时间
+function watchAlerts(c, now, P) {
+  const out = [], sgn = c.side === "long" ? 1 : -1, v = volNow(), atr = v ? v.atr : NaN, fm = S.fm;
+  if (fm && now - fm.t < 15 * 60e3 && fm.t > c.res.filled) {
+    const against = fm.dir !== sgn;
+    out.push({ key: `fm-${fm.t}`, lv: against ? "bad" : "good", text: `盘面急${fm.dir > 0 ? "涨" : "跌"} ${fmt(Math.abs(fm.mv))} 美元（${fm.k.toFixed(1)} ATR），对这单${against ? "不利" : "有利"}。回测：这时马上卖平均比按计划拿着${against ? "差约 0.08%" : "差约 0.12%"}，卖了更好的只有 47–48%——${against ? "止损没到就别恐慌割肉" : "不用急着落袋"}，确认止损单挂在交易所。` });
+  }
+  if (c.stop && isFinite(atr) && Math.abs(P - c.stop) <= 0.3 * atr && (sgn > 0 ? P > c.stop : P < c.stop))
+    out.push({ key: "near-stop", lv: "bad", text: `离止损只剩 ${fmt(Math.abs(P - c.stop))} 美元（不到 0.3 个 ATR）。按计划，碰到 ${fmt(c.stop)} 就卖。` });
+  const w = riskWindows(now).find(x => x.a - now <= 15 * 60e3 && x.z > now && x.a < c.t + c.hz * 6e4);
+  if (w) out.push({ key: `win-${w.a}`, lv: "warn", text: `${now >= w.a ? "正处于" : Math.round((w.a - now) / 6e4) + " 分钟后进入"}${w.name}时段${w.ratio ? `（大行情是平时的 ${w.ratio} 倍）` : ""}。回测里开盘前卖掉并没有更好，但这段通常会波动 1% 左右：拿着就确认止损挂在交易所、仓位没超标。` });
+  const red = ((S.news && S.news.alerts) || []).filter(a => a.level === "red" && now - Date.parse(a.time) < 15 * 60e3 && Date.parse(a.time) > c.res.filled);
+  red.slice(0, 1).forEach(a => out.push({ key: `red-${a.time}`, lv: "bad", text: `红色警报：${a.title}。先看新闻原文，按计划止损；不要在消息刚出来的第一分钟追或砍。` }));
+  return out;
+}
+function notifyWatch(c, al) {
+  const key = c.id + ":" + al.key; S.sellNotified = S.sellNotified || new Set();
+  if (S.sellNotified.has(key)) return; S.sellNotified.add(key);
+  try { if ("Notification" in window && Notification.permission === "granted") new Notification(`盘面提醒 · ${c.who} ${c.side === "long" ? "多" : "空"}单`, { body: al.text, tag: key }); } catch (e) { /* 只在页面提示 */ }
+}
+function notifySell(c, why) {
+  const key = c.id + ":" + why; S.sellNotified = S.sellNotified || new Set();
+  if (S.sellNotified.has(key)) return; S.sellNotified.add(key);
+  const msg = `${c.who} 的${c.side === "long" ? "多" : "空"}单（进场 ${fmt(c.ref)}）${why}，现价 ${fmt(S.price)}`;
+  try { if ("Notification" in window && Notification.permission === "granted") new Notification("该卖了", { body: msg, tag: key }); } catch (e) { /* 不支持就只在页面上提示 */ }
+}
+function renderPositions() {
+  if (!$("pOpen")) return;
+  const now = Date.now(), P = S.price;
+  const fmtT = fmtDT;
+  const dur = ms => ms >= 36e5 ? (ms / 36e5).toFixed(1) + " 小时" : Math.max(0, Math.round(ms / 6e4)) + " 分钟";
+  const open = C.calls.filter(c => c.res && c.res.filled && !c.exit).map(c => ({ c, s: posState(c, now, P) })).filter(x => x.s && !x.s.stale).sort((a, b) => b.c.t - a.c.t);
+  const sell = open.filter(x => x.s && x.s.why);
+  sell.forEach(x => notifySell(x.c, x.s.why));
+  open.forEach(x => { x.w = x.s.why ? [] : watchAlerts(x.c, now, P); x.w.forEach(al => notifyWatch(x.c, al)); });
+  const watching = open.filter(x => x.w.length);
+  S.sellCount = sell.length;
+  $("pAlert").className = "verdict " + (sell.length ? "badv" : open.length ? "" : "goodv");
+  $("pAlert").textContent = sell.length ? `该卖了：${sell.map(x => `${x.c.who} ${x.c.side === "long" ? "多" : "空"}单（进场 ${fmt(x.c.ref)}）${x.s.why}`).join("；")}。卖出记录会在 1 分钟内按 K 线确认后写入。`
+    : watching.length ? `盘面提醒：${watching.map(x => `${x.c.who} ${x.c.side === "long" ? "多" : "空"}单——${x.w[0].text}`).join("；")}`
+    : open.length ? `持有中 ${open.length} 单，盘面正常，暂时都不用卖。` : "现在没有持有中的单。";
+  if (!sell.length && watching.length) $("pAlert").className = "verdict " + (watching.some(x => x.w.some(a => a.lv === "bad")) ? "badv" : "");
+  $("pOpen").innerHTML = open.length ? `<thead><tr><th>进场</th><th>谁</th><th>方向</th><th>进场价</th><th>止损</th><th>止盈</th><th>最长到</th><th>现价盈亏</th><th>离止损</th><th>离止盈</th><th>状态 / 盘面提醒</th><th></th></tr></thead><tbody>` +
+    open.map(x => { const { c, s } = x; return `<tr class="${s && s.why ? "sell" : ""}"><td>${fmtT(c.res.filled)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)}</td>
+      <td>${c.stop ? fmt(c.stop) : "—"}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${fmtT(s.exp)}（剩 ${dur(s.exp - now)}）</td><td class="${s.pnl > 0 ? "good" : "bad"}">${pct(s.pnl)}</td>
+      <td>${isFinite(s.toStop) ? fmt(s.toStop) : "—"}</td><td>${isFinite(s.toTgt) ? fmt(s.toTgt) : "—"}</td><td class="txt">${s.why ? `<b class="bad">该卖了：${s.why}</b>` : x.w && x.w.length ? x.w.map(a => `<span class="${a.lv}">⚠ ${esc(a.text.split("。")[0])}</span>`).join("<br>") : "持有中 · 盘面正常"}</td>
+      <td><button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button></td></tr>`; }).join("") + "</tbody>" : "";
+  const done = C.calls.filter(c => c.exit).sort((a, b) => b.exit.t - a.exit.t).slice(0, 10);
+  $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>原因</th><th>盈亏</th><th>拿了多久</th></tr></thead><tbody>` +
+    done.map(c => `<tr><td>${fmtT(c.exit.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)} → ${fmt(c.exit.px)}</td>
+      <td>${c.exit.why}</td><td class="${c.exit.pnl > 0 ? "good" : "bad"}">${pct(c.exit.pnl)}</td><td>${dur(c.exit.t - c.res.filled)}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="txt">还没有卖出记录。</td></tr></tbody>`;
+}
+function renderCalls() {
+  if (!$("cTable")) return;
+  const who = $("cFilter").value, all = C.calls.slice().sort((a, b) => b.t - a.t), list = all.filter(c => !who || c.who === who);
+  const done = list.filter(c => c.res && c.res.done), good = done.filter(c => c.res.grade === "对"), bad = done.filter(c => c.res.grade === "错");
+  const dec = good.length + bad.length, acc = dec ? good.length / dec * 100 : NaN, err = dec ? 98 / Math.sqrt(dec) : NaN;
+  const withT = done.filter(c => c.target), tHit = withT.filter(c => c.res.first === "target").length;
+  const withS = done.filter(c => c.stop), sFirst = withS.filter(c => c.res.first === "stop").length;
+  const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[s.length >> 1] : NaN; };
+  const goodAdv = good.map(c => c.res.adv), flips = list.filter(c => c.flip).length, fixed = +($("volFixed") && $("volFixed").value) || 500;
+  const swept = good.filter(c => c.res.adv >= fixed).length;
+  $("cStats").innerHTML = [
+    ["已到期", `${done.length} 条`, "", `进行中 ${list.length - done.length} 条${done.some(c => c.res.grade === "未成交") ? ` · 未成交 ${done.filter(c => c.res.grade === "未成交").length} 条` : ""}`],
+    ["方向准确率", isFinite(acc) ? `${acc.toFixed(0)}%` : "—", isFinite(acc) && acc - err > 50 ? "good" : "", dec ? `对 ${good.length} / 错 ${bad.length} / 平 ${done.filter(c => c.res.grade === "平").length} · ±${err.toFixed(0)}%` : "对 / 错 / 平"],
+    ["目标命中", withT.length ? `${Math.round(tHit / withT.length * 100)}%` : "—", "", `${tHit} / ${withT.length} 条带目标价`],
+    ["先打止损", withS.length ? `${Math.round(sFirst / withS.length * 100)}%` : "—", sFirst ? "bad" : "", `${sFirst} / ${withS.length} 条带止损价`],
+    ["对的单中途先扛", goodAdv.length ? `${fmt(med(goodAdv))} 美元` : "—", "", goodAdv.length ? `中位数 · 最大 ${fmt(Math.max(...goodAdv))}` : "方向对的单到期前的最大逆向"],
+    ["改口", `${flips} 次`, flips ? "warn" : "", "上一条没到期就喊反方向"],
+  ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
+  // 同一批喊单，进场后 1h / 4h / 24h 各对了多少（0.1% 以内算平，不计入）
+  const hzRows = HZ_CMP.map(([m, name]) => {
+    const v = list.map(c => c.hzRes && c.hzRes[m]).filter(x => x != null), g = v.filter(x => x >= 0.1).length, b = v.filter(x => x <= -0.1).length, n = g + b;
+    const a = n ? g / n * 100 : NaN, e = n ? 98 / Math.sqrt(n) : NaN, avg = v.length ? v.reduce((s, x) => s + x, 0) / v.length : NaN;
+    return { name, n: v.length, g, b, a, e, avg };
+  });
+  $("cHzTbl").innerHTML = hzRows.some(r => r.n) ? `<thead><tr><th>进场后</th><th>样本</th><th>方向对 / 错</th><th>准确率</th><th>平均涨跌（按喊单方向，不含手续费）</th></tr></thead><tbody>` +
+    hzRows.map(r => `<tr><td class="t">${r.name}</td><td>${r.n}</td><td>${r.g} / ${r.b}</td><td class="${r.a - r.e > 50 ? "good" : ""}">${isFinite(r.a) ? `${r.a.toFixed(0)}% ±${r.e.toFixed(0)}` : "—"}</td><td class="${r.avg > 0 ? "good" : r.avg < 0 ? "bad" : ""}">${pct(r.avg, 2)}</td></tr>`).join("") + "</tbody>" : "";
+  const best = hzRows.filter(r => r.n >= 5).sort((x, y) => y.a - x.a)[0];
+  if (done.length) {
+    $("cSum").className = "verdict";
+    $("cSum").textContent = `${who || "所有人"}已到期 ${done.length} 条：方向对 ${good.length} 条、错 ${bad.length} 条${dec >= 20 ? `，准确率 ${acc.toFixed(0)}% ±${err.toFixed(0)}%${acc - err > 50 ? "，明显好于抛硬币" : "，还看不出比抛硬币好"}` : "，样本还少（至少 20 条才看得出准确率）"}。` +
+      (best && hzRows.filter(r => r.n >= 5).length > 1 ? ` 按进场后的时间看，${best.name}的方向准确率最高（${best.a.toFixed(0)}%）${best.a - best.e > 50 ? (best.name === "1 小时" ? "，说明判断的优势很短，止盈应该放在 1 小时以内" : "") : `，但还在误差范围内${best.name === "1 小时" ? "；样本多了如果仍是 1 小时最准，止盈就应该放在 1 小时以内" : ""}`}。` : "") +
+      (good.length ? ` 方向对的 ${good.length} 条里，有 ${swept} 条到期前曾逆向 ${fmt(fixed)} 美元以上——用 ${fmt(fixed)} 美元的止损，这些对的单会先被扫掉（止损对照值在「波动与扛单」里改）。` : "");
+  }
+  const fmtT = fmtDT;
+  const rows = list.map(c => {
+    const r = c.res, sgn = c.side === "long" ? 1 : -1, live = r && !r.filled ? NaN : r && !r.done && isFinite(S.price) ? sgn * (S.price / c.ref - 1) * 100 : r ? r.chg : NaN;
+    const left = c.t + c.hz * 6e4 - Date.now();
+    const st = !r ? "核对中…" : r.done ? `<b class="${r.grade === "对" ? "good" : r.grade === "错" ? "bad" : "mut"}">${r.grade}</b>` : !r.filled ? `等成交 · 剩` : `进行中 · 剩 ${left > 36e5 ? (left / 36e5).toFixed(1) + " 小时" : Math.max(0, Math.round(left / 6e4)) + " 分钟"}`;
+    const tags = [r && r.limit ? `挂单（当时市价 ${fmt(r.m0)}）` : "", r && r.first === "target" ? "目标先到" : "", r && r.first === "stop" ? "先打止损" : "", c.flip ? `改口 ${fmtT(c.flip)}` : ""].filter(Boolean).map(x => `<span class="tag">${x}</span>`).join("");
+    return `<tr><td>${fmtT(c.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td class="txt">${esc(c.text || "—")}</td>
+      <td>${c.ref ? fmt(c.ref) : "—"}</td><td>${c.target ? fmt(c.target) : "—"} / ${c.stop ? fmt(c.stop) : "—"}</td><td>${HZTXT[c.hz] || c.hz + " 分钟"}</td><td>${st}${tags ? "<br>" + tags : ""}</td>
+      <td class="${live > 0 ? "good" : live < 0 ? "bad" : ""}">${isFinite(live) ? pct(live) : "—"}</td>
+      <td class="txt">${c.exit ? `${fmtT(c.exit.t)} · ${fmt(c.exit.px)} · ${c.exit.why} · <b class="${c.exit.pnl > 0 ? "good" : "bad"}">${pct(c.exit.pnl)}</b>` : r && r.filled ? "持有中" : "—"}</td><td>${r && r.filled ? fmt(r.adv) : "—"}</td><td>${r && r.filled ? fmt(r.fav) : "—"}</td>
+      <td><button type="button" class="btn sm" data-cdel="${c.id}">删除</button></td></tr>`;
+  }).join("");
+  $("cTable").innerHTML = list.length ? `<thead><tr><th>喊单时间</th><th>谁</th><th>方向</th><th>原话</th><th>参考价</th><th>目标 / 止损</th><th>验证周期</th><th>结果</th><th>到期涨跌</th><th>卖出（时间 · 价格 · 原因 · 盈亏）</th><th>中途最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "";
+}
+// 同一个人：上一条还没到期就喊了反方向 → 上一条标改口（保存、导入、删除后整体重算）
+function markFlips() {
+  const cs = C.calls.slice().sort((a, b) => a.t - b.t);
+  cs.forEach(o => { o.flip = cs.find(n => n.who === o.who && n.side !== o.side && n.t > o.t && n.t < o.t + o.hz * 6e4)?.t || null; });
+}
+// 「此刻结论」出现参考信号时自动记一条模型喊单（与后台 monitor/paper.py 同口径、同 id，两边记的会自动合并）
+const MODEL_WHO = "模型·此刻结论";
+function recordModelCalls(c5, z, F, v) {
+  const t = S.closedAt; if (!t || C.sigBar === t || !S.modelPolled) return;   // 先合并后台记录，避免两边重复记
+  C.sigBar = t; C.sigPrev = C.sigPrev || {};
+  const sig = { A: null, B: null };
+  ruleSigs(z, F).forEach(([side, rule]) => { sig[rule] = side; });
+  let added = 0;
+  for (const rule of ["A", "B"]) {
+    const side = sig[rule];
+    const recent = C.calls.some(c => c.id.startsWith(`m-${rule}-${side}-`) && t - c.t < 3600e3);
+    if (side && side !== C.sigPrev[rule] && !recent && !(C.deleted || []).includes(`m-${rule}-${side}-${t}`)) {
+      const ref = c5.at(-1).c, sgn = side === "long" ? 1 : -1, A = SPEC.rule_a, B = SPEC.rule_b;
+      let call;
+      if (rule === "A") {
+        const d = VOLSTAT.mae_atr["4 小时"].p80 * v.atr;
+        call = { stop: Math.round((ref - sgn * d) * 10) / 10, target: 0, hz: A.hold_bars * 5,
+          text: `规则 A：4 小时模型上涨概率 ${S.prob["4 小时"].toFixed(1)}%，挂限价 ${fmt(ref)}，${A.hold_bars * 5 / 60} 小时后平仓（保险止损按 4 小时 P80 逆向）` };
+      } else {
+        const r = ruleBStop(c5, z, sgn, ref);
+        call = { stop: Math.round((ref - sgn * r) * 10) / 10, target: Math.round((ref + sgn * B.tp_R * r) * 10) / 10, hz: B.max_hold_bars * 5,
+          text: `规则 B：张主任完整${sgn > 0 ? "做多" : "做空"}信号 + 模型同向 + 不逆 1h 趋势，市价进，止盈 ${B.tp_R}R` };
+      }
+      C.calls.push({ id: `m-${rule}-${side}-${t}`, t, who: MODEL_WHO, side, ref: Math.round(ref * 10) / 10, refGiven: false, ...call });
+      added++;
+    }
+    C.sigPrev[rule] = side;
+  }
+  if (added) { markFlips(); cNames(); verifyCalls(); }
+  csave();
+}
+// 后台监控程序记的模型喊单（浏览器没开时也在记），合并进本机记录；用户删过的不再加回来
+async function pollModelCalls() {
+  try {
+    const d = await jfetch(DATA + "model_calls.json?t=" + Date.now()), ids = new Set(C.calls.map(c => c.id)), del = new Set(C.deleted || []);
+    const add = (d.calls || []).filter(c => !ids.has(c.id) && !del.has(c.id));
+    if (add.length) { C.calls.push(...add); markFlips(); csave(); cNames(); renderCalls(); verifyCalls(); }
+    S.modelCallsAt = d.updated;
+  } catch (e) { S.modelCallsAt = null; }
+  S.modelPolled = true;
+}
+// 人名列表只在记录变化时重建，避免每秒刷新打断下拉框
+function cNames() {
+  const names = [...new Set(C.calls.map(c => c.who))], keep = $("cFilter").value;
+  $("cWhoList").innerHTML = names.map(n => `<option value="${esc(n)}">`).join("");
+  $("cFilter").innerHTML = `<option value="">全部人</option>` + names.map(n => `<option${n === keep ? " selected" : ""}>${esc(n)}</option>`).join("");
+}
+function callsInit() {
+  $("cTime").value = localDT(Date.now());
+  $("c-long").onclick = () => cSetSide("long"); $("c-short").onclick = () => cSetSide("short");
+  $("cParse").onclick = () => {
+    const p = parseCall($("cText").value), got = [];
+    if (p.side) { cSetSide(p.side); got.push(p.side === "long" ? "看多" : "看空"); }
+    if (p.ref) { $("cRef").value = p.ref; got.push("参考价 " + fmt(p.ref)); }
+    if (p.target) { $("cTarget").value = p.target; got.push("目标 " + fmt(p.target)); }
+    if (p.stop) { $("cStop").value = p.stop; got.push("止损 " + fmt(p.stop)); }
+    if (p.hz) { $("cHz").value = p.hz; got.push(HZTXT[p.hz]); }
+    $("cParseMsg").textContent = got.length ? `识别到：${got.join("、")}。请核对后保存。` : "没识别出来，请手动填写。";
+    if (!p.side) $("cParseMsg").textContent += " 方向没识别出来，请手动选。";
+  };
+  $("cAdd").onclick = async () => {
+    const t = parseDT($("cTime").value) || Date.now();
+    if (!C.side) { $("cParseMsg").textContent = "请先选方向（看多 / 看空）。"; return; }
+    if (t > Date.now() + 6e4) { $("cParseMsg").textContent = "喊单时间不能在未来。"; return; }
+    const c = { id: Date.now().toString(36), t, who: ($("cWho").value || "张主任").trim(), side: C.side, text: $("cText").value.trim(),
+      ref: +$("cRef").value || (Date.now() - t < 6e4 && isFinite(S.price) ? S.price : 0), refGiven: !!+$("cRef").value, target: +$("cTarget").value || 0, stop: +$("cStop").value || 0, hz: +$("cHz").value };
+    c.u = Date.now(); C.calls.push(c); markFlips(); csave();
+    ["cText", "cRef", "cTarget", "cStop"].forEach(id => $(id).value = ""); $("cTime").value = localDT(Date.now()); cSetSide(null);
+    $("cParseMsg").textContent = "已保存。"; cNames(); renderCalls(); verifyCalls();
+  };
+  $("cFilter").onchange = renderCalls;
+  $("pOpen").addEventListener("click", ev => {
+    const id = ev.target.dataset && ev.target.dataset.psell; if (!id) return;
+    const c = C.calls.find(x => x.id === id);
+    if (c && isFinite(S.price) && confirm(`按现价 ${fmt(S.price)} 记一笔手动卖出？\n${c.who} ${c.side === "long" ? "多" : "空"}单，进场 ${fmt(c.ref)}`)) {
+      c.manualExit = { t: Date.now(), px: S.price }; c.u = Date.now(); c.exit = { ...c.manualExit, why: "手动卖出", pnl: (c.side === "long" ? 1 : -1) * (S.price / c.ref - 1) * 100 };
+      csave(); renderPositions(); renderCalls();
+    }
+  });
+  const np = () => { $("pNotifyMsg").textContent = !("Notification" in window) ? "这个浏览器不支持桌面提醒，只在页面上提示。" : Notification.permission === "granted" ? "桌面提醒已开启（页面开着时有效）。" : Notification.permission === "denied" ? "桌面提醒被浏览器拒绝了，要在浏览器设置里打开。" : ""; $("pNotify").hidden = !("Notification" in window) || Notification.permission !== "default"; };
+  $("pNotify").onclick = async () => { try { await Notification.requestPermission(); } catch (e) { /* 忽略 */ } np(); };
+  np();
+  $("cTable").addEventListener("click", ev => {
+    const id = ev.target.dataset && ev.target.dataset.cdel; if (!id) return;
+    const c = C.calls.find(x => x.id === id);
+    if (c && confirm(`删除这条喊单？\n${c.who} ${c.side === "long" ? "看多" : "看空"} ${c.text || ""}`)) { C.calls = C.calls.filter(x => x.id !== id); (C.deleted = C.deleted || []).push(id); markFlips(); csave(); cNames(); renderCalls(); }
+  });
+  $("cExport").onclick = () => {
+    const blob = new Blob([JSON.stringify(C, null, 1)], { type: "application/json" }), a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `btc-calls-${todayKey(Date.now())}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $("cImport").onchange = async ev => {
+    const f = ev.target.files[0]; if (!f) return;
+    try { const d = JSON.parse(await f.text()); if (!Array.isArray(d.calls)) throw 0; const ids = new Set(C.calls.map(c => c.id)); C.calls.push(...d.calls.filter(c => !ids.has(c.id))); markFlips(); csave(); cNames(); renderCalls(); verifyCalls();
+      $("cParseMsg").textContent = `已导入 ${d.calls.filter(c => !ids.has(c.id)).length} 条，正在核对…`; }
+    catch (e) { $("cParseMsg").textContent = "导入失败：文件格式不对。"; }
+  };
+  cNames(); renderCalls();
+}
+
+// ---------------- 规则说明（参数取自 SPEC / VOLSTAT / FASTMOVE / WEIGHTS，改参数后自动跟着变） ----------------
+function renderRulesDoc() {
+  if (!$("rulesDoc")) return;
+  const A = SPEC.rule_a, B = SPEC.rule_b, f = SPEC.fees, V = typeof VOLSTAT !== "undefined" ? VOLSTAT.mae_atr : null, FM = typeof FASTMOVE !== "undefined" ? FASTMOVE : null;
+  const w = k => WEIGHTS[k] ? `${WEIGHTS[k].test_acc}% ±${WEIGHTS[k].err}` : "—";
+  const sec = (title, items, open) => `<details${open ? " open" : ""}><summary>${title}</summary><ul>${items.map(x => `<li>${x}</li>`).join("")}</ul></details>`;
+  $("rulesDoc").innerHTML = [
+    sec("总原则", [
+      "面板只给信息和计算，<b>不会下单</b>，也不构成投资建议。",
+      "所有判断规则都先用 2021–2026 年币安 BTCUSDT 永续合约数据回测，回测、模拟盘、面板用同一份参数（rules_spec.json）。",
+      `手续费按挂单 ${f.maker_pct}%、市价 ${f.taker_pct}% 计算。<b>规则 A、B 扣费后都没有稳定赚钱</b>，所以出现信号也只叫「参考信号」，建议小仓位。`,
+      `重大数据公布和美股开盘前 ${SPEC.event_block_min} 分钟不开新仓。`,
+    ], true),
+    sec("此刻结论：做多 / 做空怎么判", [
+      `<b>不要开</b>：重大数据或美股开盘前 ${SPEC.event_block_min} 分钟、今天已亏 15% 以上、保证金占用超过余额三分之一，满足任一条。`,
+      "<b>有参考信号</b>：规则 A 或规则 B 触发（见下面两条）。给出进场价、止损、止盈、拿多久、仓位和杠杆。",
+      "<b>不建议</b>：刚急跌（4 小时跌 ≥1.5% 且 RSI6 ≤20）就抄底、刚急涨就摸顶，且还没出现扳机；或者逆着 1 小时趋势。",
+      "<b>等待</b>：以上都不是，会写出还差哪个条件。",
+      "仓位 = 余额 × 每笔最多亏 % ÷ 止损幅度。杠杆取「保证金不超过余额三分之一」需要的最低倍数，上限是「强平价离进场至少是止损距离的 2 倍」（强平距离按 1 ÷ 杠杆 − 0.4% 估算）。",
+      `没有信号时给出的「如果你还是要做」：止损按所选持有时间的 P80 逆向幅度${V ? `（1 小时 ${V["1 小时"].p80}、4 小时 ${V["4 小时"].p80}、24 小时 ${V["24 小时"].p80} 个 ATR）` : ""}，五次里有四次不会被正常波动扫掉。`,
+    ], true),
+    sec(`规则 A · ${esc(A.name)}`, [
+      `触发：5 分钟 K 线收盘时，4 小时方向模型的上涨概率 ≥ ${Math.round(A.p_long * 100)}% 做多，≤ ${Math.round(A.p_short * 100)}% 做空；美股开盘前 ${SPEC.event_block_min} 分钟不做。`,
+      `进场：在收盘价挂限价单，${A.limit_valid_bars * 5} 分钟内价格没穿过就撤单。`,
+      `卖出：成交后持有 ${A.hold_bars * 5 / 60} 小时，到期挂单平仓，${A.limit_valid_bars * 5} 分钟没成交改市价。${A.use_insurance_stop ? `保险止损 ${A.insurance_stop_pct}%。` : "回测里不设止损（加 2% 保险止损反而更差）；面板为了控制风险，另外按 4 小时 P80 逆向放一个保险止损。"}`,
+      "按波动定的卖出方式（止损 / 止盈各 1 个 ATR、移动止损、信号反转就走）也回测过：持有时间会随波动变（平静时约 1.2 小时、剧烈时约 1.8 小时），但每笔亏得更多（约 -0.08%，因为交易更频繁、手续费和止损更多），所以没有采用。",
+      `<span class="bt">回测：${esc(A.backtest)}</span>`,
+    ]),
+    sec(`规则 B · ${esc(B.name)}`, [
+      "张主任条件（5 分钟，做多为例，做空完全镜像）：① 超卖：J < 0 且 RSI6 < 20；② 动能衰竭：MACD 负柱收敛；③ 量能：底背离或连续缩量；④ 之前在 MA7 下方；⑤ 扳机：收盘站上 MA7 且 MA7 拐头向上。全部满足才算完整信号。",
+      "过滤：15 分钟和 1 小时方向模型的平均概率同方向；不逆 1 小时趋势（1 小时收盘价相对 MA25 的位置和 MA25 方向）；非周末、非低量（成交量不低于 24 小时中位数的一半）；事件前不开。",
+      `进场：下一根 5 分钟 K 线开盘市价进。止损 = 近 12 根的低点（做空用高点）再往外 ${B.stop_atr} 个 5 分钟 ATR；止盈 = ${B.tp_R} 倍止损距离；最长 ${B.max_hold_bars * 5 / 60} 小时。持有时间由价格先碰到哪个决定，本来就随波动变。`,
+      `<span class="bt">回测：${esc(B.backtest)}</span>`,
+    ]),
+    sec("方向判断（模型）", [
+      "逻辑回归模型，20 个特征：过去 1 / 3 / 12 / 48 / 288 根涨跌、离 MA7 / MA25 / MA99 多远、RSI6、KDJ 的 J、MACD 柱、成交量、主动买入占比、24 小时高低位置和振幅、是否周末、是否美股时段、4 小时趋势。",
+      "用 2021–2026 年逐年滚动检验（每年只用之前的数据训练）。",
+      `准确率：1 分钟 ${w("1 分钟")}、5 分钟 ${w("5 分钟")}、15 分钟 ${w("15 分钟")}、1 小时 ${w("1 小时")}、4 小时 ${w("4 小时")}、24 小时 ${w("24 小时（大势）")}。`,
+      "它本质是「跌多了押反弹、涨多了押回落」。急跌超卖时标「超卖反弹倾向」、急涨超买时标「超买回落倾向」，并显示同类情况的历史结果：反弹比例只有 53–60%，而且通常先再逆向一段。",
+      "结论按已收盘 K 线，盘中预估另列。",
+    ]),
+    sec("波动与扛单", [
+      "ATR = 过去 24 小时 1 小时 K 线的平均振幅（最高减最低）。",
+      `进场后价格先朝反方向走多远，和 ATR 成正比，平静和剧烈时期的倍数几乎一样${V ? `：持有 4 小时的中位 ${V["4 小时"].p50}、P80 ${V["4 小时"].p80}、P95 ${V["4 小时"].p95} 个 ATR` : ""}。所以止损和仓位按 ATR 定，不用固定点数。`,
+      "波动状态 = 最近 7 天 ATR ÷ 之前 30 天 ATR：大于 1.3 算扩张，小于 0.77 算收缩。",
+    ]),
+    sec("急动提醒", [
+      "最近 5 分钟或 15 分钟走了 1 个 ATR 以上就提醒，保留 30 分钟。",
+      FM && FM.all["5_1.0"] ? `历史上这时顺势追进去，30 分钟后继续同方向的只有 ${FM.all["5_1.0"].c30}%；「止盈 1 ATR、止损 0.5 ATR、最长 30 分钟」每笔 ${FM.all["5_1.0"].pnl}%（含 0.10% 往返手续费）。走得越猛越容易回吐。` : "历史上顺势追进去，之后继续同方向的不到一半，扣费后亏钱。",
+      FM ? `大行情高发时段：美股开盘后 1 小时是平时的 ${FM.window.open} 倍，美东 8:30（多数美国数据公布）那一小时是 ${FM.window.data} 倍。` : "",
+    ].filter(Boolean)),
+    sec("喊单记录、持仓与卖出", [
+      "每一单（人工喊单、补录的历史单、模型自动记的单）进场时就写好卖出计划：止损价、止盈价、最长持有时间。",
+      "卖出：价格先碰到止损或止盈就在那里卖（同一根 K 线两个都碰到按止损算）；都没碰到就到最长持有时间按当时收盘价卖；你也可以手动卖出。卖出时间、价格、原因、盈亏都会记下，喊单记录同步显示。",
+      "对错：到期价朝喊单方向走了 0.1% 以上算对，反方向 0.1% 以上算错，其余算平。喊的价位离当时市价超过 0.15% 当作挂单，碰到才算进场。",
+      "模型自动记单：「此刻结论」每出现一次参考信号（规则 A 或 B）就记一条「模型·此刻结论」，同一规则同方向 60 分钟内只记一次；后台监控程序在跑时浏览器关着也会记，并在买入和该卖时发 Mac 通知。",
+      "持有期间盯盘面：急动（5 或 15 分钟走 1 个 ATR 以上）、离止损不到 0.3 个 ATR、15 分钟内进入美股开盘或数据公布时段、红色新闻警报，都会提醒。回测里这些时候马上卖都没有比按计划拿着更好（平均差 0.05%–0.27%），所以提醒只说明发生了什么、该检查什么，卖出仍按计划。",
+      "盈亏按价格百分比算，没扣手续费和资金费，也没乘杠杆。",
+      "存储：点「连接云端」并填一次 GitHub 令牌后，喊单记录和交易日志存在私有仓库 weilong-lab/btc-records（只有你能看），每分钟和每次改动后自动同步，换设备填同一个令牌就能读到；浏览器里只留一份缓存，断网时先存本机、恢复后自动补传。后台监控程序配置了 RECORDS_REPO 后，浏览器关着也会对人工喊单发 Mac 提醒。",
+      "时间：右上角可切换东京时间 / 北京时间，页面上所有时间同步切换（各设备分别保存）。",
+    ]),
+  ].join("");
+}
+
+async function loadSpec() {
+  try { const s = await jfetch(SPEC_URL + "?t=" + Date.now()); if (s.rule_a && s.rule_b) SPEC = s; } catch (e) { /* 用内置兜底 */ }
+  renderRulesDoc();
+}
+
+// ---------------- 多周期均线 ----------------
+function renderMA() {
+  const TFS = [["15 分钟", S.b15, 0.02], ["30 分钟", S.b30, 0.03], ["1 小时", S.b60, 0.05], ["4 小时", S.b240, 0.1], ["1 天", S.b1d, 0.2]];
+  const P = S.price, res = [];
+  const rows = TFS.map(([name, bars, flat]) => {
+    const b = (bars || []).slice(0, -1), c = b.map(x => x.c), i = c.length - 1;
+    if (i < 104) return `<tr><td class="t">${name}</td><td colspan="6">数据加载中…</td></tr>`;
+    const ma = (j, n) => { let t = 0; for (let k = j - n + 1; k <= j; k++) t += c[k]; return t / n; };
+    const m7 = ma(i, 7), m25 = ma(i, 25), m99 = ma(i, 99), slope = (m7 / ma(i - 1, 7) - 1) * 100;
+    const arr = m7 > m25 && m25 > m99 ? ["多头排列", "good", 1] : m7 < m25 && m25 < m99 ? ["空头排列", "bad", -1] : ["交织", "mut", 0];
+    const dir = slope > flat ? ["↑ 向上", "good"] : slope < -flat ? ["↓ 向下", "bad"] : ["→ 走平", "mut"];
+    let cross = "";
+    for (let k = 0; k < 3 && !cross; k++) {
+      const d0 = ma(i - k, 7) - ma(i - k, 25), d1 = ma(i - k - 1, 7) - ma(i - k - 1, 25);
+      if (d0 > 0 && d1 <= 0) cross = `<span class="good">金叉</span><small>${k ? k + " 根前" : "最新一根"}</small>`;
+      if (d0 < 0 && d1 >= 0) cross = `<span class="bad">死叉</span><small>${k ? k + " 根前" : "最新一根"}</small>`;
+    }
+    const above = [m7, m25, m99].filter(m => P > m).length;
+    const pos = above === 3 ? ["三线之上", "good"] : above === 0 ? ["三线之下", "bad"] : [`${above} 条之上`, "mut"];
+    res.push({ name, a: arr[2], dir: dir[0] });
+    const cell = m => `${fmt(m)}<small>${pct((P / m - 1) * 100)}</small>`;
+    return `<tr><td class="t">${name}</td><td>${cell(m7)}</td><td>${cell(m25)}</td><td>${cell(m99)}</td>
+      <td class="t"><span class="${arr[1]}">${arr[0]}</span></td><td class="t"><span class="${dir[1]}">${dir[0]}</span><small>MA7 ${pct(slope, 3)}</small></td>
+      <td class="t">${cross || '<span class="mut">—</span>'}</td><td class="t"><span class="${pos[1]}">${pos[0]}</span></td></tr>`;
+  });
+  $("ma").innerHTML = `<thead><tr><th>周期</th><th>MA7<br>现价偏离</th><th>MA25<br>现价偏离</th><th>MA99<br>现价偏离</th><th>排列</th><th>MA7 方向</th><th>近 3 根交叉</th><th>现价位置</th></tr></thead><tbody>${rows.join("")}</tbody>`;
+  if (res.length === 5) {
+    const bull = res.filter(x => x.a > 0).map(x => x.name), bear = res.filter(x => x.a < 0).map(x => x.name);
+    const short = res.slice(0, 3).reduce((t, x) => t + x.a, 0), long = res.slice(3).reduce((t, x) => t + x.a, 0);
+    const relation = short > 0 && long > 0 ? "短周期和长周期都偏多，方向一致" : short < 0 && long < 0 ? "短周期和长周期都偏空，方向一致"
+      : short * long < 0 ? `短周期（15 分钟–1 小时）${short > 0 ? "偏多" : "偏空"}，长周期（4 小时–1 天）${long > 0 ? "偏多" : "偏空"}，方向冲突` : "至少一组周期均线交织，方向不明确";
+    $("maSum").className = "verdict " + (short * long > 0 ? "goodv" : "");
+    $("maSum").textContent = `多头排列：${bull.join("、") || "无"}；空头排列：${bear.join("、") || "无"}。${relation}。`;
+  }
+}
 // ---------------- 持仓推演 ----------------
 function calc(st) {
   if (!st) return;
@@ -848,12 +1955,12 @@ function everySecond() {
     computeProbs();
     const st = stats();
     if (st) { $("chg").textContent = pct(st.chg24) + " 24h"; $("chg").className = "chg num " + (st.chg24 >= 0 ? "good" : "bad"); }
-    renderStatus(st); renderFC(); plan(st); renderRuler(st); mirror(st); calc(st); renderJournal();
+    renderStatus(st); renderMA(); renderUS(); renderFC(); renderVol(); renderFast(); renderSummary(st); renderCalls(); renderPositions(); plan(st); renderRuler(st); mirror(st); calc(st); renderJournal();
   } catch (err) { console.error(err); }
 }
 async function fullRefresh() {
   const btn = $("refresh"); btn.disabled = true; btn.textContent = "刷新中…";
-  try { await resolveData(); await loadSpec(); await bootstrap(); connect(); await pollPaper(); everySecond(); btn.textContent = "已刷新"; }
+  try { await resolveData(); await loadSpec(); await bootstrap(); connect(); await pollStocks(true); connectStocks(); await pollPaper(); await pollModelCalls(); await cloudSync(); verifyCalls(); everySecond(); btn.textContent = "已刷新"; }
   catch (e) { btn.textContent = "刷新失败，重试"; console.error(e); }
   finally { setTimeout(() => { btn.disabled = false; btn.textContent = "手动刷新"; }, 1200); }
 }
@@ -865,13 +1972,103 @@ $("b-long").onclick = () => setSide("long"); $("b-short").onclick = () => setSid
 $("refresh").onclick = fullRefresh;
 document.addEventListener("visibilitychange", () => { if (!document.hidden && (!S.wsOk || !S.ws || S.ws.readyState !== 1)) fullRefresh(); });
 jInit();
+callsInit();
+cloudInit();
+tzInit();
+// 目录：取每张卡片标题（不含小字说明），点击直接跳到该卡片，滚动时高亮当前卡片
+// 目录 + 卡片顺序：取每张卡片标题（不含小字说明），点击直接跳到该卡片，滚动时高亮当前卡片；
+// 顺序可以在「调整顺序」里拖动或用 ↑ ↓ 改，保存在本机浏览器（每个人可以不一样）
+const LKEY = "btc_layout_v1";
+(function buildToc() {
+  const wrap = document.querySelector(".wrap"), nav = $("toc"), top = document.querySelector(".top");
+  const cardsNow = () => [...wrap.querySelectorAll(":scope > section.card")];
+  cardsNow().forEach((c, i) => { if (!c.id) c.id = "sec-" + i; });
+  const DEFAULT = cardsNow().map(c => c.id), title = id => document.getElementById(id).querySelector("h2").firstChild.textContent.trim();
+  // 跳转时让卡片标题落在吸顶栏下面（吸顶栏在手机上会换行变高）
+  const setH = () => document.documentElement.style.setProperty("--toph", top.offsetHeight + "px");
+  new ResizeObserver(setH).observe(top);
+  const save = ids => { try { localStorage.setItem(LKEY, JSON.stringify(ids)); } catch (e) { /* 存不了就只在本次有效 */ } };
+  const load = () => { try { return JSON.parse(localStorage.getItem(LKEY)) || null; } catch (e) { return null; } };
+  // 按保存的顺序排；面板以后新增的卡片放在它默认位置的前一张后面
+  const apply = ids => {
+    const order = ids.filter(id => DEFAULT.includes(id));
+    DEFAULT.forEach((id, k) => { if (!order.includes(id)) { const prev = DEFAULT.slice(0, k).reverse().find(x => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : 0, 0, id); } });
+    order.forEach(id => wrap.appendChild(document.getElementById(id)));
+    return order;
+  };
+  let links = new Map();
+  const renderNav = () => {
+    nav.innerHTML = cardsNow().map(c => `<a href="#${c.id}">${esc(title(c.id))}</a>`).join("") + `<button type="button" class="tedit" id="layOpen">⇅ 调整顺序</button>`;
+    links = new Map([...nav.querySelectorAll("a")].map(a => [a.getAttribute("href").slice(1), a]));
+    mark();
+  };
+  nav.addEventListener("click", e => {
+    if (e.target.id === "layOpen") { openLay(); return; }
+    const a = e.target.closest("a"); if (!a) return;
+    e.preventDefault(); setH();
+    document.getElementById(a.getAttribute("href").slice(1)).scrollIntoView(); mark();
+  });
+  // 当前卡片 = 第一张底边还在吸顶栏下方 40px 以外的卡片
+  let queued = false;
+  function mark() {
+    queued = false;
+    const cards = cardsNow(), line = top.offsetHeight + 40, cur = cards.find(c => c.getBoundingClientRect().bottom > line) || cards.at(-1);
+    links.forEach((a, id) => a.classList.toggle("on", id === cur.id));
+    // 窄屏横向目录：把当前项滚到可见处（只动目录自己，不动页面）
+    if (getComputedStyle(nav).position !== "fixed" && links.get(cur.id)) {
+      const a = links.get(cur.id), l = a.offsetLeft - nav.offsetLeft;
+      if (l < nav.scrollLeft || l + a.offsetWidth > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = l - 12;
+    }
+  }
+  addEventListener("scroll", () => { if (!queued) { queued = true; requestAnimationFrame(mark); } }, { passive: true });
+  addEventListener("resize", mark);
+
+  // 调整顺序面板
+  const lay = $("lay"), list = $("layList");
+  const commit = ids => { save(apply(ids)); renderNav(); renderLay(); };
+  const renderLay = () => {
+    const ids = cardsNow().map(c => c.id);
+    list.innerHTML = ids.map((id, k) => `<li draggable="true" data-id="${id}"><span class="h" aria-hidden="true">⠿</span><span class="n">${esc(title(id))}</span>
+      <button type="button" data-mv="-1" aria-label="上移 ${esc(title(id))}"${k === 0 ? " disabled" : ""}>↑</button><button type="button" data-mv="1" aria-label="下移 ${esc(title(id))}"${k === ids.length - 1 ? " disabled" : ""}>↓</button></li>`).join("");
+  };
+  function openLay() { renderLay(); lay.hidden = false; list.querySelector("button:not([disabled])")?.focus(); }
+  const closeLay = () => { lay.hidden = true; $("layOpen")?.focus(); };
+  list.addEventListener("click", e => {
+    const b = e.target.closest("button[data-mv]"); if (!b) return;
+    const ids = cardsNow().map(c => c.id), id = b.closest("li").dataset.id, k = ids.indexOf(id), j = k + +b.dataset.mv;
+    if (j < 0 || j >= ids.length) return;
+    [ids[k], ids[j]] = [ids[j], ids[k]]; commit(ids);
+    list.querySelector(`li[data-id="${id}"] button[data-mv="${b.dataset.mv}"]:not([disabled])`)?.focus();
+  });
+  let dragId = null;
+  list.addEventListener("dragstart", e => { const li = e.target.closest("li"); dragId = li.dataset.id; li.classList.add("drag"); e.dataTransfer.effectAllowed = "move"; });
+  list.addEventListener("dragend", () => { dragId = null; list.querySelectorAll("li").forEach(li => li.classList.remove("drag", "over")); });
+  list.addEventListener("dragover", e => { const li = e.target.closest("li"); if (!li || !dragId) return; e.preventDefault(); list.querySelectorAll("li").forEach(x => x.classList.toggle("over", x === li)); });
+  list.addEventListener("drop", e => {
+    const li = e.target.closest("li"); if (!li || !dragId || li.dataset.id === dragId) return;
+    e.preventDefault();
+    const ids = cardsNow().map(c => c.id).filter(x => x !== dragId), r = li.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
+    ids.splice(ids.indexOf(li.dataset.id) + (after ? 1 : 0), 0, dragId); commit(ids);
+  });
+  $("layReset").onclick = () => { try { localStorage.removeItem(LKEY); } catch (e) { /* 忽略 */ } apply(DEFAULT); renderNav(); renderLay(); };
+  $("layDone").onclick = closeLay;
+  addEventListener("keydown", e => { if (e.key === "Escape" && !lay.hidden) closeLay(); });
+
+  const saved = load();
+  if (saved) apply(saved);
+  renderNav();
+})();
 fullRefresh();
 setInterval(everySecond, 1000);
 setInterval(loadSpec, 600000);
 setInterval(() => pollOI().catch(() => {}), 10000);
 setInterval(() => pollLS().catch(() => {}), 60000);
 setInterval(() => pollFunding().catch(() => {}), 60000);
-setInterval(async () => { await resolveData(); pollNews(); pollPaper(); }, 60000);
+setInterval(() => pollStocks(false).catch(() => {}), 60000);
+setInterval(verifyCalls, 60000);
+setInterval(cloudSync, 60000);
+setInterval(() => pollStocks(true).catch(() => {}), 600000);
+setInterval(async () => { await resolveData(); pollNews(); pollPaper(); pollModelCalls(); }, 60000);
 </script>
 </body>
 </html>

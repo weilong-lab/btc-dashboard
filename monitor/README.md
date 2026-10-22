@@ -13,6 +13,7 @@
 | 新闻 | 加密媒体、中文快讯、官方机构、全网聚合（比特币 / 宏观 / 地缘） | CoinDesk、Cointelegraph、The Block、Decrypt、Bitcoin Magazine、Odaily；美联储、SEC、CFTC、币安公告；Google 新闻；GDELT |
 | 盘面异常 | 5 分钟急涨急跌、成交量暴增、15 分钟持仓量剧变、资金费率极端 | 币安合约公开接口 |
 | 跨市场 | 纳指期货、黄金、原油、美元指数、美元兑日元、美债 10 年收益率 | Yahoo Finance |
+| 美股官方价 | QQQ、SPY、IWM、NVDA、MSTR、COIN、BMNR、CRCL、HOOD、MARA、IREN、BITO 的常规收盘、盘前盘后最后一笔、含夜盘的全时段最新价（面板的实时价直接连币安股票永续，不经过这里） | Yahoo Finance |
 | 事件日历 | 美国高影响数据（CPI、非农、FOMC 等）、美股开盘；发布前 60 分钟和 10 分钟各提醒一次 | ForexFactory 日历 |
 | 预期振幅 | 根据当前时段和过去 24h 活跃度，给出未来 1h 振幅中位数、4h 振幅 P80 | 一年回测得出（见 `../backtest/range_table.py`） |
 
@@ -72,13 +73,15 @@ AI 结果回来之前，面板显示关键词规则的结果，并标注「规�
 
 `paper.py` 按仓库根目录 `rules_spec.json` 的统一规则，每根 5 分钟 K 线收盘后执行规则 A / B，逐笔记录到 `out/paper.json`（面板读取），状态保存在 `out/paper_state.json`，重启后接着跑。逻辑与 `../backtest/rules_backtest.py` 逐笔一致。需要 `pip install -r requirements.txt`（pandas、numpy），并且部署时要带上 `../backtest/` 里的 `zhang.py`、`direction_model.py`、`results/direction_weights_full.json`。
 
+**模型喊单（自我验证）**：模拟盘每处理一根 5 分钟 K 线，都会检查面板「此刻结论」会不会给出参考信号（规则 A 或 B，不管模拟盘当时有没有持仓）。信号出现时，按面板给出的进场价、止损、止盈和持有时间记一条「模型·此刻结论」喊单，写到 `out/model_calls.json`；同一规则同方向 60 分钟内只记一次。面板打开时会合并这些记录，在「喊单记录与验证」里自动核对。面板开着时也会自己记（同一个 id，不会重复），所以监控程序没运行的时段只要面板开着也不会漏。
+
 另外每分钟把价格、持仓量、资金费率、多空比追加到 `out/market_log.csv`，攒够数据后用来验证挤压雷达。
 
 ## 运行
 
 ```bash
 python3 monitor.py --once --no-push   # 测试：跑一轮，不推送
-./run.sh                              # 长期运行，崩溃后自动重启（日志在 out/monitor.log）
+./run.sh                              # 长期运行，崩溃后自动重启（日志在 out/monitor.log）；本机会自动用 ../backtest/.venv 的 Python
 ```
 
 输出都在 `out/` 目录下：
@@ -91,6 +94,8 @@ python3 monitor.py --once --no-push   # 测试：跑一轮，不推送
 ## 推送设置（环境变量，都是可选）
 
 数据发布到 GitHub（面板读取）：`GITHUB_REPO=weilong-lab/btc-dashboard`、`GITHUB_TOKEN=细粒度令牌`、`PUBLISH_EVERY=120`。
+
+人工喊单的后台提醒：`RECORDS_REPO=weilong-lab/btc-records`（私有记录仓库，面板「连接云端」后喊单和交易日志存在这里）。设置后每分钟读一次喊单，持有中的单碰到止损 / 止盈、到时间或盘面突变时发 Mac 通知（`MAC_NOTIFY=0` 关闭）。令牌要同时能读写这两个仓库。
 
 
 ```bash

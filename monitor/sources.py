@@ -48,6 +48,11 @@ CROSS_ASSETS = {
 }
 YAHOO_SPARK = "https://query1.finance.yahoo.com/v7/finance/spark?symbols={syms}&range=1d&interval=5m"
 
+# 与 BTC 联动的美股（面板「美股联动」卡片同一份名单）。实时价由面板直连币安股票永续；
+# 这里抓 Yahoo 的官方价：收盘价、盘前盘后最后成交、含夜盘的全时段最新价，作为对照
+US_STOCKS = ["QQQ", "SPY", "IWM", "NVDA", "MSTR", "COIN", "BMNR", "CRCL", "HOOD", "MARA", "IREN", "BITO"]
+YAHOO_CHART = "https://query1.finance.yahoo.com/v8/finance/chart/{sym}?interval=1m&range=1d&includePrePost=true"
+
 # 美股（NYSE）休市日：这些日子不提醒美股开盘
 US_MARKET_HOLIDAYS = {
     "2026-11-26", "2026-12-25",

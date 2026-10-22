@@ -325,6 +325,10 @@ class Market:
             self.check_cross()
         except Exception as ex:
             log("跨市场行情获取失败:", ex)
+        try:
+            self.check_stocks()
+        except Exception as ex:
+            log("美股官方价获取失败:", ex)
 
     def check_btc(self):
         kl = get_json(f"{S.BINANCE}/fapi/v1/klines?symbol={S.SYMBOL}&interval=1m&limit=1500")
@@ -402,6 +406,29 @@ class Market:
                 self.n.send("yellow", f"{name} 异动：5 分钟 {ch5:+.2f}%，15 分钟 {ch15:+.2f}%",
                             f"BTC 现价 {self.price:,.0f}。跨市场同时异动通常意味着宏观消息，先查新闻。" if self.price else "", "跨市场")
         self.state["cross"] = cross
+
+    def check_stocks(self):
+        """Yahoo 官方价：上一个常规收盘、盘前 / 盘后最后一笔、含夜盘的全时段最新价。"""
+        out = {}
+        for sym in S.US_STOCKS:
+            try:
+                r = get_json(S.YAHOO_CHART.format(sym=sym), timeout=10)["chart"]["result"][0]
+            except Exception:
+                continue
+            m, ts = r["meta"], r.get("timestamp") or []
+            closes = r["indicators"]["quote"][0].get("close") or []
+            last = next(((t, c) for t, c in zip(reversed(ts), reversed(closes)) if c is not None), None)
+            per = m.get("currentTradingPeriod", {})
+            reg_end = per.get("regular", {}).get("end", 0)
+            ext = None
+            if last and last[0] >= reg_end:
+                ext = dict(price=last[1], at_ms=last[0] * 1000, session="盘后")
+            elif last and last[0] < per.get("regular", {}).get("start", 0):
+                ext = dict(price=last[1], at_ms=last[0] * 1000, session="盘前")
+            out[sym] = dict(regular=m.get("regularMarketPrice"), regular_at_ms=(m.get("regularMarketTime") or 0) * 1000,
+                            prev_close=m.get("chartPreviousClose") or m.get("previousClose"), ext=ext,
+                            fullday=m.get("fulldayPrice"))
+        self.state["stocks"] = dict(updated_ms=int(time.time() * 1000), data=out)
 
     def ruler(self):
         n = now_utc().astimezone(NY)

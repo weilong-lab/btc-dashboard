@@ -2,11 +2,15 @@
 
 由 monitor.py 每轮调用 PaperTrader.step()；也可单独运行：python3 paper.py --once
 依赖：pandas、numpy（见 requirements.txt），以及 ../backtest 里的 zhang.py、direction_model.py 和模型参数。
-输出：out/paper.json（面板读取）、out/paper_state.json（重启后续跑）
+输出：out/paper.json（面板读取）、out/paper_state.json（重启后续跑）、
+      out/model_calls.json（面板「此刻结论」每次出现参考信号，就记一条「模型」喊单，面板的喊单记录自动核对）
 """
+import base64
 import json
 import os
+import subprocess
 import sys
+import time
 import urllib.request
 from datetime import datetime, timezone
 
@@ -23,6 +27,44 @@ SPEC = json.load(open(os.path.join(ROOT, "rules_spec.json"), encoding="utf-8"))
 WEIGHTS = json.load(open(os.path.join(ROOT, "backtest", "results", "direction_weights_full.json"), encoding="utf-8"))
 MAKER, TAKER = SPEC["fees"]["maker_pct"], SPEC["fees"]["taker_pct"]
 FAPI = "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=5m&limit=1500"
+MODEL_WHO = "模型·此刻结论"
+
+
+def cloud_calls():
+    """私有记录仓库里的喊单（面板「连接云端」后写入）。需要环境变量 RECORDS_REPO 和 GITHUB_TOKEN，没配置就返回空。"""
+    repo, token = os.environ.get("RECORDS_REPO"), os.environ.get("GITHUB_TOKEN")
+    if not repo or not token:
+        return []
+    req = urllib.request.Request(f"https://api.github.com/repos/{repo}/contents/calls.json",
+                                 headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "User-Agent": "btc-paper/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            doc = json.loads(base64.b64decode(json.load(r)["content"]).decode("utf-8"))
+    except Exception:
+        return []
+    return [c for c in doc.get("calls", []) if c.get("who") != MODEL_WHO and c.get("ref")]
+
+
+def mac_notify(title, body):
+    """在 Mac 上弹系统通知（只在本机运行时；设 MAC_NOTIFY=0 关闭）。"""
+    if sys.platform != "darwin" or os.environ.get("MAC_NOTIFY") == "0":
+        return
+    esc = lambda x: x.replace("\\", "\\\\").replace('"', '\\"')
+    try:
+        subprocess.run(["osascript", "-e", f'display notification "{esc(body)}" with title "{esc(title)}"'], timeout=10, check=False)
+    except Exception:
+        pass
+
+
+def p80_4h():
+    """规则 A 的保险止损 = 4 小时 P80 逆向（ATR 倍数），与面板一致，取自 dashboard/live/context.js。"""
+    try:
+        src = open(os.path.join(ROOT, "dashboard", "live", "context.js"), encoding="utf-8").read()
+        line = next(x for x in src.splitlines() if x.startswith("var VOLSTAT="))
+        return json.loads(line[len("var VOLSTAT="):].rstrip(";"))["mae_atr"]["4 小时"]["p80"]
+    except Exception:
+        return 1.6
+
 
 
 def fetch_5m():
@@ -66,6 +108,8 @@ class PaperTrader:
         self.state_path = os.path.join(out_dir, "paper_state.json")
         self.st = json.load(open(self.state_path)) if os.path.exists(self.state_path) else {
             "last_bar": None, "A": {"mode": "flat", "trades": [], "missed": 0}, "B": {"mode": "flat", "trades": []}}
+        self.st.setdefault("sig_prev", {"A": None, "B": None})
+        self.st.setdefault("model_calls", [])
 
     # ---------- 逐根推进 ----------
     def step(self):
@@ -77,11 +121,144 @@ class PaperTrader:
         new = d if last is None else d[d.index > pd.Timestamp(last)]
         if last is None:
             new = d.iloc[-1:]  # 第一次启动：只从最新一根开始，不回放历史
+        h1 = d[["high", "low"]].resample("1h").agg({"high": "max", "low": "min"})
+        a1 = (h1.high - h1.low).rolling(24).mean()
+        a1.index = a1.index + pd.Timedelta("1h")                   # 只用已收盘的 1h K 线
+        atr1h = a1.reindex(d.index + pd.Timedelta("5min"), method="ffill").to_numpy()
+        pos = {ts: i for i, ts in enumerate(d.index)}
+        n_before = len(self.st["model_calls"])
         for t, bar in new.iterrows():
+            self.log_signals(t, bar, atr1h[pos[t]])
             self.bar_a(t, bar)
             self.bar_b(t, bar)
             self.st["last_bar"] = t.isoformat()
+        now_ms = time.time() * 1000
+        for c in self.st["model_calls"][n_before:]:
+            if now_ms - c["t"] < 15 * 60e3:   # 只提醒刚发生的（重启回放历史时不提醒）
+                mac_notify("模型买入提示", f"{'做多' if c['side'] == 'long' else '做空'} 参考价 {c['ref']:,.0f}，止损 {c['stop']:,.0f}" + (f"，止盈 {c['target']:,.0f}" if c["target"] else "") + f"，最长 {c['hz'] // 60} 小时")
+        self.update_exits(d)
+        self.watch_positions(d, atr1h[-1], self.st["model_calls"])
+        manual = cloud_calls()                # 人工喊单：只提醒（该卖了 / 盘面变化），记录由面板写
+        if manual:
+            self.notify_manual_exits(d, manual)
+            self.watch_positions(d, atr1h[-1], manual)
         self.save(d)
+
+    def notify_manual_exits(self, d, calls):
+        """人工喊单碰到止损 / 止盈或到最长持有时间时发 Mac 通知（和面板同口径）。"""
+        now_ms, sent = time.time() * 1000, self.st.setdefault("watch_sent", [])
+        for c in calls:
+            sgn, exp = (1 if c["side"] == "long" else -1), c["t"] + c["hz"] * 6e4
+            if c.get("manualExit") or now_ms - exp > 15 * 60e3:
+                continue
+            bars = d[(d.index >= pd.Timestamp(c["t"], unit="ms", tz="UTC")) & (d.index < pd.Timestamp(exp, unit="ms", tz="UTC"))]
+            why = None
+            for _, b in bars.iterrows():
+                if c.get("stop") and ((b.low <= c["stop"]) if sgn > 0 else (b.high >= c["stop"])):
+                    why = "触及止损"; break
+                if c.get("target") and ((b.high >= c["target"]) if sgn > 0 else (b.low <= c["target"])):
+                    why = "触及止盈"; break
+            if why is None and now_ms >= exp:
+                why = "到了最长持有时间"
+            key = f"{c['id']}:sell"
+            if why and key not in sent:
+                sent.append(key)
+                body = f"{c.get('who', '')} 的{'多' if sgn > 0 else '空'}单（进场 {c['ref']:,.0f}）{why}，现价 {float(d.close.iloc[-1]):,.0f}"
+                mac_notify("该卖了", body)
+                self.log("该卖了：" + body)
+
+    def watch_positions(self, d, atr, calls):
+        """持仓中的模型单：盘面急动、接近止损、15 分钟内进入美股开盘或数据公布时段时发 Mac 通知（只提醒，卖出仍按计划，和面板同口径）。"""
+        if not np.isfinite(atr):
+            return
+        now_ms, last = time.time() * 1000, d.iloc[-1]
+        sent = self.st.setdefault("watch_sent", [])
+        try:
+            upcoming = json.load(open(os.path.join(self.out, "status.json"), encoding="utf-8")).get("upcoming", [])
+        except Exception:
+            upcoming = []
+        for c in calls:
+            if c.get("exit") or c.get("manualExit") or c["t"] > now_ms or now_ms > c["t"] + c["hz"] * 6e4:
+                continue
+            name = "模型" if c.get("who") == MODEL_WHO else c.get("who", "")
+            sgn, who = (1 if c["side"] == "long" else -1), f"{name}{'多' if c['side'] == 'long' else '空'}单（进场 {c['ref']:,.0f}）"
+            msgs = []
+            mv = float(d.close.iloc[-1] - d.open.iloc[-3])       # 最近 15 分钟
+            if abs(mv) >= atr and d.index[-3].timestamp() * 1000 >= c["t"]:
+                against = (mv > 0) != (sgn > 0)
+                msgs.append((f"fm-{d.index[-1].isoformat()}", f"{who}：盘面急{'涨' if mv > 0 else '跌'} {abs(mv):,.0f} 美元，{'不利' if against else '有利'}。回测里这时马上卖并不更好，止损没到就按计划。"))
+            if c.get("stop") and abs(float(last.close) - c["stop"]) <= 0.3 * atr:
+                msgs.append((f"near-{int(now_ms // 9e5)}", f"{who}：离止损 {c['stop']:,.0f} 只剩 {abs(float(last.close) - c['stop']):,.0f} 美元。"))
+            for u in upcoming:
+                if 0 < u.get("at_ms", 0) - now_ms <= 15 * 60e3 and u["at_ms"] < c["t"] + c["hz"] * 6e4:
+                    msgs.append((f"win-{u['at_ms']}", f"{who}：{round((u['at_ms'] - now_ms) / 6e4)} 分钟后{u['title']}，确认止损挂在交易所。"))
+            for key, body in msgs:
+                k = f"{c['id']}:{key}"
+                if k not in sent:
+                    sent.append(k)
+                    mac_notify("盘面提醒", body)
+                    self.log("盘面提醒：" + body)
+        self.st["watch_sent"] = sent[-300:]
+
+    def update_exits(self, d):
+        """模型喊单的卖出：止损 / 止盈先碰到哪个就在哪个卖，都没碰到就到最长持有时间卖（和面板同口径，面板用 1 分钟 K 线会更精确）。"""
+        now_ms = time.time() * 1000
+        for c in self.st["model_calls"]:
+            if c.get("exit"):
+                continue
+            sgn, exp = (1 if c["side"] == "long" else -1), c["t"] + c["hz"] * 6e4
+            bars = d[(d.index >= pd.Timestamp(c["t"], unit="ms", tz="UTC")) & (d.index < pd.Timestamp(exp, unit="ms", tz="UTC"))]
+            ex = None
+            for t, b in bars.iterrows():
+                if c["stop"] and ((b.low <= c["stop"]) if sgn > 0 else (b.high >= c["stop"])):
+                    ex = dict(t=int(t.timestamp() * 1000), px=c["stop"], why="止损"); break
+                if c["target"] and ((b.high >= c["target"]) if sgn > 0 else (b.low <= c["target"])):
+                    ex = dict(t=int(t.timestamp() * 1000), px=c["target"], why="止盈"); break
+            if ex is None and now_ms >= exp + 5 * 60e3 and len(bars):
+                ex = dict(t=int(exp), px=float(bars.close.iloc[-1]), why="到时间")
+            if ex:
+                ex["pnl"] = round(sgn * (ex["px"] / c["ref"] - 1) * 100, 4)
+                c["exit"] = ex
+                self.log(f"模型喊单卖出：{ex['why']}，{ex['pnl']:+.2f}%")
+                if now_ms - ex["t"] < 15 * 60e3:
+                    mac_notify("该卖了", f"模型{'多' if sgn > 0 else '空'}单（进场 {c['ref']:,.0f}）{ex['why']}，卖出价 {ex['px']:,.0f}，{ex['pnl']:+.2f}%")
+
+    def signals(self, b):
+        """这根收盘时规则 A / B 各自是否给出信号（不管模拟盘有没有持仓），口径与面板 ruleSigs 一致。"""
+        a = b_ = None
+        if not b.pre_open and not np.isnan(b.p4h):
+            a = "long" if b.p4h >= SPEC["rule_a"]["p_long"] else "short" if b.p4h <= SPEC["rule_a"]["p_short"] else None
+        pm = (b.p15 + b.p1h) / 2
+        if not (b.weekend or b.lowvol or b.pre_open):
+            if b.long_B and not b.dn1h and pm >= 0.5:
+                b_ = "long"
+            elif b.short_B and not b.up1h and pm <= 0.5:
+                b_ = "short"
+        return {"A": a, "B": b_}
+
+    def log_signals(self, t, b, atr1h):
+        """信号从无到有（或换方向）时记一条模型喊单；连续几根都是同一个信号只记第一根，同方向 60 分钟内不重复。"""
+        sig, prev = self.signals(b), self.st["sig_prev"]
+        close_t = t + pd.Timedelta("5min")
+        for rule, side in sig.items():
+            # 同一规则同方向 60 分钟内只记一次，避免信号断一根又出现时重复记
+            recent = any(c["id"].startswith(f"m-{rule}-{side}-") and close_t.timestamp() * 1000 - c["t"] < 3600e3 for c in self.st["model_calls"][-20:])
+            if side and side != prev.get(rule) and not recent:
+                ref, sgn = float(b.close), 1 if side == "long" else -1
+                if rule == "A":
+                    stop_d = p80_4h() * atr1h
+                    call = dict(stop=round(ref - sgn * stop_d, 1), target=0, hz=SPEC["rule_a"]["hold_bars"] * 5,
+                                text=f"规则 A：4 小时模型上涨概率 {b.p4h * 100:.1f}%，挂限价 {ref:,.0f}，{SPEC['rule_a']['hold_bars'] * 5 // 60} 小时后平仓（保险止损按 4 小时 P80 逆向）")
+                else:
+                    s = SPEC["rule_b"]
+                    risk = max((ref - b.lo12 + s["stop_atr"] * b.atr) if sgn > 0 else (b.hi12 + s["stop_atr"] * b.atr - ref), ref * 0.001)
+                    call = dict(stop=round(ref - sgn * risk, 1), target=round(ref + sgn * s["tp_R"] * risk, 1), hz=s["max_hold_bars"] * 5,
+                                text=f"规则 B：张主任完整{'做多' if sgn > 0 else '做空'}信号 + 模型同向 + 不逆 1h 趋势，市价进，止盈 {s['tp_R']}R")
+                ms = int(close_t.timestamp() * 1000)
+                self.st["model_calls"].append(dict(id=f"m-{rule}-{side}-{ms}", t=ms, who=MODEL_WHO, side=side, ref=round(ref, 1), refGiven=False, **call))
+                self.st["model_calls"] = self.st["model_calls"][-500:]
+                self.log(f"模型喊单：规则 {rule} {'做多' if sgn > 0 else '做空'}，参考价 {ref:,.1f}")
+            prev[rule] = side
 
     def bar_a(self, t, b):
         s, A = SPEC["rule_a"], self.st["A"]
@@ -167,6 +344,7 @@ class PaperTrader:
                                    avg=round(float(np.mean(rets)), 4) if rets else None, cum=round(float(np.sum(rets)), 3) if rets else 0,
                                    backtest=SPEC[f"rule_{k.lower()}"]["backtest"], recent=tr[-30:][::-1])
         json.dump(out, open(os.path.join(self.out, "paper.json"), "w"), ensure_ascii=False, indent=1, default=str)
+        json.dump({"updated": out["updated"], "calls": self.st["model_calls"]}, open(os.path.join(self.out, "model_calls.json"), "w"), ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":

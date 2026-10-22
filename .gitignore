@@ -17,3 +17,6 @@ monitor/out/
 # 本机工具配置
 .claude/
 .DS_Store
+
+# 私人内容：从聊天记录补录的喊单（面板「喊单记录」导入用）
+private/
