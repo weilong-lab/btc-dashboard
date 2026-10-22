@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 作战面板</title>
-<meta name="dashboard-release" content="2026-10-22-margin-roi-v2">
+<meta name="dashboard-release" content="2026-10-22-plain-mood-v3">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /* 布局：手机优先的单列卡片流，宽屏两列；顶部价格条吸顶 */
@@ -339,12 +339,20 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
   </section>
 
   <section class="card span" id="moodCard">
-    <h2>情绪盘 <small id="moodUpd">大户 vs 散户 · 恐惧贪婪 · 主动买卖</small></h2>
+    <h2>情绪盘 <small id="moodUpd">持仓方向 · 市场情绪 · 谁更急着成交</small></h2>
     <div class="status" id="moodSplit"></div>
     <div class="verdict" id="moodSum">读取中…</div>
     <div class="status" id="mood"></div>
     <div class="tablewrap"><table class="ma" id="moodTbl"></table></div>
-    <p class="note">「大户」是币安合约里保证金余额前 20% 的账户（币安公开的「大户多空比」，按账户数和按持仓量各一个），常被当作聪明钱；「全体」是全部账户（也包含大户）。大户账户和全体账户都按账户数统计，可以直接对比；大户按持仓量的比值口径不同，单独看。多空比 = 做多的账户（或多仓）÷ 做空的；比值上升可能是多头增加，也可能是空头减少。「主动买卖比」= 主动买入成交量 ÷ 主动卖出成交量，大于 1 表示吃单买的人多。恐惧贪婪指数来自 alternative.me，每天更新一次（0 极度恐惧 – 100 极度贪婪）。2018–2026 年回测：极度贪婪之后 7 天平均 +3.7%、极度恐惧之后 +1.0%，但主要来自 2019–2021 年牛市，2025–2026 年极度贪婪之后反而平均 -2% 到 -3%，所以只当背景，不当信号。币安广场没有公开接口，X（推特）的接口要付费（约 200 美元 / 月起），这一版没有接入大 V 观点；新闻卡片里的 AI 判断覆盖了主流媒体和快讯。</p>
+    <div class="note">
+      <p><b>先分清三件事：</b>多空账户占比看「大家现在持有什么方向」；主动买卖比看「刚才成交时，哪一边更急着成交」；恐惧贪婪看「市场整体有多紧张或兴奋」。三者不是同一个东西，也不是买卖指令。</p>
+      <p><b>多空比怎么读：</b>做多 ÷ 做空。1 = 两边一样多；2 = 每 1 个做空账户，对应 2 个做多账户；0.65 = 每 100 个做空账户，对应约 65 个做多账户。按账户数统计时，每个账户一票，不代表资金多少。「全体」包含大户；「大户」是平台按保证金余额筛选的前 20% 账户，不保证更会赚钱。</p>
+      <p><b>恐惧贪婪怎么读：</b>范围 0–100，越低越害怕，越高越兴奋、越容易追涨。20 是比较恐惧，80 是比较贪婪。不是越高越好，也不是越低越好；80 不代表 80% 的人做多，20 也不代表应该买入。恐惧时仍可能继续跌，贪婪时也可能继续涨。</p>
+      <p><b>主动、被动和「吃单」是什么：</b>假设有人挂着 82,000 的卖单等买家，你接受这个价格立即买到，你是主动买方（吃单），挂卖单等你的人是被动卖方。反过来，你接受别人挂好的买价立即卖出，就是主动卖出，对方是被动买方。「主动」说的是谁接受现成报价成交，不是开仓还是平仓；市价单通常主动成交，限价单如果直接碰到对手报价也会主动成交。</p>
+      <p><b>主动买卖比怎么读：</b>主动买入成交量 ÷ 主动卖出成交量。0.65 = 每 100 份主动卖出量，对应 65 份主动买入量，所以主动卖出更多；不是 65% 的人看多。每笔成交都有买卖双方，统计的是谁主动成交，不是总买量比总卖量多。主动买入可能是开多，也可能是空单平仓，不能直接当成新增多单。</p>
+      <p><b>被动买卖比：</b>本页没有单列。同一批成交里，主动卖出的对手就是被动买入，主动买入的对手就是被动卖出；它们不是另外一笔资金，不能当成第二个独立信号。</p>
+      <p>来源：<a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">恐惧贪婪指数说明</a> · <a href="https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/market-data" target="_blank" rel="noopener">币安公开数据说明</a>。本页未接入币安广场或 X 大 V 的观点。</p>
+    </div>
   </section>
 
   <section id="fcCard" class="card span">
@@ -849,6 +857,11 @@ function accountSplit(rows) {
   const long = Math.round(x.l * 1000) / 10;
   return { long, short: Math.round((100 - long) * 10) / 10, at: x.t };
 }
+function takerMeaning(r) {
+  if (!Number.isFinite(r) || r < 0) return "数据不足，暂时无法比较";
+  const buy = r / (1 + r) * 100;
+  return `每 100 份主动卖出量，对应 ${+(r * 100).toFixed(1)} 份主动买入量；${r > 1 ? "主动买入更多" : r < 1 ? "主动卖出更多" : "两边一样多"}。按成交量换算：主动买 ${buy.toFixed(1)}%，主动卖 ${(100 - buy).toFixed(1)}%。不代表看多人数或上涨概率。`;
+}
 function renderMood() {
   const m = S.mood; if (!m || !$("mood")) return;
   const split = accountSplit(m.retail);
@@ -865,26 +878,27 @@ function renderMood() {
   const rows = [["大户 · 按账户数", m.topA, "做多账户占"], ["全体 · 按账户数", m.retail, "做多账户占"], ["大户 · 按持仓量（单独看）", m.topP, "多仓占比"]].map(([n, a, lab]) => {
     const L = last(a); if (!L) return `<tr><td class="t">${n}</td><td colspan="5" class="t">读取失败</td></tr>`;
     const c1 = chg(a, 1), c24 = chg(a, 24);
-    return `<tr><td class="t">${n}<small>${asOf(a)}</small></td><td>${L.v.toFixed(2)}<small>${lab} ${(L.l * 100).toFixed(1)}%</small></td><td>${updn(c1)}</td><td>${updn(c24)}</td><td>${sp(a.slice(-48), 1)}</td></tr>`;
+    const meaning = `每 100 份${lab === "多仓占比" ? "空仓" : "做空账户"}，对应 ${(L.v * 100).toFixed(0)} 份${lab === "多仓占比" ? "多仓" : "做多账户"}；${L.v > 1 ? "多方占比更大" : L.v < 1 ? "空方占比更大" : "两边相同"}`;
+    return `<tr><td class="t">${n}<small>${asOf(a)}</small></td><td>${L.v.toFixed(2)}<small>${meaning}</small><small>${lab} ${(L.l * 100).toFixed(1)}%</small></td><td>${updn(c1)}</td><td>${updn(c24)}</td><td>${sp(a.slice(-48), 1)}</td></tr>`;
   });
-  $("moodTbl").innerHTML = `<thead><tr><th class="t">多空比</th><th>现在</th><th>1 小时变化</th><th>24 小时变化</th><th>48 小时走势（虚线 = 1）</th></tr></thead><tbody>${rows.join("")}</tbody>`;
+  $("moodTbl").innerHTML = `<thead><tr><th class="t">多空比</th><th>现在</th><th>比值比 1 小时前<br>升 = 多方占比提高</th><th>比值比 24 小时前<br>降 = 空方占比提高</th><th>48 小时走势（虚线 = 1）</th></tr></thead><tbody>${rows.join("")}</tbody>`;
   // 主动买卖比：凑够完整的小时数才显示
   const tk = m.taker || [], sumR = h => { if (tk.length < h) return NaN; const a = tk.slice(-h); const b = a.reduce((s2, x) => s2 + x.b, 0), s2 = a.reduce((t, x) => t + x.s, 0); return s2 ? b / s2 : NaN; };
   const f = m.fng || [], fv = f[0] ? +f[0].value : NaN, fprev = f[1] ? +f[1].value : NaN, fweek = f[7] ? +f[7].value : NaN, fts = f[0] ? +f[0].timestamp * 1000 : NaN;
-  const fcls = !isFinite(fv) ? "" : fv <= 24 ? "bad" : fv <= 44 ? "warn" : fv >= 76 ? "good" : "";
+  const fcls = ""; // 情绪高低不以赚亏颜色暗示好坏
   const fmtR = x => isFinite(x) ? x.toFixed(2) : "数据不足", rc = x => !isFinite(x) ? "" : x > 1.05 ? "good" : x < 0.95 ? "bad" : "";
   const tkAsOf = tk.length ? `截至 ${fmtDT(tk.at(-1).t)}${now - tk.at(-1).t > 3 * 36e5 ? " · 已过时" : ""}` : "读取失败";
   $("mood").innerHTML = [
-    ["恐惧贪婪指数", isFinite(fv) ? `${fv} · ${FNG_ZH[f[0].value_classification] || f[0].value_classification}` : "读取失败", fcls, isFinite(fv) ? `数据日期 ${new Date(fts).toLocaleDateString("zh-CN", { timeZone: TZ })}（每天更新一次）· 昨天 ${fprev} · 一周前 ${fweek}${now - fts > 50 * 36e5 ? " · 已过时" : ""}` : ""],
-    ["主动买卖比 · 最近 1 小时", fmtR(sumR(1)), rc(sumR(1)), `大于 1 = 吃单买的多 · ${tkAsOf}`],
-    ["主动买卖比 · 最近 4 小时", fmtR(sumR(4)), rc(sumR(4)), tk.length >= 4 ? "4 个完整小时" : "不足 4 小时"],
-    ["主动买卖比 · 最近 24 小时", fmtR(sumR(24)), rc(sumR(24)), tk.length >= 24 ? "24 个完整小时" : "不足 24 小时"],
+    ["恐惧贪婪指数", isFinite(fv) ? `${fv} · ${FNG_ZH[f[0].value_classification] || f[0].value_classification}` : "读取失败", fcls, isFinite(fv) ? `数据日期 ${new Date(fts).toLocaleDateString("zh-CN", { timeZone: TZ })}（每天更新一次）。越低越害怕，越高越兴奋；不是做多比例，也不是越高越好。· 昨天 ${fprev} · 一周前 ${fweek}${now - fts > 50 * 36e5 ? " · 已过时" : ""}` : ""],
+    ["主动买卖比 · 最近 1 小时", fmtR(sumR(1)), rc(sumR(1)), `${takerMeaning(sumR(1))} ${tkAsOf}`],
+    ["主动买卖比 · 最近 4 小时", fmtR(sumR(4)), rc(sumR(4)), takerMeaning(sumR(4))],
+    ["主动买卖比 · 最近 24 小时", fmtR(sumR(24)), rc(sumR(24)), takerMeaning(sumR(24))],
   ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
   // 一句话：只描述多空比的高低和升降，不推断谁在加仓减仓（比值上升可能是多头增加，也可能是空头减少）
   const ta = last(m.topA), rt = last(m.retail), tp = last(m.topP), out = [];
   if (ta && rt) {
     const d = ta.v - rt.v;
-    out.push(Math.abs(d) < 0.05 ? `大户账户和全体账户的多空比接近（${ta.v.toFixed(2)} / ${rt.v.toFixed(2)}）` : `大户账户的多空比${d > 0 ? "高于" : "低于"}全体账户（${ta.v.toFixed(2)} / ${rt.v.toFixed(2)}）`);
+    out.push(Math.abs(d) < 0.05 ? `大户账户和全体账户的多空比接近（${ta.v.toFixed(2)} / ${rt.v.toFixed(2)}）` : `大户中做多账户占 ${(ta.l * 100).toFixed(1)}%，全体账户中占 ${(rt.l * 100).toFixed(1)}%：大户群体做多的比例${d > 0 ? "更高" : "更低"}，不代表大户一定判断正确，也不代表价格一定${d > 0 ? "涨" : "跌"}`);
     const c24a = chg(m.topA, 24), c24r = chg(m.retail, 24);
     if (isFinite(c24a) && isFinite(c24r)) out.push(`过去 24 小时大户账户多空比${updn(c24a)}，全体${updn(c24r)}`);
   }
