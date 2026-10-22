@@ -91,6 +91,7 @@ a{color:var(--accent)}
 .fld input{flex:1;min-width:0;border:0;background:none;text-align:right;padding:0 8px;font-family:var(--m);font-size:13.5px;outline:none}
 .fld .u{color:var(--fg2);font-size:12px;white-space:nowrap}
 .fld button{background:none;border:0;color:var(--accent);cursor:pointer;padding:0 0 0 6px;font-size:12px}
+.qhint{font-size:11.5px;color:var(--muted);margin:-4px 0 6px;min-height:16px;font-family:var(--m)}
 .pct{display:flex;gap:6px;margin-bottom:8px}.pct button{flex:1;background:none;border:1px solid var(--line);border-radius:4px;padding:3px 0;cursor:pointer;font-size:12px;color:var(--fg2)}
 .pct button:hover{border-color:var(--accent)}
 .chk{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:var(--fg2)}.chk label{display:flex;align-items:center;gap:4px;cursor:pointer}
@@ -213,6 +214,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
     <div class="fld" id="fPriceF"><label for="fPrice">价格</label><input id="fPrice" inputmode="decimal" autocomplete="off"><span class="u">USDT</span><button type="button" data-fill="fPrice">最新</button></div>
     <div class="fld" id="fMktF" hidden><label>价格</label><input value="市价" disabled><span class="u">USDT</span></div>
     <div class="fld"><label for="fQty">数量</label><input id="fQty" inputmode="decimal" autocomplete="off" placeholder="0"><button type="button" id="unitBtn" class="u" style="color:var(--fg2)">BTC ⇄</button></div>
+    <div class="qhint" id="fQtyHint"></div>
     <div class="pct" id="pct"><button type="button" data-p="10">10%</button><button type="button" data-p="25">25%</button><button type="button" data-p="50">50%</button><button type="button" data-p="75">75%</button><button type="button" data-p="100">100%</button></div>
     <div class="chk"><label><input type="checkbox" id="fTpsl">止盈 / 止损</label><label><input type="checkbox" id="fRo">只减仓</label></div>
     <div class="tpsl" id="tpslBox">
@@ -466,9 +468,14 @@ function onMark(mk, t) {
 
 // ---------------- 下单 ----------------
 let FROM = null;   // 从作战面板「放进模拟盘」带过来的喊单（记在这一仓上）
-let OT = "limit", UNIT = lsGet("btc_sim_unit") === "usdt" ? "usdt" : "btc";
+// 数量单位（和币安一样）：BTC；USDT·成本 = 填保证金，自动乘杠杆；USDT·价值 = 填仓位价值（名义）
+const UNITS = { btc: "BTC", cost: "USDT·成本", usdt: "USDT·价值" }, UNEXT = { btc: "cost", cost: "usdt", usdt: "btc" };
+let OT = "limit", UNIT = UNITS[lsGet("btc_sim_unit")] ? lsGet("btc_sim_unit") : "cost";
+const MIN_NOTIONAL = 50;    // 币安 BTCUSDT 永续：每单至少 0.001 BTC，且仓位价值至少 50 USDT
+const toQty = (v, px) => UNIT === "cost" ? r3(v * A.lev / px) : UNIT === "usdt" ? r3(v / px) : r3(v);
+const fromQty = (q, px) => UNIT === "cost" ? (q * px / A.lev).toFixed(2) : UNIT === "usdt" ? (q * px).toFixed(2) : q.toFixed(3);
 function refPx() { return OT === "limit" ? +$("fPrice").value : OT === "stop" ? +$("fStop").value : M.last; }
-function qtyIn(px) { const v = +$("fQty").value; return UNIT === "usdt" ? r3(v / px) : r3(v); }
+function qtyIn(px) { return toQty(+$("fQty").value, px); }
 function place(side) {
   const msg = s => { $("fMsg").textContent = s; $("fMsg").className = "msg bad"; };
   if (!M.ready) return msg("行情还没连上，稍等");
@@ -478,7 +485,8 @@ function place(side) {
   if (OT === "stop" && !(stop > 0)) return msg("先填触发价");
   const px = OT === "limit" ? price : OT === "stop" ? stop : (side === "buy" ? M.ask : M.bid) || M.last;
   const qty = qtyIn(px);
-  if (!(qty >= STEP)) return msg(`数量至少 ${STEP} BTC（约 ${p1(STEP * px)} USDT）`);
+  if (!(qty >= STEP) || qty * px < MIN_NOTIONAL) { const minQ = Math.max(STEP, Math.ceil(MIN_NOTIONAL / px / STEP) * STEP);
+    return msg(`太小了：币安每单至少 ${q3(minQ)} BTC（仓位价值约 ${p1(minQ * px)} USDT）。按现在 ${A.lev} 倍杠杆，保证金至少约 ${p2(minQ * px / A.lev)} USDT${UNIT === "usdt" ? "；如果你填的是保证金，把单位切到「USDT·成本」" : ""}`); }
   const closeQ = A.pos && sg(A.pos) !== dir ? A.pos.qty : 0;
   if (ro && !closeQ) return msg("只减仓：现在没有可以减的反向仓位");
   const openQ = ro ? 0 : Math.max(0, qty - closeQ), need = openQ * px / A.lev + qty * px * FEE.taker;
@@ -944,12 +952,13 @@ function renderForm() {
   $("levBtn").textContent = A.lev + "x";
   setTxt("fAvail", `${p2(avail())} USDT`);
   const px = OT === "market" ? M.last : refPx() || M.last;
-  const mb = maxQty("buy", px), ms = maxQty("sell", px), u = UNIT === "usdt";
-  setTxt("mBuy", u ? `${p2(mb * px)} USDT` : `${q3(mb)} BTC`); setTxt("mSell", u ? `${p2(ms * px)} USDT` : `${q3(ms)} BTC`);
+  const mb = maxQty("buy", px), ms = maxQty("sell", px), u = UNIT !== "btc";
+  setTxt("mBuy", u ? `${fromQty(mb, px)} USDT` : `${q3(mb)} BTC`); setTxt("mSell", u ? `${fromQty(ms, px)} USDT` : `${q3(ms)} BTC`);
   const q = qtyIn(px), cost = dir => { if (!(q > 0)) return "—"; const closeQ = A.pos && sg(A.pos) !== dir ? A.pos.qty : 0; return p2(Math.max(0, q - closeQ) * px / A.lev) + " USDT"; };
   setTxt("cBuy", cost(1)); setTxt("cSell", cost(-1));
-  $("unitBtn").textContent = (u ? "USDT" : "BTC") + " ⇄";
-  $("fQty").placeholder = u ? "名义金额" : "0.000";
+  $("unitBtn").textContent = UNITS[UNIT] + " ⇄";
+  $("fQty").placeholder = UNIT === "cost" ? "保证金" : UNIT === "usdt" ? "仓位价值" : "0.000";
+  setTxt("fQtyHint", q > 0 && UNIT !== "btc" ? `≈ ${q3(q)} BTC · 仓位价值 ${p2(q * px)} USDT` : q > 0 ? `仓位价值 ${p2(q * px)} USDT · 保证金 ${p2(q * px / A.lev)} USDT` : "");
 }
 function posRow(p) {
   const L = p.side === "long", lp = liqPx(p), u = upnl(), im = p.mode === "cross" ? posIM() : p.margin, roe = im ? u / im * 100 : NaN;
@@ -1027,10 +1036,11 @@ document.querySelectorAll("[data-fill]").forEach(b => b.onclick = () => { if (is
 $("pct").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return;
   const px = (OT === "market" ? M.last : refPx()) || M.last, f = +b.dataset.p / 100;
   const m = Math.max(maxQty("buy", px), maxQty("sell", px)), q = r3(m * f);
-  $("fQty").value = UNIT === "usdt" ? (q * px).toFixed(2) : q.toFixed(3); dirty = true; };
+  $("fQty").value = fromQty(q, px); dirty = true; };
 $("unitBtn").onclick = () => { const px = refPx() || M.last, v = +$("fQty").value;
-  UNIT = UNIT === "btc" ? "usdt" : "btc"; lsSet("btc_sim_unit", UNIT);
-  if (v && px) $("fQty").value = UNIT === "usdt" ? (v * px).toFixed(2) : r3(v / px).toFixed(3); dirty = true; };
+  const q = v && px ? toQty(v, px) : 0;
+  UNIT = UNEXT[UNIT]; lsSet("btc_sim_unit", UNIT);
+  if (q) $("fQty").value = fromQty(q, px); dirty = true; };
 ["fQty", "fPrice", "fStop"].forEach(id => $(id).addEventListener("input", () => { dirty = true; }));
 $("fTpsl").onchange = () => $("tpslBox").classList.toggle("on", $("fTpsl").checked);
 $("goBuy").onclick = () => place("buy"); $("goSell").onclick = () => place("sell");
@@ -1090,7 +1100,7 @@ $("oOk").onclick = () => {
   if (!o) { $("oDlg").hidden = true; return; }
   const px = +$("oPx").value, qty = r3(+$("oQty").value), dir = o.side === "buy" ? 1 : -1;
   if (!(px > 0)) return msg(o.type === "stop" ? "触发价要大于 0" : "价格要大于 0");
-  if (!(qty >= STEP)) return msg(`数量至少 ${STEP} BTC`);
+  if (!(qty >= STEP) || qty * px < MIN_NOTIONAL) return msg(`太小了：每单至少 ${STEP} BTC，且仓位价值至少 ${MIN_NOTIONAL} USDT`);
   const tp = o.ro ? null : +$("oTp").value || null, sl = o.ro ? null : +$("oSl").value || null;
   if (tp && (dir > 0 ? tp <= px : tp >= px)) return msg(`止盈价要${dir > 0 ? "高" : "低"}于委托价`);
   if (sl && (dir > 0 ? sl >= px : sl <= px)) return msg(`止损价要${dir > 0 ? "低" : "高"}于委托价`);
@@ -1179,7 +1189,7 @@ async function fromCall() {
   let calls; try { calls = JSON.parse(lsGet(AK("btc_journal_v1"))) || {}; } catch (e) { calls = {}; }
   const amt = c.amt || calls.defAmt || 100, lev = c.lev || calls.defLev || A.lev, px = limit ? +c.ref : M.last || +c.ref;
   const qty = r3(amt * lev / px);
-  UNIT = "btc"; lsSet("btc_sim_unit", UNIT); $("fQty").value = qty.toFixed(3);
+  $("fQty").value = fromQty(qty, px);
   if (c.target || c.stop) { $("fTpsl").checked = true; $("tpslBox").classList.add("on"); $("fTp").value = c.target || ""; $("fSl").value = c.stop || ""; }
   $(long ? "goBuy" : "goSell").style.outline = "3px solid var(--accent)";
   $("fMsg").className = "msg";
