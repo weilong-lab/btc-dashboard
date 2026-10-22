@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 作战面板</title>
-<meta name="dashboard-release" content="2026-10-22-plain-mood-v3">
+<meta name="dashboard-release" content="2026-10-22-dual-pnl-v4">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /* 布局：手机优先的单列卡片流，宽屏两列；顶部价格条吸顶 */
@@ -464,6 +464,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     </form>
     <h3 class="sub-h">方向成绩 <small class="mut">（到时间涨了还是跌了，和有没有成交、赚没赚钱无关）</small></h3>
     <div class="status" id="cStats"></div>
+    <p class="note">盈亏同时显示未扣手续费和扣手续费后的估算；收益率均为盈亏 U ÷ 投入保证金 U × 100%。手续费沿用开平合计名义仓位的 0.1%，持有中也预估完整开平手续费，未计资金费和滑点。强平时沿用亏光保证金的简化估算。</p>
     <h3 class="sub-h">执行成绩 <small class="mut">（有没有成交、止盈止损谁先到、扣费后赚亏多少；实际金额和按默认金额模拟的分开算）</small></h3>
     <div class="status" id="cExec"></div>
     <div class="verdict" id="cPaper">严格执行成绩读取中…</div>
@@ -591,10 +592,10 @@ const fmtDTs = ms => new Date(ms).toLocaleString("zh-CN", { timeZone: TZ, month:
 const sizeOf = c => c.amt && c.lev ? { amt: c.amt, lev: c.lev, dflt: false } : { amt: J.defAmt || 100, lev: J.defLev || 10, dflt: true };
 const sizeTxt = c => { const z = sizeOf(c); return `${fmt(z.amt)} U × ${z.lev} 倍${z.dflt ? "<small>默认</small>" : ""}`; };
 // 百分比换成 U：名义仓位 × 涨跌幅，扣开平各 0.05% 市价手续费；亏到强平价就按亏光保证金算
-function pnlU(c, pctv) {
+function pnlU(c, pctv, deductFees = true) {
   if (!isFinite(pctv)) return NaN;
   const z = sizeOf(c), notional = z.amt * z.lev, liq = Math.max(0, 1 / z.lev - 0.004) * 100;
-  return pctv < 0 && -pctv >= liq ? -z.amt : notional * pctv / 100 - notional * 0.001;
+  return pctv < 0 && -pctv >= liq ? -z.amt : notional * pctv / 100 - (deductFees ? notional * 0.001 : 0);
 }
 // 保证金收益率：扣费后的盈亏 U ÷ 投入保证金 U；价格涨跌幅仍留给方向核对。
 function marginROI(c, pricePct) {
@@ -609,7 +610,7 @@ function expectPL(c, px) {
   const one = target => {
     if (!target) return null;
     const p = sgn * (target / ref - 1) * 100;
-    return { pct: p, roi: marginROI(c, p), u: pnlU(c, p), liqHit: p < 0 && -p >= liq, dflt: z.dflt };
+    return { pct: p, roi: marginROI(c, p), u: pnlU(c, p), gross: pnlU(c, p, false), amt: z.amt, liqHit: p < 0 && -p >= liq, dflt: z.dflt };
   };
   out.tp = one(c.target); out.sl = one(c.stop);
   if (px) out.now = one(px);
@@ -620,8 +621,13 @@ const r1 = u => Math.round(u * 10) / 10;
 const plCls = u => r1(u) > 0 ? "good" : r1(u) < 0 ? "bad" : "";
 const uTxt = u => `${r1(u) > 0 ? "+" : r1(u) < 0 ? "-" : ""}${Math.abs(r1(u)).toFixed(1)} U`;
 const uHtml = u => `<b class="${plCls(u)}">${uTxt(u)}</b>`;
-const plCell = x => !x ? "—" : `<span class="plv ${plCls(x.u)}"><b>${uTxt(x.u)}</b><small>${pct(x.roi)} · 占投入${x.liqHit ? " · 先爆仓" : ""}${x.dflt ? " · 按默认金额" : ""}</small></span>`;
-const moneyCell = (c, pctv) => { if (!isFinite(pctv)) return "—"; const u = pnlU(c, pctv); return `<span class="plv ${plCls(u)}"><b>${uTxt(u)}</b><small>${pct(marginROI(c, pctv))} · 占投入${sizeOf(c).dflt ? " · 按默认金额" : ""}</small></span>`; };
+// 同时比较手续费前后，两个收益率都除以投入保证金。
+const dualPL = (gross, net, amt, dflt = false, liqHit = false) => {
+  const line = (label, u) => `<span class="plv ${plCls(u)}"><small>${label}</small><b>${uTxt(u)}</b><small>${pct(amt > 0 ? u / amt * 100 : NaN)} · 占投入</small></span>`;
+  return line("未扣手续费", gross) + line("扣手续费后（估算）", net) + (liqHit ? '<small>先爆仓：两种口径均按亏光保证金封顶</small>' : "") + (dflt ? '<small>按默认投入金额模拟</small>' : "");
+};
+const plCell = x => !x ? "—" : dualPL(x.gross, x.u, x.amt, x.dflt, x.liqHit);
+const moneyCell = (c, pctv) => { if (!isFinite(pctv)) return "—"; const z = sizeOf(c); return dualPL(pnlU(c, pctv, false), pnlU(c, pctv), z.amt, z.dflt, pctv < 0 && -pctv >= Math.max(0, 1 / z.lev - 0.004) * 100); };
 const tzHour = ms => +new Date(ms).toLocaleString("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }) % 24;
 const tzDay = ms => new Date(ms + TZOFF[TZ] * 6e4);              // 用 getUTC* 读出所选时区的日期
 // 监控程序给的新闻时间是东京时间字符串「MM-DD HH:MM」，换成时间戳再按所选时区显示
@@ -2047,13 +2053,13 @@ function renderPositions() {
     : watching.length ? `盘面提醒：${watching.map(x => `${x.c.who} ${x.c.side === "long" ? "多" : "空"}单——${x.w[0].text}`).join("；")}`
     : open.length ? `持有中 ${open.length} 单，盘面正常，暂时都不用卖。` : "现在没有持有中的单。";
   if (!sell.length && watching.length) $("pAlert").className = "verdict " + (watching.some(x => x.w.some(a => a.lv === "bad")) ? "badv" : "");
-  $("pOpen").innerHTML = open.length ? `<thead><tr><th>进场</th><th>谁</th><th>方向</th><th>进场价</th><th>投入 × 杠杆</th><th>止损</th><th>止盈</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长到</th><th>现在盈亏（扣手续费）</th><th>离止损</th><th>离止盈</th><th>状态 / 盘面提醒</th><th></th></tr></thead><tbody>` +
+  $("pOpen").innerHTML = open.length ? `<thead><tr><th>进场</th><th>谁</th><th>方向</th><th>进场价</th><th>投入 × 杠杆</th><th>止损</th><th>止盈</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长到</th><th>现在盈亏（手续费前 / 后）</th><th>离止损</th><th>离止盈</th><th>状态 / 盘面提醒</th><th></th></tr></thead><tbody>` +
     open.map(x => { const { c, s } = x; return `<tr class="${s && s.why ? "sell" : ""}"><td>${fmtDTs(c.res.filled)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)}</td>
       <td>${sizeTxt(c)}<small>名义 ${fmt(sizeOf(c).amt * sizeOf(c).lev)} U</small></td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${fmtT(s.exp)}（剩 ${dur(s.exp - now)}）</td><td>${moneyCell(c, s.pnl)}</td>
       <td>${isFinite(s.toStop) ? fmt(s.toStop) : "—"}</td><td>${isFinite(s.toTgt) ? fmt(s.toTgt) : "—"}</td><td class="txt">${s.why ? `<b class="bad">该卖了：${s.why}</b>` : x.w && x.w.length ? x.w.map(a => `<span class="${a.lv}">⚠ ${esc(a.text.split("。")[0])}</span>`).join("<br>") : "持有中 · 盘面正常"}</td>
       <td class="txt"><button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}</td></tr>`; }).join("") + "</tbody>" : "";
   const done = C.calls.filter(c => c.exit).sort((a, b) => b.exit.t - a.exit.t).slice(0, 10);
-  $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏（扣手续费）<br>收益率 = 盈亏 ÷ 投入 U</th><th>拿了多久</th></tr></thead><tbody>` +
+  $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏（手续费前 / 后）<br>收益率 = 盈亏 ÷ 投入 U</th><th>拿了多久</th></tr></thead><tbody>` +
     done.map(c => `<tr><td>${fmtDTs(c.exit.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)} → ${fmt(c.exit.px)}</td><td>${sizeTxt(c)}</td>
       <td>${c.exit.why}</td><td>${moneyCell(c, c.exit.pnl)}</td><td>${dur(c.exit.t - c.res.filled)}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="txt">还没有卖出记录。</td></tr></tbody>`;
 }
@@ -2108,14 +2114,14 @@ function renderCalls() {
   ].map(chip).join("");
   const unfilled = done.filter(c => c.res.grade === "未成交" || c.res.grade === "已撤单").length, triggered = list.filter(c => c.entry === "limit" || (c.res && c.res.limit));
   const realSold = sold.filter(c => !sizeOf(c).dflt), simSold = sold.filter(c => sizeOf(c).dflt);
-  const uSum = a => a.reduce((t, c) => t + pnlU(c, c.exit.pnl), 0), rU = uSum(realSold), sU = uSum(simSold);
+  const uSum = (a, fees = true) => a.reduce((t, c) => t + pnlU(c, c.exit.pnl, fees), 0), rU = uSum(realSold), sU = uSum(simSold);
   $("cExec").innerHTML = [
     ["到价单成交", triggered.length ? `${triggered.filter(c => c.res && c.res.filled).length} / ${triggered.length}` : "—", "", unfilled ? `${unfilled} 条没成交或撤单` : "现价进的单都算成交"],
     ["止盈先到", withT.length ? `${Math.round(tHit / withT.length * 100)}%` : "—", "", `${tHit} / ${withT.length} 条带止盈价`],
     ["止损先到", withS.length ? `${Math.round(sFirst / withS.length * 100)}%` : "—", sFirst ? "bad" : "", `${sFirst} / ${withS.length} 条带止损价`],
-    ["实际金额 · 已卖出", realSold.length ? uTxt(rU) : "—", plCls(rU), `${realSold.length} 笔喊单里写了投入和杠杆 · 已扣手续费`],
-    ["按默认金额模拟 · 已卖出", simSold.length ? uTxt(sU) : "—", plCls(sU), `${simSold.length} 笔没写金额，按 ${fmt(J.defAmt || 100)} U × ${J.defLev || 10} 倍假设，不是真实收益`],
-    ["持有中浮动", holding.length ? uTxt(holdU) : "—", plCls(holdU), `${holding.length} 笔 · 按现价（含默认金额的单）`],
+    ["实际金额 · 已卖出", realSold.length ? `未扣 ${uTxt(uSum(realSold, false))} / 扣后 ${uTxt(rU)}` : "—", plCls(rU), `${realSold.length} 笔喊单里写了投入和杠杆 · 已扣手续费`],
+    ["按默认金额模拟 · 已卖出", simSold.length ? `未扣 ${uTxt(uSum(simSold, false))} / 扣后 ${uTxt(sU)}` : "—", plCls(sU), `${simSold.length} 笔没写金额，按 ${fmt(J.defAmt || 100)} U × ${J.defLev || 10} 倍假设，不是真实收益`],
+    ["持有中浮动", holding.length ? `未扣 ${uTxt(holding.reduce((t, c) => t + pnlU(c, (c.side === "long" ? 1 : -1) * (S.price / c.ref - 1) * 100, false), 0))} / 扣后 ${uTxt(holdU)}` : "—", plCls(holdU), `${holding.length} 笔 · 按现价（含默认金额的单）`],
   ].map(chip).join("");
   // 同一批喊单，进场后 1h / 4h / 24h 各对了多少（0.1% 以内算平，不计入）
   const hzRows = HZ_CMP.map(([m, name]) => {
@@ -2154,7 +2160,7 @@ function renderCalls() {
       <td>${r && r.filled ? fmt(r.adv) : "—"}</td><td>${r && r.filled ? fmt(r.fav) : "—"}</td>
       <td class="acts">${act}<button type="button" class="btn sm" data-cdel="${c.id}">删除</button></td></tr>`;
   }).join("");
-  $("cTable").innerHTML = list.length ? `<thead><tr><th>喊单时间</th><th>谁</th><th>方向</th><th>原话</th><th>进场</th><th>投入 × 杠杆</th><th>止盈</th><th>止损</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长持有</th><th>结果</th><th>卖出</th><th>盈亏（扣手续费）<br>收益率 = 盈亏 ÷ 投入 U</th><th>最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "";
+  $("cTable").innerHTML = list.length ? `<thead><tr><th>喊单时间</th><th>谁</th><th>方向</th><th>原话</th><th>进场</th><th>投入 × 杠杆</th><th>止盈</th><th>止损</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长持有</th><th>结果</th><th>卖出</th><th>盈亏（手续费前 / 后）<br>收益率 = 盈亏 ÷ 投入 U</th><th>最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "";
 }
 // 同一个人：上一条还没到期就喊了反方向 → 上一条标改口（保存、导入、删除后整体重算）
 function markFlips() {
