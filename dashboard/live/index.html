@@ -177,7 +177,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
 .fm-wins span{font-size:12px;color:var(--muted)}
 .fm-wins b{font-size:14px}
 /* 顶部「此刻结论」 */
-.sum-in{grid-template-columns:repeat(2,minmax(0,170px)) minmax(0,320px)}
+.sum-in{grid-template-columns:minmax(0,170px) minmax(0,320px) minmax(0,260px)}
+.sum-in .levinfo{font-family:var(--m);font-size:14px;color:var(--fg);padding:7px 0}
 .sum-in .levrow{display:flex;gap:8px;align-items:center}
 .sum-in .levrow input[type=range]{flex:1;padding:0;accent-color:var(--accent)}
 .sum-in .levrow input[type=number]{width:72px;flex:none}
@@ -287,12 +288,12 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <p class="sum-line" id="sumNow">正在读取行情…</p>
     <div class="status" id="sumState"></div>
     <form class="sum-in" onsubmit="return false">
-      <label for="sbal">账户余额 (U)<input id="sbal" inputmode="decimal" placeholder="例如 1000"></label>
-      <label for="srisk">每笔最多亏 (% 余额)<input id="srisk" inputmode="decimal" value="2"></label>
-      <label for="slev" class="levl">杠杆倍数（0 = 自动）<span class="levrow"><input id="slevr" type="range" min="0" max="150" step="1" value="0" aria-label="杠杆滑块"><input id="slev" type="number" min="0" max="150" step="1" value="0" inputmode="numeric"></span></label>
+      <label for="samt">买入金额（保证金 U）<input id="samt" inputmode="decimal" value="100"></label>
+      <label for="slev" class="levl">杠杆（倍）<span class="levrow"><input id="slevr" type="range" min="1" max="150" step="1" value="10" aria-label="杠杆滑块"><input id="slev" type="number" min="1" max="150" step="1" value="10" inputmode="numeric"></span></label>
+      <label>名义仓位 · 强平距离<span class="levinfo" id="sinfo">—</span></label>
     </form>
     <div class="sum-sides" id="sumSides"></div>
-    <p class="note">判断顺序：先看硬性禁止（重大数据前 60 分钟、今日亏损超 15%、保证金占用超三分之一），再看规则 A / B 有没有触发，最后看是不是在急涨急跌后逆势进场。规则 A / B 在扣手续费的真实挂单回测里都没有稳定赚钱，所以即使出现信号也只叫「有参考信号」，建议小仓位。仓位 = 余额 × 每笔最多亏 % ÷ 止损幅度，和杠杆无关；杠杆只决定占用多少保证金和强平价离多远。杠杆选 0 是自动（保证金不超过余额三分之一，且强平距离至少是止损距离的 2 倍）；自己选 1–150 倍时按你选的算，强平比止损近或保证金超过余额会标红提醒。余额和比例与「交易日志与风控」共用，只存在这台设备上。</p>
+    <p class="note">判断顺序：先看硬性禁止（重大数据前 60 分钟、今日亏损超 15%、保证金占用超三分之一），再看规则 A / B 有没有触发，最后看是不是在急涨急跌后逆势进场。规则 A / B 在扣手续费的真实挂单回测里都没有稳定赚钱，所以即使出现信号也只叫「有参考信号」，建议小仓位。仓位按上面填的买入金额 × 杠杆算（名义仓位），每一边显示打到止损亏多少、打到止盈赚多少（都扣了约 0.1% 的开平手续费）和强平价；强平价比止损还近会标红，并给出这个止损下建议的最高杠杆（强平距离至少是止损距离的 2 倍，按 1 ÷ 杠杆 − 0.4% 估算）。买入金额和杠杆会同步到云端，也是喊单记录里没写金额时的默认值。</p>
   </section>
 
   <section class="card span" id="fastCard">
@@ -1189,6 +1190,12 @@ function sizing(P, stop, bal, riskPct, levSel = J.lev || 0) {
   return { sp, maxLev, lev, notional, margin, liq, chosen: !!levSel, overBal: margin > bal, liqFirst: liq <= sp,
     loss: liq <= sp ? margin : notional * sp + notional * 0.0007, qty: notional / P };
 }
+// 按「买入金额 × 杠杆」算：打到止损亏多少、打到止盈赚多少、强平价离多远（手续费按开平合计 0.1% 名义仓位）
+function fixedSize(ref, stopDist, tpDist) {
+  const amt = J.defAmt || 100, lev = J.defLev || 10, notional = amt * lev, sp = stopDist / ref, liq = Math.max(0, 1 / lev - 0.004), fee = notional * 0.001;
+  return { amt, lev, notional, sp, liq, liqFirst: liq <= sp, maxLev: Math.max(1, Math.min(150, Math.floor(1 / (2 * sp + 0.004)))),
+    loss: liq <= sp ? amt : notional * sp + fee, gain: tpDist ? notional * tpDist / ref - fee : null };
+}
 // 选定杠杆时的提醒：强平比止损近、保证金超过余额
 function levNote(z, P, sgn) {
   if (!z.lev) return "";
@@ -1244,14 +1251,14 @@ function renderSummary(st) {
     const cell = (k, x) => `<div><span>${k}</span><b>${x}</b></div>`;
     let body;
     if (pl) {
-      const z2 = sizing(pl.ref, pl.stop, bal, riskPct);
+      const z2 = fixedSize(pl.ref, pl.stop, pl.tpR ? pl.tpR * pl.stop : 0), lp = pl.ref * (1 - sgn * z2.liq);
       body = `<div class="grid">${cell("进场", pl.entry)}${cell("止损", `${fmt(pl.ref - sgn * pl.stop)}（${(z2.sp * 100).toFixed(2)}%）`)}${pl.tpR ? cell("止盈", `${fmt(pl.ref + sgn * pl.tpR * pl.stop)}（${pl.tpR}R）`) : ""}${cell("拿多久", pl.hold)}` +
-        (bal ? `${cell("名义仓位", `${fmt(z2.notional)} U（${z2.qty.toFixed(3)} BTC）`)}${cell("杠杆", `${z2.lev} 倍${z2.chosen ? "（你选的）" : `（自动，上限 ${z2.maxLev}）`}`)}${cell("保证金（投入）", `${fmt(z2.margin)} U`)}${cell("打到止损约亏", `${fmt(z2.loss)} U`)}`
-          : cell("杠杆上限", `${z2.maxLev} 倍`)) + `</div>` + (bal ? levNote(z2, pl.ref, sgn) : `<p class="if">填上账户余额才能算仓位。</p>`) + (pl.stopNote ? `<p class="if">${pl.stopNote}。</p>` : "");
+        `${cell("投入 × 杠杆", `${fmt(z2.amt)} U × ${z2.lev} 倍`)}${cell("打到止损亏", `<span class="bad">${uTxt(-z2.loss)}</span>`)}${z2.gain != null ? cell("打到止盈赚", `<span class="good">${uTxt(z2.gain)}</span>`) : ""}${cell("强平价", fmt(lp))}</div>` +
+        (z2.liqFirst ? `<p class="if bad">${z2.lev} 倍杠杆价格反向 ${(z2.liq * 100).toFixed(2)}% 就强平，比止损还近，会亏掉全部 ${fmt(z2.amt)} U。这个止损建议不超过 ${z2.maxLev} 倍。</p>` : z2.lev > z2.maxLev ? `<p class="if warn">强平价离止损太近（不到止损距离的 2 倍），插针可能先爆仓，建议不超过 ${z2.maxLev} 倍。</p>` : "") + (pl.stopNote ? `<p class="if">${pl.stopNote}。</p>` : "");
     } else if (vd !== "不要开") {
-      const z2 = sizing(P, volStop, bal, riskPct);
-      body = `<p class="if">如果你还是要现在${key === "long" ? "做多" : "做空"}（持有 ${hold}）：止损放 ${fmt(P - sgn * volStop)}（${(z2.sp * 100).toFixed(2)}%，五次里有四次不会被正常波动扫掉）` +
-        (bal ? `，名义仓位最多 ${fmt(z2.notional)} U（${z2.qty.toFixed(3)} BTC），${z2.lev} 倍杠杆${z2.chosen ? "（你选的）" : ""}、保证金 ${fmt(z2.margin)} U，打到止损约亏 ${fmt(z2.loss)} U。` : `，杠杆不超过 ${z2.maxLev} 倍；填上余额可以算出仓位。`) + `</p>` + (bal ? levNote(z2, P, sgn) : "");
+      const z2 = fixedSize(P, volStop, 0);
+      body = `<p class="if">如果你还是要现在${key === "long" ? "做多" : "做空"}（持有 ${hold}）：止损放 ${fmt(P - sgn * volStop)}（${(z2.sp * 100).toFixed(2)}%，五次里有四次不会被正常波动扫掉），按 ${fmt(z2.amt)} U × ${z2.lev} 倍，打到止损约亏 <b class="bad">${fmt(z2.loss)} U</b>，强平价约 ${fmt(P * (1 - sgn * z2.liq))}。</p>` +
+        (z2.liqFirst ? `<p class="if bad">这个杠杆在止损前就会强平，会亏掉全部 ${fmt(z2.amt)} U，建议不超过 ${z2.maxLev} 倍。</p>` : "");
     } else body = "";
     // 按现价开仓用的方案：有信号用信号的止损 / 止盈 / 持有时间；没有信号用「如果你还是要做」的止损和所选持有时间
     const HZM = { "1 小时": 60, "4 小时": 240, "24 小时": 1440 };
@@ -1267,8 +1274,8 @@ function renderSummary(st) {
   $("sumState").innerHTML = [
     ["市场状态", `4 小时 ${pct(mv4)} · 波动${v.state}`, "", `${S.maRel || "均线读取中"}${cx && cx.key ? "；刚" + (cx.down ? "急跌超卖" : "急涨超买") : ""}`],
     ["策略状态", "参考，未通过验证", "warn", `规则 A / B 扣费回测都没有稳定赚钱${pr ? `；模型严格执行 A ${pr.A.n} 笔累计 ${pct(pr.A.cum || 0)}、B ${pr.B.n} 笔累计 ${pct(pr.B.cum || 0)}` : ""}${mine.length ? `；模型自动记单已卖 ${mine.length} 笔，${uTxt(mineU)}（按默认金额）` : ""}`],
-    ["账户约束", isFinite(rk.room) ? `新单最多亏 ${fmt(Math.min(rk.room, Math.max(0, rk.dayRoom)))} U` : "没填余额", rk.noStop.length ? "bad" : isFinite(rk.room) ? "" : "mut", `${rk.open.length ? `持仓总风险 ${isFinite(rk.total) ? fmt(rk.total) + " U" : "无上限"}` : isFinite(rk.room) ? "没有持仓" : "不填也能用；填了余额会算出仓位上限"}${F.blocked ? "；事件前不开新仓" : ""}`],
   ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
+  { const amt = J.defAmt || 100, lev = J.defLev || 10; $("sinfo").textContent = `${fmt(amt * lev)} U · 反向 ${(Math.max(0, 1 / lev - 0.004) * 100).toFixed(2)}% 强平`; }
   const L = side("long"), Sh = side("short");
   $("sumSides").innerHTML = L.html + Sh.html + (S.sumMsg && Date.now() - S.sumMsg.t < 15e3 ? `<p class="sum-line good" style="grid-column:1/-1">${S.sumMsg.html}</p>` : "");
   const mv = (() => { const b = S.b5, n = b.length; return n > 50 ? (P / b[n - 48].o - 1) * 100 : NaN; })();
@@ -1484,16 +1491,21 @@ function jInit() {
   jSetSide(J.side);
   $("j-long").onclick = () => jSetSide("long"); $("j-short").onclick = () => jSetSide("short");
   // 杠杆：滑块和数字框同步，0 = 自动
-  const setLev = v => { v = Math.max(0, Math.min(150, Math.round(+v || 0))); $("slev").value = $("slevr").value = v; J.lev = v; J.u = Date.now(); jsave(); everySecond(); };
-  $("slev").value = $("slevr").value = J.lev || 0;
-  $("slevr").addEventListener("input", e => setLev(e.target.value));
-  $("slev").addEventListener("change", e => setLev(e.target.value));
+  // 此刻结论的买入金额和杠杆 = 喊单记录里「没写金额时按」的默认值，两处同步
+  const setAmtLev = (amt, lev) => {
+    J.defAmt = Math.max(1, +amt || 100); J.defLev = Math.max(1, Math.min(150, Math.round(+lev || 10))); J.u = Date.now();
+    $("samt").value = J.defAmt; $("slev").value = $("slevr").value = J.defLev; if ($("cDefAmt")) { $("cDefAmt").value = J.defAmt; $("cDefLev").value = J.defLev; }
+    jsave(); everySecond(); renderCalls(); renderPositions();
+  };
+  window.setAmtLev = setAmtLev;
+  $("samt").value = J.defAmt || 100; $("slev").value = $("slevr").value = J.defLev || 10;
+  $("samt").addEventListener("change", e => setAmtLev(e.target.value, J.defLev));
+  $("slevr").addEventListener("input", e => setAmtLev(J.defAmt, e.target.value));
+  $("slev").addEventListener("change", e => setAmtLev(J.defAmt, e.target.value));
   // 余额和每笔风险：顶部「此刻结论」和这里是同一份设置，任一处改动两边同步
-  if (J.balance) $("sbal").value = J.balance;
-  if (J.riskPct) $("srisk").value = J.riskPct;
-  [["jbal", "jrisk", "sbal", "srisk"], ["sbal", "srisk", "jbal", "jrisk"]].forEach(([bal, risk, ob, or]) => [bal, risk].forEach(id => $(id).addEventListener("input", () => {
+  [["jbal", "jrisk"]].forEach(([bal, risk]) => [bal, risk].forEach(id => $(id).addEventListener("input", () => {
     if ((+$(bal).value || 0) !== (J.balance || 0)) J.balanceAt = Date.now();
-    J.balance = +$(bal).value || 0; J.riskPct = +$(risk).value || 2; J.u = Date.now(); $(ob).value = $(bal).value; $(or).value = $(risk).value; jsave(); renderJournal(); everySecond();
+    J.balance = +$(bal).value || 0; J.riskPct = +$(risk).value || 2; J.u = Date.now(); jsave(); renderJournal(); everySecond();
   })));
   $("jfrom").onclick = () => { jSetSide(S.side); $("jentry").value = $("entry").value; $("jstop").value = $("stop").value; $("jnotional").value = Math.round(+$("margin").value * +$("lev").value); $("jlev").value = $("lev").value; };
   $("jsize").onclick = () => {
@@ -1615,7 +1627,7 @@ async function cloudSync() {
       // 交易日志
       const delJ = new Set([...(J.deleted || []), ...((rj.obj && rj.obj.deleted) || [])]);
       J.trades = mergeById(J.trades, (rj.obj && rj.obj.trades) || [], delJ); J.deleted = [...delJ];
-      if (rj.obj && (rj.obj.u || 0) > (J.u || 0)) { J.balance = rj.obj.balance; J.balanceAt = rj.obj.balanceAt || 0; J.riskPct = rj.obj.riskPct; J.lev = rj.obj.lev || 0; J.defAmt = rj.obj.defAmt || 100; J.defLev = rj.obj.defLev || 10; J.u = rj.obj.u; if ($("cDefAmt")) { $("cDefAmt").value = J.defAmt; $("cDefLev").value = J.defLev; } if ($("slev")) $("slev").value = $("slevr").value = J.lev; if ($("jbal")) { $("jbal").value = $("sbal").value = J.balance || ""; $("jrisk").value = $("srisk").value = J.riskPct; } }
+      if (rj.obj && (rj.obj.u || 0) > (J.u || 0)) { J.balance = rj.obj.balance; J.balanceAt = rj.obj.balanceAt || 0; J.riskPct = rj.obj.riskPct; J.lev = rj.obj.lev || 0; J.defAmt = rj.obj.defAmt || 100; J.defLev = rj.obj.defLev || 10; J.u = rj.obj.u; if ($("cDefAmt")) { $("cDefAmt").value = J.defAmt; $("cDefLev").value = J.defLev; } if ($("slev")) { $("samt").value = J.defAmt; $("slev").value = $("slevr").value = J.defLev; } if ($("jbal")) { $("jbal").value = J.balance || ""; $("jrisk").value = J.riskPct; } }
       try { localStorage.setItem(CKEY, JSON.stringify(C)); localStorage.setItem(JKEY, JSON.stringify(J)); } catch (e) { /* 只是缓存 */ }
       markFlips();
       const cd = callsDoc(), jd = journalDoc();
@@ -2028,7 +2040,7 @@ function callsInit() {
   $("cDefAmt").value = J.defAmt || 100; $("cDefLev").value = J.defLev || 10;
   ["cDefAmt", "cDefLev"].forEach(id => $(id).addEventListener("change", () => {
     J.defAmt = Math.max(1, +$("cDefAmt").value || 100); J.defLev = Math.max(1, Math.min(150, Math.round(+$("cDefLev").value || 10))); J.u = Date.now();
-    $("cDefAmt").value = J.defAmt; $("cDefLev").value = J.defLev; jsave(); renderCalls(); renderPositions();
+    $("cDefAmt").value = J.defAmt; $("cDefLev").value = J.defLev; if ($("samt")) { $("samt").value = J.defAmt; $("slev").value = $("slevr").value = J.defLev; } jsave(); renderCalls(); renderPositions(); everySecond();
   }));
   ["cRef", "cTarget", "cStop", "cAmt", "cLev"].forEach(id => $(id).addEventListener("input", cPreview));
   ["c-long", "c-short", "cParse"].forEach(id => $(id).addEventListener("click", () => setTimeout(cPreview, 0)));
@@ -2091,15 +2103,12 @@ function callsInit() {
   $("sumSides").addEventListener("click", ev => {
     const key = ev.target.dataset && ev.target.dataset.sumopen; if (!key) return;
     const plan = S.sumPlan && S.sumPlan[key], P = S.price; if (!plan || !isFinite(P)) return;
-    const sgn = key === "long" ? 1 : -1, bal = J.balance || 0;
-    let amt, lev;
-    if (bal) { const z2 = sizing(P, plan.stop, bal, J.riskPct || 2); amt = Math.round(z2.margin * 10) / 10; lev = z2.lev; }
-    else { amt = J.defAmt || 100; lev = J.lev || J.defLev || 10; }
+    const sgn = key === "long" ? 1 : -1, amt = J.defAmt || 100, lev = J.defLev || 10;    // 按此刻结论上面填的买入金额和杠杆
     const c = { id: Date.now().toString(36), t: Date.now(), who: "我", side: key, entry: "market", ref: Math.round(P * 10) / 10, refGiven: false,
       stop: Math.round((P - sgn * plan.stop) * 10) / 10, target: plan.tp ? Math.round((P + sgn * plan.tp) * 10) / 10 : 0, hz: plan.hz, amt, lev,
       text: `此刻结论按现价${key === "long" ? "开多" : "开空"}（当时：${plan.why}）` };
     const e = expectPL(c);
-    const msg = `按现价 ${fmt(c.ref)} ${key === "long" ? "开多" : "开空"}？\n止损 ${fmt(c.stop)}${c.target ? `，止盈 ${fmt(c.target)}` : "，不设止盈"}，最长拿 ${HZTXT[c.hz] || c.hz + " 分钟"}\n投入 ${fmt(amt)} U × ${lev} 倍${bal ? "（按余额和每笔风险算）" : "（默认金额）"}\n` +
+    const msg = `按现价 ${fmt(c.ref)} ${key === "long" ? "开多" : "开空"}？\n止损 ${fmt(c.stop)}${c.target ? `，止盈 ${fmt(c.target)}` : "，不设止盈"}，最长拿 ${HZTXT[c.hz] || c.hz + " 分钟"}\n投入 ${fmt(amt)} U × ${lev} 倍（此刻结论上面填的买入金额和杠杆）\n` +
       `打到止损预计 ${e.sl ? uTxt(e.sl.u) : "—"}${e.tp ? `，打到止盈预计 ${uTxt(e.tp.u)}` : ""}${plan.vd === "不要开" ? "\n\n注意：此刻结论是「不要开」。" : plan.vd === "不建议" ? "\n\n注意：此刻结论是「不建议」。" : ""}\n\n只记进喊单记录，不会真的下单。`;
     if (!confirm(msg)) return;
     c.u = Date.now(); C.calls.push(c); markFlips(); csave(); cNames(); renderCalls(); verifyCalls();
@@ -2132,7 +2141,7 @@ function renderRulesDoc() {
       "<b>有参考信号</b>：规则 A 或规则 B 触发（见下面两条）。给出进场价、止损、止盈、拿多久、仓位和杠杆。",
       "<b>不建议</b>：刚急跌（4 小时跌 ≥1.5% 且 RSI6 ≤20）就抄底、刚急涨就摸顶，且还没出现扳机；或者逆着 1 小时趋势。",
       "<b>等待</b>：以上都不是，会写出还差哪个条件。",
-      "仓位 = 余额 × 每笔最多亏 % ÷ 止损幅度。杠杆取「保证金不超过余额三分之一」需要的最低倍数，上限是「强平价离进场至少是止损距离的 2 倍」（强平距离按 1 ÷ 杠杆 − 0.4% 估算）。",
+      "仓位 = 买入金额（保证金）× 杠杆。打到止损亏 = 名义仓位 × 止损幅度 + 手续费；强平距离按 1 ÷ 杠杆 − 0.4% 估算，比止损近时会先爆仓、亏掉全部保证金。",
       `没有信号时给出的「如果你还是要做」：止损按所选持有时间的 P80 逆向幅度${V ? `（1 小时 ${V["1 小时"].p80}、4 小时 ${V["4 小时"].p80}、24 小时 ${V["24 小时"].p80} 个 ATR）` : ""}，五次里有四次不会被正常波动扫掉。`,
     ], true),
     sec(`规则 A · ${esc(A.name)}`, [
@@ -2170,7 +2179,7 @@ function renderRulesDoc() {
       "进场两种：现价进（喊单那一刻就算买入）；到价再进（规定分钟内价格碰到进场价才算买入，最长持有从成交那一刻算，没碰到记「未成交」，可以撤单）。原话里有投入金额和杠杆就一起记，盈亏同时显示 U。",
       "此刻结论里每一边都有「按现价开多 / 开空」：按点击那一刻的实时价，把这一单记进喊单记录（谁喊的 =「我」），止损、止盈、最长持有用此刻结论当时给的方案，投入和杠杆按余额和每笔风险算（没填余额就用默认金额）。之后在「持仓与卖出」里盯着、到了提醒。只是记录，不会真的下单。",
       "开仓后（和交易所一样）：进场时间、方向、进场价、投入和杠杆不能改；止损、止盈、最长持有可以点「改止盈止损」随时改，每次改动记下时间和改前改后的值。核对时改之前的行情按旧的止损止盈判断、改之后按新的，被改后的止损止盈打掉会标「止损（改过）」「止盈（改过）」。模型自动记的单不能改，保证模型成绩干净。",
-      "此刻结论的杠杆：0 = 自动；自己选 1–150 倍时，仓位不变（仍由每笔最多亏 % ÷ 止损幅度决定），只改变保证金和强平价；强平价比止损近会标红。",
+      "此刻结论上面填买入金额（保证金）和杠杆（1–150 倍），每一边都按它算打到止损亏多少、打到止盈赚多少、强平价；强平价比止损还近会标红并给出建议的最高杠杆。这两个数也是喊单记录里没写金额时的默认值。",
       "卖出：价格先碰到止损或止盈就在那里卖（同一根 K 线两个都碰到按止损算）；都没碰到就到最长持有时间按当时收盘价卖；你也可以手动卖出。卖出时间、价格、原因、盈亏都会记下，喊单记录同步显示。",
       "对错：到期价朝喊单方向走了 0.1% 以上算对，反方向 0.1% 以上算错，其余算平。喊的价位离当时市价超过 0.15% 当作挂单，碰到才算进场。",
       "模型自动记单：「此刻结论」每出现一次参考信号（规则 A 或 B）就记一条「模型·此刻结论」，同一规则同方向 60 分钟内只记一次；后台监控程序在跑时浏览器关着也会记，并在买入和该卖时发 Mac 通知。",
