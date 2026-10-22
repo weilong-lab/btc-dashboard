@@ -68,6 +68,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .lay li button{font:inherit;font-size:13px;width:28px;height:26px;border:1px solid var(--line);border-radius:5px;background:var(--chip);color:var(--fg);cursor:pointer}
 .lay li button:disabled{opacity:.35;cursor:default}
 .lay .row2{display:flex;gap:8px;justify-content:flex-end}
+.edlg{width:min(420px,calc(100vw - 24px))}
+.edlg form{grid-template-columns:1fr 1fr}
+.edlg form label:last-child{grid-column:1/-1}
 .card{scroll-margin-top:calc(var(--toph,110px) + 10px)}
 @media(min-width:1260px){
   .toc{position:fixed;left:max(12px,calc((100vw - 1100px) / 2 - 172px));top:76px;width:150px;flex-direction:column;gap:2px;margin:0;overflow:visible}
@@ -257,6 +260,18 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
   </div>
   <button class="refresh" id="refresh" type="button">手动刷新</button>
   <nav class="toc" id="toc" aria-label="目录"></nav>
+</div>
+<div class="lay edlg" id="edlg" role="dialog" aria-label="修改止盈止损" hidden>
+  <h3>修改止盈 / 止损</h3>
+  <div class="note" id="edFixed"></div>
+  <form id="edForm" onsubmit="return false">
+    <label for="edStop">止损价（清空 = 不设）<input id="edStop" inputmode="decimal"></label>
+    <label for="edTarget">止盈价（清空 = 不设）<input id="edTarget" inputmode="decimal"></label>
+    <label for="edHz">最长持有（从进场算）<select id="edHz"></select></label>
+  </form>
+  <div class="verdict" id="edPrev"></div>
+  <p class="note">进场时间、方向、进场价、投入和杠杆开仓后不能改（和交易所一样）。止损、止盈、最长持有可以随时改，每次改动都会记下时间和改前改后的值；核对时，改之前的行情按旧的止损止盈判断，改之后按新的。</p>
+  <div class="row2"><button type="button" class="btn" id="edCancel">取消</button><button type="button" class="btn primary" id="edSave">保存</button></div>
 </div>
 <div class="lay" id="lay" role="dialog" aria-label="调整卡片顺序" hidden>
   <h3>调整卡片顺序</h3>
@@ -1577,7 +1592,7 @@ async function ghPut(path, obj, sha) {
   return (await r.json()).content.sha;
 }
 // 只同步人填写的内容；核对结果（res / exit / hzRes / flip）每台设备自己算
-const CALL_FIELDS = ["id", "t", "who", "side", "text", "entry", "ref", "refGiven", "validMin", "target", "stop", "hz", "amt", "lev", "manualExit", "cancel", "u"];
+const CALL_FIELDS = ["id", "t", "who", "side", "text", "entry", "ref", "refGiven", "validMin", "target", "stop", "hz", "amt", "lev", "manualExit", "cancel", "orig", "mods", "u"];
 const pickCall = c => Object.fromEntries(CALL_FIELDS.filter(k => c[k] !== undefined).map(k => [k, c[k]]));
 const callsDoc = () => ({ calls: C.calls.map(pickCall).sort((a, b) => a.t - b.t || (a.id < b.id ? -1 : 1)), deleted: [...new Set(C.deleted || [])].sort() });
 const journalDoc = () => ({ balance: J.balance || 0, balanceAt: J.balanceAt || 0, riskPct: J.riskPct || 2, lev: J.lev || 0, defAmt: J.defAmt || 100, defLev: J.defLev || 10, u: J.u || 0, trades: J.trades.map(({ _open, ...t }) => t).sort((a, b) => a.t - b.t), deleted: [...new Set(J.deleted || [])].sort() });
@@ -1703,6 +1718,13 @@ function cPreview() {
 }
 function cEntryUI() { const lim = $("cEntry").value === "limit"; $("cValidL").hidden = !lim; $("cRefL").firstChild.textContent = lim ? "到这个价再进场" : "进场价（空着 = 喊单时的市价）"; }
 // 逐根 K 线核对一条喊单（到期前也会算，用来显示进行中的状态）
+// 某个时刻有效的止损 / 止盈：开仓时的值，再按修改记录依次覆盖（修改之前的 K 线仍按旧值判断）
+function lvAt(c, t) {
+  if (!c.mods || !c.mods.length) return { stop: c.stop, target: c.target };
+  const o = c.orig || c, L = { stop: o.stop, target: o.target };
+  for (const m of c.mods) if (m.at <= t) { L.stop = m.stop; L.target = m.target; }
+  return L;
+}
 // 到价再进的单：最长持有从成交那一刻算；现价进的单从喊单时间算
 const validMs = c => c.entry === "limit" ? (c.validMin || 60) * 6e4 : 0;
 const callExp = c => (c.entry === "limit" && c.res && c.res.filled ? c.res.filled : c.t) + c.hz * 6e4;
@@ -1717,7 +1739,7 @@ async function verifyCall(c) {
   // 老记录没有 entry 字段：喊的价位离当时市价超过 0.15% 当作挂单，等到最长持有结束
   const limit = c.entry === "limit" || (!c.entry && c.refGiven && Math.abs(c.ref / m0 - 1) > 0.0015);
   const fillBy = c.entry === "limit" ? Math.min(c.t + validMs(c), c.cancel ? c.cancel.t : Infinity) : c.t + c.hz * 6e4;
-  let adv = 0, fav = 0, tHit = null, sHit = null, both = false, filled = limit ? null : c.t, exp = c.t + c.hz * 6e4;
+  let adv = 0, fav = 0, tHit = null, sHit = null, sPx = 0, tPx = 0, both = false, filled = limit ? null : c.t, exp = c.t + c.hz * 6e4;
   for (const b of k) {
     if (!filled) {
       if (b.t >= fillBy) break;
@@ -1725,10 +1747,11 @@ async function verifyCall(c) {
     }
     if (b.t >= exp) break;
     const a = sgn > 0 ? c.ref - b.l : b.h - c.ref, f = sgn > 0 ? b.h - c.ref : c.ref - b.l;
-    const hitT = c.target && !tHit && (sgn > 0 ? b.h >= c.target : b.l <= c.target), hitS = c.stop && !sHit && (sgn > 0 ? b.l <= c.stop : b.h >= c.stop);
+    const L = lvAt(c, b.t);                     // 这根 K 线时有效的止损 / 止盈（中途改过就按改后的）
+    const hitT = L.target && !tHit && (sgn > 0 ? b.h >= L.target : b.l <= L.target), hitS = L.stop && !sHit && (sgn > 0 ? b.l <= L.stop : b.h >= L.stop);
     if (hitT && hitS && !tHit && !sHit) both = true;
-    if (hitS) sHit = b.t;
-    if (hitT) tHit = b.t;
+    if (hitS) { sHit = b.t; sPx = L.stop; }
+    if (hitT) { tHit = b.t; tPx = L.target; }
     adv = Math.max(adv, a); fav = Math.max(fav, f);
   }
   const last = k.filter(b => b.t < exp).at(-1) || k.at(-1), done = filled ? now >= exp + iv[1] : now >= fillBy + iv[1] || !!c.cancel;
@@ -1738,8 +1761,9 @@ async function verifyCall(c) {
   c.res = { done, endPx, chg, m0, limit, filled, grade: !filled ? (c.cancel ? "已撤单" : "未成交") : chg >= 0.1 ? "对" : chg <= -0.1 ? "错" : "平", adv, fav, tHit, sHit, first, at: now };
   // 卖出：止损 / 止盈先碰到哪个就在哪个卖；都没碰到就在验证周期结束时卖；手动卖出更早的话按手动
   let ex = null;
-  if (filled && first === "stop") ex = { t: sHit, px: c.stop, why: "止损" };
-  else if (filled && first === "target") ex = { t: tHit, px: c.target, why: "止盈" };
+  const changed = (c.mods || []).length > 0;
+  if (filled && first === "stop") ex = { t: sHit, px: sPx, why: changed && sPx !== (c.orig || {}).stop ? "止损（改过）" : "止损" };
+  else if (filled && first === "target") ex = { t: tHit, px: tPx, why: changed && tPx !== (c.orig || {}).target ? "止盈（改过）" : "止盈" };
   else if (filled && done) ex = { t: exp, px: last.c, why: "到时间" };
   if (filled && c.manualExit && (!ex || c.manualExit.t < ex.t)) ex = { ...c.manualExit, why: "手动卖出" };
   if (ex) ex.pnl = sgn * (ex.px / c.ref - 1) * 100;
@@ -1830,7 +1854,7 @@ function renderPositions() {
     open.map(x => { const { c, s } = x; return `<tr class="${s && s.why ? "sell" : ""}"><td>${fmtDTs(c.res.filled)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)}</td>
       <td>${sizeTxt(c)}<small>名义 ${fmt(sizeOf(c).amt * sizeOf(c).lev)} U</small></td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${fmtT(s.exp)}（剩 ${dur(s.exp - now)}）</td><td>${moneyCell(c, s.pnl)}</td>
       <td>${isFinite(s.toStop) ? fmt(s.toStop) : "—"}</td><td>${isFinite(s.toTgt) ? fmt(s.toTgt) : "—"}</td><td class="txt">${s.why ? `<b class="bad">该卖了：${s.why}</b>` : x.w && x.w.length ? x.w.map(a => `<span class="${a.lv}">⚠ ${esc(a.text.split("。")[0])}</span>`).join("<br>") : "持有中 · 盘面正常"}</td>
-      <td><button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button></td></tr>`; }).join("") + "</tbody>" : "";
+      <td class="txt"><button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}</td></tr>`; }).join("") + "</tbody>" : "";
   const done = C.calls.filter(c => c.exit).sort((a, b) => b.exit.t - a.exit.t).slice(0, 10);
   $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏（扣手续费）</th><th>拿了多久</th></tr></thead><tbody>` +
     done.map(c => `<tr><td>${fmtDTs(c.exit.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)} → ${fmt(c.exit.px)}</td><td>${sizeTxt(c)}</td>
@@ -1889,11 +1913,11 @@ function renderCalls() {
     const cur = c.exit ? c.exit.pnl : r && r.filled && !r.done && isFinite(S.price) ? sgn * (S.price / c.ref - 1) * 100 : r && r.filled ? r.chg : NaN;
     const st = !r ? "核对中…" : c.exit && !r.done ? `<b class="${c.exit.pnl > 0 ? "good" : "bad"}">已卖出</b>` : r.done ? `<b class="${r.grade === "对" ? "good" : r.grade === "错" ? "bad" : "mut"}">${r.grade}</b>`
       : !r.filled ? `等成交 · 剩 ${dur(c.t + validMs(c) - now)}` : `持有中 · 剩 ${dur(callExp(c) - now)}`;
-    const tags = [r && r.first === "target" ? "止盈先到" : "", r && r.first === "stop" ? "止损先到" : "", c.flip ? `改口 ${fmtT(c.flip)}` : ""].filter(Boolean).map(x => `<span class="tag">${x}</span>`).join("");
+    const tags = [r && r.first === "target" ? "止盈先到" : "", r && r.first === "stop" ? "止损先到" : "", c.flip ? `改口 ${fmtT(c.flip)}` : "", (c.mods || []).length ? `改过 ${c.mods.length} 次止盈止损` : ""].filter(Boolean).map(x => `<span class="tag">${x}</span>`).join("");
     const entryTxt = c.entry === "limit" || (r && r.limit) ? `到 ${fmt(c.ref)} 再进${c.validMin ? `<small>${c.validMin} 分钟内 · ${r && r.filled ? fmtT(r.filled).slice(-5) + " 成交" : "未成交"}</small>` : `<small>${r && r.filled ? fmtT(r.filled).slice(-5) + " 成交" : "未成交"}</small>`}`
       : `现价 ${c.ref ? fmt(c.ref) : "—"}`;
     const open = r && r.filled && !c.exit, pend = r && !r.filled && !r.done;
-    const act = open ? `<button type="button" class="btn sm" data-psell="${c.id}">卖出</button>` : pend ? `<button type="button" class="btn sm" data-ccancel="${c.id}">撤单</button>` : "";
+    const act = open ? `<button type="button" class="btn sm" data-psell="${c.id}">卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}` : pend ? `<button type="button" class="btn sm" data-ccancel="${c.id}">撤单</button>` : "";
     return `<tr><td>${fmtDTs(c.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td>
       <td class="txt">${esc(c.text || "—")}</td><td>${entryTxt}</td><td>${sizeTxt(c)}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${HZTXT[c.hz] || c.hz + " 分钟"}</td>
       <td>${st}${tags ? "<br>" + tags : ""}</td>
@@ -2031,6 +2055,38 @@ function callsInit() {
     catch (e) { $("cParseMsg").textContent = "导入失败：文件格式不对。"; }
   };
   cNames(); renderCalls();
+  // 修改止盈止损（像交易所的 TP/SL）：固定字段只显示，止损 / 止盈 / 最长持有可改，改动记进 mods
+  $("edHz").innerHTML = Object.entries(HZTXT).map(([m, t]) => `<option value="${m}">${t}</option>`).join("");
+  let edId = null;
+  const edPreview = () => {
+    const c = C.calls.find(x => x.id === edId); if (!c) return;
+    const t = { ...c, stop: +$("edStop").value || 0, target: +$("edTarget").value || 0 }, e = expectPL(t), sgn = c.side === "long" ? 1 : -1;
+    const warn = [];
+    if (t.stop && isFinite(S.price) && (sgn > 0 ? t.stop >= S.price : t.stop <= S.price)) warn.push("止损价已经在现价的另一边，保存后会马上按止损算");
+    if (t.target && isFinite(S.price) && (sgn > 0 ? t.target <= S.price : t.target >= S.price)) warn.push("止盈价已经被现价越过，保存后会马上按止盈算");
+    $("edPrev").className = "verdict" + (warn.length ? " badv" : "");
+    $("edPrev").innerHTML = `打到止盈预计 ${e.tp ? `<b class="good">${uTxt(e.tp.u)}</b>（${pct(e.tp.pct)}）` : "—（不设止盈）"}；打到止损预计 ${e.sl ? `<b class="bad">${uTxt(e.sl.u)}</b>（${pct(e.sl.pct)}）` : "—（不设止损，亏损没有上限）"}。${warn.length ? "<br>" + warn.join("；") + "。" : ""}`;
+  };
+  const edOpen = id => {
+    const c = C.calls.find(x => x.id === id); if (!c || c.exit) return;
+    edId = id;
+    $("edFixed").innerHTML = `<b>${esc(c.who)} · ${c.side === "long" ? "多" : "空"}单</b>　进场 ${fmtDTs(c.res && c.res.filled ? c.res.filled : c.t)} @ ${fmt(c.ref)}　投入 ${sizeTxt(c).replace(/<[^>]+>/g, " ")}${(c.mods || []).length ? `　已改过 ${c.mods.length} 次` : ""}`;
+    $("edStop").value = c.stop || ""; $("edTarget").value = c.target || ""; $("edHz").value = c.hz;
+    $("edlg").hidden = false; edPreview(); $("edStop").focus();
+  };
+  ["edStop", "edTarget"].forEach(id => $(id).addEventListener("input", edPreview));
+  $("edCancel").onclick = () => { $("edlg").hidden = true; edId = null; };
+  $("edSave").onclick = () => {
+    const c = C.calls.find(x => x.id === edId); if (!c) return;
+    const nv = { stop: +$("edStop").value || 0, target: +$("edTarget").value || 0, hz: +$("edHz").value };
+    if (nv.stop === (c.stop || 0) && nv.target === (c.target || 0) && nv.hz === c.hz) { $("edlg").hidden = true; return; }
+    if (!c.orig) c.orig = { stop: c.stop || 0, target: c.target || 0, hz: c.hz };
+    (c.mods = c.mods || []).push({ at: Date.now(), from: { stop: c.stop || 0, target: c.target || 0, hz: c.hz }, ...nv });
+    Object.assign(c, nv); c.u = Date.now(); if (c.res) c.res.done = false;
+    csave(); $("edlg").hidden = true; edId = null; renderCalls(); renderPositions(); verifyCalls();
+  };
+  addEventListener("keydown", e => { if (e.key === "Escape" && !$("edlg").hidden) $("edCancel").click(); });
+  document.addEventListener("click", ev => { const id = ev.target.dataset && ev.target.dataset.cedit; if (id) edOpen(id); });
   // 此刻结论里的「按现价开多 / 开空」：按实时价记一条「我」的喊单（现价进），带上止损、止盈、持有时间、投入和杠杆
   $("sumSides").addEventListener("click", ev => {
     const key = ev.target.dataset && ev.target.dataset.sumopen; if (!key) return;
@@ -2113,6 +2169,7 @@ function renderRulesDoc() {
       "每一单（人工喊单、补录的历史单、模型自动记的单）进场时就写好卖出计划：止损价、止盈价、最长持有时间。",
       "进场两种：现价进（喊单那一刻就算买入）；到价再进（规定分钟内价格碰到进场价才算买入，最长持有从成交那一刻算，没碰到记「未成交」，可以撤单）。原话里有投入金额和杠杆就一起记，盈亏同时显示 U。",
       "此刻结论里每一边都有「按现价开多 / 开空」：按点击那一刻的实时价，把这一单记进喊单记录（谁喊的 =「我」），止损、止盈、最长持有用此刻结论当时给的方案，投入和杠杆按余额和每笔风险算（没填余额就用默认金额）。之后在「持仓与卖出」里盯着、到了提醒。只是记录，不会真的下单。",
+      "开仓后（和交易所一样）：进场时间、方向、进场价、投入和杠杆不能改；止损、止盈、最长持有可以点「改止盈止损」随时改，每次改动记下时间和改前改后的值。核对时改之前的行情按旧的止损止盈判断、改之后按新的，被改后的止损止盈打掉会标「止损（改过）」「止盈（改过）」。模型自动记的单不能改，保证模型成绩干净。",
       "此刻结论的杠杆：0 = 自动；自己选 1–150 倍时，仓位不变（仍由每笔最多亏 % ÷ 止损幅度决定），只改变保证金和强平价；强平价比止损近会标红。",
       "卖出：价格先碰到止损或止盈就在那里卖（同一根 K 线两个都碰到按止损算）；都没碰到就到最长持有时间按当时收盘价卖；你也可以手动卖出。卖出时间、价格、原因、盈亏都会记下，喊单记录同步显示。",
       "对错：到期价朝喊单方向走了 0.1% 以上算对，反方向 0.1% 以上算错，其余算平。喊的价位离当时市价超过 0.15% 当作挂单，碰到才算进场。",
