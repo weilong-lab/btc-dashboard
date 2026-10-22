@@ -89,7 +89,8 @@ class Labeler:
             "SELECT key, title, link, source FROM items WHERE level IN ('red','yellow','gray') "
             "AND (lean_src IS NULL OR lean_src != 'AI') AND (queued IS NULL OR queued = 0) "
             "AND first_seen > datetime('now', '-12 hours') "
-            "ORDER BY CASE level WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 ELSE 2 END, first_seen DESC LIMIT ?", (limit,)).fetchall()
+            # 红色最先；其余按时间从新到旧，面板上看到的最新新闻先有 AI 判断
+            "ORDER BY CASE level WHEN 'red' THEN 0 ELSE 1 END, first_seen DESC LIMIT ?", (limit,)).fetchall()
 
     def save(self, labels):
         n = 0
