@@ -685,6 +685,22 @@ function drawCanvas() {
   if (cv.width !== Math.round(sz.width * dpr) || cv.height !== Math.round(sz.height * dpr)) { cv.width = Math.round(sz.width * dpr); cv.height = Math.round(sz.height * dpr); cv.style.width = sz.width + "px"; cv.style.height = sz.height + "px"; }
   const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, sz.width, sz.height);
   const acc = cssv("--accent"), mut = cssv("--muted"), W = sz.width;
+  // 当前看得到的这段里最高价和最低价：在那根 K 线的影线尖上标出价格（和币安图上一样）
+  const vr = chart.timeScale().getVisibleLogicalRange();
+  if (vr && BARS.length) {
+    const i0 = Math.max(0, Math.ceil(vr.from)), i1 = Math.min(BARS.length - 1, Math.floor(vr.to));
+    let hi = -1, lo = -1;
+    for (let i = i0; i <= i1; i++) { if (hi < 0 || BARS[i].h > BARS[hi].h) hi = i; if (lo < 0 || BARS[i].l < BARS[lo].l) lo = i; }
+    g.font = "11px IBM Plex Mono, monospace"; g.lineWidth = 1; g.setLineDash([]);
+    [[hi, BARS[hi] && BARS[hi].h, -1], [lo, BARS[lo] && BARS[lo].l, 1]].forEach(([i, pr, dy]) => {
+      if (i < 0) return;
+      const x = chart.timeScale().logicalToCoordinate(i), y = cs.priceToCoordinate(pr); if (x == null || y == null) return;
+      const txt = p1(pr), tw = g.measureText(txt).width, left = x > W / 2, x2 = left ? x - 24 : x + 24, ty = y + (dy > 0 ? 4 : 4);
+      g.strokeStyle = cssv("--fg2"); g.fillStyle = cssv("--fg2");
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x2, y); g.stroke();
+      g.fillText(txt, left ? x2 - tw - 3 : x2 + 3, ty);
+    });
+  }
   const list = DR.pend && DR.hover ? [...A.draws, { ...DR.pend, b: DR.hover, temp: true }] : A.draws;
   for (const d of list) {
     const P = xy(d.a), Q = d.b ? xy(d.b) : null; if (!P) continue;
