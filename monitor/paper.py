@@ -144,14 +144,29 @@ class PaperTrader:
             self.watch_positions(d, atr1h[-1], manual)
         self.save(d)
 
+    @staticmethod
+    def fill_time(d, c):
+        """进场时间：现价进 = 喊单时间；到价再进 = 有效时间内第一次碰到进场价（5 分钟 K 线），没碰到返回 None。"""
+        if c.get("entry") != "limit":
+            return c["t"]
+        if c.get("cancel"):
+            return None
+        until = c["t"] + (c.get("validMin") or 60) * 6e4
+        w = d[(d.index >= pd.Timestamp(c["t"], unit="ms", tz="UTC").floor("5min")) & (d.index < pd.Timestamp(until, unit="ms", tz="UTC"))]
+        hit = w[(w.low <= c["ref"]) & (w.high >= c["ref"])]
+        return max(int(hit.index[0].timestamp() * 1000), c["t"]) if len(hit) else None
+
     def notify_manual_exits(self, d, calls):
         """人工喊单碰到止损 / 止盈或到最长持有时间时发 Mac 通知（和面板同口径）。"""
         now_ms, sent = time.time() * 1000, self.st.setdefault("watch_sent", [])
         for c in calls:
-            sgn, exp = (1 if c["side"] == "long" else -1), c["t"] + c["hz"] * 6e4
+            filled = self.fill_time(d, c)
+            if filled is None:
+                continue
+            sgn, exp = (1 if c["side"] == "long" else -1), filled + c["hz"] * 6e4
             if c.get("manualExit") or now_ms - exp > 15 * 60e3:
                 continue
-            bars = d[(d.index >= pd.Timestamp(c["t"], unit="ms", tz="UTC")) & (d.index < pd.Timestamp(exp, unit="ms", tz="UTC"))]
+            bars = d[(d.index >= pd.Timestamp(filled, unit="ms", tz="UTC").floor("5min")) & (d.index < pd.Timestamp(exp, unit="ms", tz="UTC"))]
             why = None
             for _, b in bars.iterrows():
                 if c.get("stop") and ((b.low <= c["stop"]) if sgn > 0 else (b.high >= c["stop"])):
@@ -178,19 +193,20 @@ class PaperTrader:
         except Exception:
             upcoming = []
         for c in calls:
-            if c.get("exit") or c.get("manualExit") or c["t"] > now_ms or now_ms > c["t"] + c["hz"] * 6e4:
+            filled = self.fill_time(d, c) if c.get("who") != MODEL_WHO else c["t"]
+            if filled is None or c.get("exit") or c.get("manualExit") or filled > now_ms or now_ms > filled + c["hz"] * 6e4:
                 continue
             name = "模型" if c.get("who") == MODEL_WHO else c.get("who", "")
             sgn, who = (1 if c["side"] == "long" else -1), f"{name}{'多' if c['side'] == 'long' else '空'}单（进场 {c['ref']:,.0f}）"
             msgs = []
             mv = float(d.close.iloc[-1] - d.open.iloc[-3])       # 最近 15 分钟
-            if abs(mv) >= atr and d.index[-3].timestamp() * 1000 >= c["t"]:
+            if abs(mv) >= atr and d.index[-3].timestamp() * 1000 >= filled:
                 against = (mv > 0) != (sgn > 0)
                 msgs.append((f"fm-{d.index[-1].isoformat()}", f"{who}：盘面急{'涨' if mv > 0 else '跌'} {abs(mv):,.0f} 美元，{'不利' if against else '有利'}。回测里这时马上卖并不更好，止损没到就按计划。"))
             if c.get("stop") and abs(float(last.close) - c["stop"]) <= 0.3 * atr:
                 msgs.append((f"near-{int(now_ms // 9e5)}", f"{who}：离止损 {c['stop']:,.0f} 只剩 {abs(float(last.close) - c['stop']):,.0f} 美元。"))
             for u in upcoming:
-                if 0 < u.get("at_ms", 0) - now_ms <= 15 * 60e3 and u["at_ms"] < c["t"] + c["hz"] * 6e4:
+                if 0 < u.get("at_ms", 0) - now_ms <= 15 * 60e3 and u["at_ms"] < filled + c["hz"] * 6e4:
                     msgs.append((f"win-{u['at_ms']}", f"{who}：{round((u['at_ms'] - now_ms) / 6e4)} 分钟后{u['title']}，确认止损挂在交易所。"))
             for key, body in msgs:
                 k = f"{c['id']}:{key}"
