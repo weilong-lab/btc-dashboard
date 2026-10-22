@@ -34,6 +34,7 @@ from zoneinfo import ZoneInfo
 
 import labeler as LB
 import rules
+import market_data as MD
 import sources as S
 
 OUT = os.environ.get("OUT_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "out"))
@@ -333,7 +334,7 @@ class Market:
             log("美股官方价获取失败:", ex)
 
     def check_btc(self):
-        kl = get_json(f"{S.BINANCE}/fapi/v1/klines?symbol={S.SYMBOL}&interval=1m&limit=1500")
+        kl = MD.klines("1m", 1500)
         kl = kl[:-1]  # 去掉未走完的这一根
         hi = [float(k[2]) for k in kl]; lo = [float(k[3]) for k in kl]; cl = [float(k[4]) for k in kl]; vol = [float(k[5]) for k in kl]
         self.price = cl[-1]
@@ -354,7 +355,7 @@ class Market:
             self.n.send("yellow", f"BTC 1 分钟成交量是平时的 {vol[-1]/vbase:.0f} 倍",
                         f"现价 {self.price:,.0f}，这一分钟 {(cl[-1]/cl[-2]-1)*100:+.2f}%。", "盘面异常")
 
-        oi = float(get_json(f"{S.BINANCE}/fapi/v1/openInterest?symbol={S.SYMBOL}")["openInterest"])
+        oi = MD.open_interest()
         self.oi_hist.append((time.time(), oi, self.price))
         self.oi_hist = [x for x in self.oi_hist if time.time() - x[0] < 3600]
         old = [x for x in self.oi_hist if time.time() - x[0] >= 900]
@@ -370,15 +371,14 @@ class Market:
         else:
             self.state.update(oi=oi)
 
-        pi = get_json(f"{S.BINANCE}/fapi/v1/premiumIndex?symbol={S.SYMBOL}")
-        fr = float(pi["lastFundingRate"]) * 100
+        fr = MD.funding_pct()
         self.state.update(funding=fr)
         if abs(fr) >= 0.03 and self._cooldown("funding", 8 * 3600):
             self.n.send("yellow", f"资金费率达到 {fr:+.4f}%（这一年很少超过 ±0.01%）",
                         "一边仓位极度拥挤，注意反向挤压。", "仓位异动")
         try:
-            ls = get_json(f"{S.BINANCE}/futures/data/globalLongShortAccountRatio?symbol={S.SYMBOL}&period=5m&limit=4")
-            self.state.update(ls=float(ls[-1]["longShortRatio"]), ls_chg15=float(ls[-1]["longShortRatio"]) - float(ls[0]["longShortRatio"]))
+            ls = MD.long_short(4)
+            self.state.update(ls=ls[-1], ls_chg15=ls[-1] - ls[0])
         except Exception:
             pass
         path = os.path.join(OUT, "market_log.csv")
@@ -515,7 +515,7 @@ def backfill(store):
                 continue
             ms = int((t + timedelta(hours=hours)).timestamp() * 1000)
             try:
-                k = get_json(f"{S.BINANCE}/fapi/v1/klines?symbol={S.SYMBOL}&interval=1m&startTime={ms}&limit=1")
+                k = MD.klines("1m", 1, start_ms=ms)
                 if k:
                     store.db.execute(f"UPDATE items SET {col}=? WHERE key=?", ((float(k[0][1]) / p0 - 1) * 100, key))
             except Exception:

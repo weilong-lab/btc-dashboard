@@ -26,7 +26,6 @@ from direction_model import features  # noqa: E402
 SPEC = json.load(open(os.path.join(ROOT, "rules_spec.json"), encoding="utf-8"))
 WEIGHTS = json.load(open(os.path.join(ROOT, "backtest", "results", "direction_weights_full.json"), encoding="utf-8"))
 MAKER, TAKER = SPEC["fees"]["maker_pct"], SPEC["fees"]["taker_pct"]
-FAPI = "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=5m&limit=1500"
 MODEL_WHO = "模型·此刻结论"
 
 
@@ -69,8 +68,8 @@ def p80_4h():
 
 
 def fetch_5m():
-    with urllib.request.urlopen(urllib.request.Request(FAPI, headers={"User-Agent": "btc-paper/1.0"}), timeout=20) as r:
-        k = json.load(r)
+    import market_data as MD           # 本机用币安永续；云上（MARKET_SOURCE=cloud）用币安公开行情镜像的现货
+    k = MD.klines("5m", 1500)
     df = pd.DataFrame([[x[0], x[1], x[2], x[3], x[4], x[5], x[9]] for x in k],
                       columns=["open_time", "open", "high", "low", "close", "volume", "taker_buy_volume"])
     df["time"] = pd.to_datetime(df.open_time, unit="ms", utc=True)

@@ -81,6 +81,7 @@ jobs:
           RECORDS_TOKEN: ${{ secrets.RECORDS_TOKEN }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           MAC_NOTIFY: "0"
+          MARKET_SOURCE: cloud          # 美国服务器连不上币安合约：K 线用币安公开行情镜像，持仓量 / 资金费率用 OKX
           DISPLAY_TZ: Asia/Tokyo
           PYTHONWARNINGS: ignore
         run: python monitor.py --minutes 55 --no-push
