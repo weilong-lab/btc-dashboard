@@ -265,13 +265,6 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 
 <div class="wrap">
 
-  <section class="card span" id="riskCard">
-    <h2>我的风险 <small id="rkUpd">先看这里，再看市场判断</small></h2>
-    <div class="verdict" id="rkMsg">读取中…</div>
-    <div class="status" id="rk"></div>
-    <p class="note">数据来自「交易日志与风控」里记的真实持仓（不含喊单记录里的模拟单）。止损分三种状态：没有止损 / 只填了价格（没确认交易所真的挂了）/ 已确认交易所挂单——开仓后在日志里点「已挂止损」确认。账户余额是手填的，超过 24 小时没更新会提醒，免得用旧余额算出错误的仓位。</p>
-  </section>
-
   <section class="card span" id="summaryCard">
     <h2>此刻结论 <small id="sumBasis">依据已收盘 K 线 · 不是投资建议</small></h2>
     <p class="sum-line" id="sumNow">正在读取行情…</p>
@@ -349,7 +342,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <h2>交易计划 <small id="planBasis">按已收盘 K 线判断 · 不是投资建议</small></h2>
     <div class="plan-now" id="planNow"></div>
     <div class="plans" id="plans"></div>
-    <details class="rules"><summary>规则和回测结果（与模拟盘、回测同一份参数）</summary>
+    <details class="rules"><summary>规则和回测结果（与模型严格执行、回测同一份参数）</summary>
       <ol id="ruleText"></ol>
     </details>
   </section>
@@ -358,14 +351,8 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <h2>做多信号 / 做空信号 <small>完全镜像 · 5 分钟 / 15 分钟 / 1 小时同时看</small></h2>
     <div class="mirror" id="mirror"></div>
     <details class="rules"><summary>为什么结论不只看交易原则</summary>
-      <p>结论只看已收盘的 K 线，过滤条件和回测、模拟盘完全一致。用 2020 年以来的全部数据检验：只看 5 分钟信号，做多做空都显著亏损（t 值 -3.8 / -4.7，7 年里最多 1 年为正）；加 1 小时趋势过滤、三周期共振、排除周末低量，或者把信号放到 15 分钟 / 1 小时 / 4 小时 K 线上，都没有变成稳定盈利。按真实挂单执行回测，规则 A（4 小时模型高把握）和规则 B（交易原则完整信号 + 过滤）也都没有通过，所以这里出现的只是「参考信号」，由模拟盘继续验证。</p>
+      <p>结论只看已收盘的 K 线，过滤条件和回测、模型严格执行完全一致。用 2020 年以来的全部数据检验：只看 5 分钟信号，做多做空都显著亏损（t 值 -3.8 / -4.7，7 年里最多 1 年为正）；加 1 小时趋势过滤、三周期共振、排除周末低量，或者把信号放到 15 分钟 / 1 小时 / 4 小时 K 线上，都没有变成稳定盈利。按真实挂单执行回测，规则 A（4 小时模型高把握）和规则 B（交易原则完整信号 + 过滤）也都没有通过，所以这里出现的只是「参考信号」，由模型严格执行继续验证。</p>
     </details>
-  </section>
-
-  <section class="card span" id="paperCard">
-    <h2>模拟盘 <small id="paperUpd">后台按统一规则逐根执行，不受网页开关影响</small></h2>
-    <div class="mirror" id="paper"></div>
-    <p class="note">模拟盘和回测用同一套代码逻辑（已逐笔核对一致），挂单只有被价格穿过才算成交，手续费按挂单 0.02% / 市价 0.05% 计算。攒够几十笔后，和回测对比，就知道规则在真实行情里是否成立。</p>
   </section>
 
   <section id="calcCard" class="card span">
@@ -441,6 +428,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <div class="status" id="cStats"></div>
     <h3 class="sub-h">执行成绩 <small class="mut">（有没有成交、止盈止损谁先到、扣费后赚亏多少；实际金额和按默认金额模拟的分开算）</small></h3>
     <div class="status" id="cExec"></div>
+    <div class="verdict" id="cPaper">严格执行成绩读取中…</div>
     <div class="tablewrap"><table class="ma" id="cHzTbl"></table></div>
     <div class="verdict" id="cSum">还没有记录。把张主任（或任何人、包括你自己）的喊单原话贴进来，识别后确认保存，到期面板会自动核对。</div>
     <label for="cText" class="wide">粘贴喊单原话<textarea id="cText" placeholder="例如：现价空 100U 20倍，止损 84800，目标 83000，今晚看 · 或：30 分钟内回踩 82500 再多，到 83300 卖"></textarea></label>
@@ -935,6 +923,17 @@ function calendar(nowMs) {
 }
 function nextEvent(nowMs) { return calendar(nowMs).find(e => e[1] > nowMs - 15 * 60e3); }
 
+// 数据状态：实时行情连着没有、后台数据多久前更新、各自来自哪里
+function dataStatus(now) {
+  const ago = ms => ms == null ? "未连接" : ms < 36e5 ? Math.round(ms / 6e4) + " 分钟前" : (ms / 36e5).toFixed(1) + " 小时前";
+  const newsAge = S.news && isFinite(jstStr(S.news.updated)) ? now - jstStr(S.news.updated) : null;
+  const paperAge = S.paper && S.paper.last_bar ? now - Date.parse(S.paper.last_bar) - 5 * 6e4 : null;
+  const wsOk = S.wsOk && isFinite(S.lag) && S.lag < 5000;
+  return [
+    ["实时行情", wsOk ? "正常" : "中断", wsOk ? "good" : "bad", `币安永续直连 · 延迟 ${isFinite(S.lag) ? S.lag + " ms" : "—"}${wsOk ? "" : " · 下面的数可能是旧的"}`],
+    ["后台数据", newsAge == null ? "未连接" : newsAge > 15 * 6e4 ? "过时" : "正常", newsAge == null || newsAge > 15 * 6e4 ? "bad" : "good", `新闻 ${ago(newsAge)} · 模型严格执行 ${ago(paperAge)} · GitHub Actions（K 线：币安公开行情现货；持仓量、资金费率：OKX）`],
+  ];
+}
 function renderStatus(st) {
   const tr = S.f5 ? S.f5.trend4h * 100 : NaN, nowMs = Date.now();
   const regime = !isFinite(tr) ? ["—", ""] : tr > 1 ? ["偏上涨", "good"] : tr < -1 ? ["偏下跌", "bad"] : ["震荡", "warn"];
@@ -966,6 +965,7 @@ function renderStatus(st) {
     ["跨市场（15 分钟）", crossHot ? "有异动" : "平稳", crossHot ? "warn" : "", crossTxt],
     ["资金费率", pct(S.funding, 4), Math.abs(S.funding) >= 0.03 ? "bad" : "", `下次结算 ${S.nextFunding ? fmtIn(S.nextFunding) : "—"}`],
     ["持仓量", S.oi.length ? fmt(S.oi.at(-1)[1]) + " BTC" : "—", "", `15 分钟 ${pct(o15)} · 1 小时 ${pct(o60)}`],
+    ...dataStatus(nowMs),
   ];
   $("status").innerHTML = items.map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
   $("stUpd").textContent = `更新于 ${fmtClock(Date.now(), true)}（${tzName()}）`;
@@ -1065,13 +1065,13 @@ function mirror(st) {
     const blockers = filt.filter(x => !x[1]).map(x => x[0]);
     const zb = Z[0][1], ruleB = zb && (sd.key === "long" ? zb.now.longB : zb.now.shortB) && !blockers.length;
     let word, cls, why;
-    if (sd.ruleA && !F.blocked) { word = "规则 A 信号"; cls = "warn"; why = `4 小时模型高把握（${p4.toFixed(1)}%）。参考信号：按真实挂单执行回测未通过，模拟盘正在验证。`; }
-    else if (ruleB) { word = "规则 B 信号"; cls = "warn"; why = "5 分钟完整信号收盘确认，四项过滤全部通过。参考信号：回测未通过，模拟盘正在验证。"; }
+    if (sd.ruleA && !F.blocked) { word = "规则 A 信号"; cls = "warn"; why = `4 小时模型高把握（${p4.toFixed(1)}%）。参考信号：按真实挂单执行回测未通过，模型严格执行正在验证。`; }
+    else if (ruleB) { word = "规则 B 信号"; cls = "warn"; why = "5 分钟完整信号收盘确认，四项过滤全部通过。参考信号：回测未通过，模型严格执行正在验证。"; }
     else if (Math.max(...cnt) >= 3) { word = "准备中"; cls = "mut"; why = `交易原则最多满足 ${Math.max(...cnt)}/5（${Z[cnt.indexOf(Math.max(...cnt))][0]}）${blockers.length ? "；不利因素：" + blockers.join("、") : ""}。`; }
     else { word = "无信号"; cls = "mut"; why = blockers.length ? "不利因素：" + blockers.join("、") + "。" : "条件不足。"; }
     return `<div class="side ${sd.key}"><h3><span class="${sd.key === "long" ? "good" : "bad"}">${sd.name}</span></h3>
       <div class="verdict2"><b class="${cls}">${word}</b>${esc(why)}</div>${table}
-      <table><thead><tr><th colspan="4">过滤条件（与回测、模拟盘一致）</th></tr></thead><tbody>${filtHtml}</tbody></table></div>`;
+      <table><thead><tr><th colspan="4">过滤条件（与回测、模型严格执行一致）</th></tr></thead><tbody>${filtHtml}</tbody></table></div>`;
   }).join("");
 }
 
@@ -1155,37 +1155,6 @@ function riskNow() {
   const room = bal ? bal * riskPct / 100 : NaN;          // 一笔新单最多可以亏多少
   const dayRoom = bal ? bal * 0.15 + day : NaN;           // 离今天 -15% 停手线还剩多少
   return { now, bal, riskPct, open, total, noStop, unconf, conf, day, room, dayRoom, balAge: J.balanceAt ? now - J.balanceAt : null };
-}
-function renderRisk() {
-  if (!$("rk")) return;
-  const r = riskNow(), ev = nextEvent(r.now), evMin = ev ? (ev[1] - r.now) / 6e4 : Infinity;
-  const ago = ms => ms == null ? "没记录" : ms < 36e5 ? Math.round(ms / 6e4) + " 分钟前" : ms < 864e5 ? (ms / 36e5).toFixed(1) + " 小时前" : Math.round(ms / 864e5) + " 天前";
-  const newsAge = S.news && isFinite(jstStr(S.news.updated)) ? r.now - jstStr(S.news.updated) : null;
-  const paperAge = S.paper && S.paper.last_bar ? r.now - Date.parse(S.paper.last_bar) - 5 * 6e4 : null;
-  const wsOk = S.wsOk && isFinite(S.lag) && S.lag < 5000;
-  const items = [
-    ["账户余额", r.bal ? `${fmt(r.bal)} U` : "没填", !r.bal || (r.balAge != null && r.balAge > 864e5) ? "bad" : "", r.bal ? `手填 · ${ago(r.balAge)}更新${r.balAge != null && r.balAge > 864e5 ? "，可能已过时" : ""}` : "在「交易日志与风控」里填"],
-    ["当前总风险", !r.open.length ? "没有持仓" : isFinite(r.total) ? `${fmt(r.total)} U` : "无上限", !isFinite(r.total) ? "bad" : r.bal && r.total > r.bal * 0.06 ? "warn" : "", !r.open.length ? "—" : isFinite(r.total) ? `全部打到止损约亏${r.bal ? `，占余额 ${(r.total / r.bal * 100).toFixed(1)}%` : ""}` : `${r.noStop.length} 单没有止损`],
-    ["止损状态", r.open.length ? `${r.conf.length} 已挂 · ${r.unconf.length} 未确认 · ${r.noStop.length} 没有` : "—", r.noStop.length ? "bad" : r.unconf.length ? "warn" : r.open.length ? "good" : "", "已确认交易所挂单 / 只填了价格 / 没有止损"],
-    ["今日盈亏", r.bal || r.open.length ? uTxt(r.day) : "—", r.bal && r.day <= -r.bal * 0.15 ? "bad" : "", r.bal ? `离 -15% 停手线还有 ${fmt(Math.max(0, r.dayRoom))} U` : "含持仓浮动"],
-    ["新单最多能亏", isFinite(r.room) ? `${fmt(Math.min(r.room, Math.max(0, r.dayRoom)))} U` : "—", "", isFinite(r.room) ? `每笔 ${r.riskPct}% 余额，且不超过今天剩下的额度` : "先填余额"],
-    ["下一个事件", ev ? ev[0] : "近期没有", evMin < 60 ? "bad" : evMin < 180 ? "warn" : "", ev ? `${fmtDT(ev[1])} · ${evMin < 90 ? Math.round(evMin) + " 分钟后" : (evMin / 60).toFixed(1) + " 小时后"}` : ""],
-    ["实时行情", wsOk ? "正常" : "中断", wsOk ? "good" : "bad", `币安永续直连 · 延迟 ${isFinite(S.lag) ? S.lag + " ms" : "—"}`],
-    ["后台数据", newsAge == null ? "未连接" : newsAge > 15 * 6e4 ? "过时" : "正常", newsAge == null || newsAge > 15 * 6e4 ? "bad" : "good", `新闻 ${ago(newsAge)} · 模拟盘 ${ago(paperAge)} · GitHub Actions（K 线：币安公开行情现货；持仓量、资金费率：OKX）`],
-  ];
-  $("rk").innerHTML = items.map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
-  const msg = [];
-  if (r.noStop.length) msg.push(`先处理：${r.noStop.length} 单没有止损`);
-  if (r.unconf.length) msg.push(`${r.unconf.length} 单的止损只填了价格，去交易所确认挂好后在日志里点「已挂止损」`);
-  if (r.bal && r.day <= -r.bal * 0.15) msg.push("今天亏损已到 15%，今天不再开新仓");
-  if (evMin < 60) msg.push(`${Math.round(evMin)} 分钟后${ev[0]}，不开新仓`);
-  if (!r.bal) msg.push("没填账户余额，算不出仓位上限");
-  else if (r.balAge == null || r.balAge > 864e5) msg.push("账户余额超过 24 小时没更新，先确认一下");
-  if (!wsOk) msg.push("实时行情断开，下面的结论可能是旧的");
-  if (newsAge != null && newsAge > 15 * 6e4) msg.push("后台数据超过 15 分钟没更新，新闻和模拟盘可能是旧的");
-  $("rkMsg").className = "verdict " + (msg.length ? "badv" : "goodv");
-  $("rkMsg").textContent = msg.length ? msg.join("；") + "。" : `风险正常${r.open.length ? `：${r.open.length} 单持仓都已确认挂好止损` : "：没有持仓"}。新开一单最多亏 ${isFinite(r.room) ? fmt(Math.min(r.room, Math.max(0, r.dayRoom))) + " U" : "—"}。`;
-  $("rkUpd").textContent = `更新于 ${fmtClock(r.now, true)} · 先看这里，再看市场判断`;
 }
 
 // ---------------- 此刻结论：做多 / 做空各给一个结论和具体仓位 ----------------
@@ -1274,8 +1243,8 @@ function renderSummary(st) {
   const pr = S.paper && S.paper.rules, mine = C.calls.filter(c => c.who === MODEL_WHO && c.exit), mineU = mine.reduce((s2, c) => s2 + pnlU(c, c.exit.pnl), 0);
   $("sumState").innerHTML = [
     ["市场状态", `4 小时 ${pct(mv4)} · 波动${v.state}`, "", `${S.maRel || "均线读取中"}${cx && cx.key ? "；刚" + (cx.down ? "急跌超卖" : "急涨超买") : ""}`],
-    ["策略状态", "参考，未通过验证", "warn", `规则 A / B 扣费回测都没有稳定赚钱${pr ? `；模拟盘 A ${pr.A.n} 笔累计 ${pct(pr.A.cum || 0)}、B ${pr.B.n} 笔累计 ${pct(pr.B.cum || 0)}` : ""}${mine.length ? `；模型自动记单已卖 ${mine.length} 笔，${uTxt(mineU)}（按默认金额）` : ""}`],
-    ["账户约束", isFinite(rk.room) ? `新单最多亏 ${fmt(Math.min(rk.room, Math.max(0, rk.dayRoom)))} U` : "先填余额", rk.noStop.length ? "bad" : "", `${rk.open.length ? `持仓总风险 ${isFinite(rk.total) ? fmt(rk.total) + " U" : "无上限"}` : "没有持仓"}${F.blocked ? "；事件前不开新仓" : ""}`],
+    ["策略状态", "参考，未通过验证", "warn", `规则 A / B 扣费回测都没有稳定赚钱${pr ? `；模型严格执行 A ${pr.A.n} 笔累计 ${pct(pr.A.cum || 0)}、B ${pr.B.n} 笔累计 ${pct(pr.B.cum || 0)}` : ""}${mine.length ? `；模型自动记单已卖 ${mine.length} 笔，${uTxt(mineU)}（按默认金额）` : ""}`],
+    ["账户约束", isFinite(rk.room) ? `新单最多亏 ${fmt(Math.min(rk.room, Math.max(0, rk.dayRoom)))} U` : "没填余额", rk.noStop.length ? "bad" : isFinite(rk.room) ? "" : "mut", `${rk.open.length ? `持仓总风险 ${isFinite(rk.total) ? fmt(rk.total) + " U" : "无上限"}` : isFinite(rk.room) ? "没有持仓" : "不填也能用；填了余额会算出仓位上限"}${F.blocked ? "；事件前不开新仓" : ""}`],
   ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
   const L = side("long"), Sh = side("short");
   $("sumSides").innerHTML = L.html + Sh.html;
@@ -1338,7 +1307,7 @@ function plan(st) {
       }
       return `<div class="pl"><h3><span class="${side === "long" ? "good" : "bad"}">规则 ${rule} · ${side === "long" ? "做多" : "做空"}信号</span><small>参考 · 回测未通过</small></h3><div class="k">${lv}</div><p>${esc(desc)}。</p></div>`;
     });
-    html = `<span class="act warn">有参考信号</span><span class="why">两条规则在真实挂单口径的回测里都没有通过，模拟盘正在用实时行情验证。现阶段建议只看模拟盘结果，真要下单只用极小仓位。</span>`;
+    html = `<span class="act warn">有参考信号</span><span class="why">两条规则在真实挂单口径的回测里都没有通过，模型严格执行正在用实时行情验证。现阶段建议只看模型严格执行结果，真要下单只用极小仓位。</span>`;
     $("plans").innerHTML = rows.join("");
     $("planNow").className = "plan-now wait";
   }
@@ -1354,32 +1323,29 @@ function plan(st) {
   $("ruleText").innerHTML = [
     `<b>规则 A · ${esc(A.name)}</b>：4 小时模型上涨概率 ≥ ${Math.round(A.p_long * 100)}% 做多、≤ ${Math.round(A.p_short * 100)}% 做空；收盘价挂限价单，${A.limit_valid_bars * 5} 分钟内未被穿过就撤；持有 ${A.hold_bars * 5 / 60} 小时后挂单平仓，${A.limit_valid_bars * 5} 分钟未成交改市价；事件前 ${SPEC.event_block_min} 分钟不开。<br><span class="mut">回测：${esc(A.backtest)}</span>`,
     `<b>规则 B · ${esc(B.name)}</b>：5 分钟交易原则完整信号收盘确认；15m 与 1h 模型平均同向；不逆 1 小时趋势；非周末、非低量、事件前 ${SPEC.event_block_min} 分钟不开；下一根开盘市价进场，止损 = 近 12 根高 / 低点外加 ${B.stop_atr} 个 ATR，止盈 ${B.tp_R}R，最长 ${B.max_hold_bars * 5 / 60} 小时。<br><span class="mut">回测：${esc(B.backtest)}</span>`,
-    `手续费按挂单 ${SPEC.fees.maker_pct}% / 市价 ${SPEC.fees.taker_pct}% 计算。参数文件 rules_spec.json 同时供回测、模拟盘和这个面板使用，改参数后先跑回测。`,
+    `手续费按挂单 ${SPEC.fees.maker_pct}% / 市价 ${SPEC.fees.taker_pct}% 计算。参数文件 rules_spec.json 同时供回测、模型严格执行和这个面板使用，改参数后先跑回测。`,
   ].map(x => `<li>${x}</li>`).join("");
 }
 
-// ---------------- 模拟盘 ----------------
+// ---------------- 模型严格执行 ----------------
 async function pollPaper() {
   try { S.paper = await jfetch(PAPER_URL + "?t=" + Date.now()); S.paperErr = ""; }
-  catch (e) { S.paperErr = "模拟盘数据未连接（" + PAPER_URL + "）。模拟盘在后台监控程序里运行。"; }
+  catch (e) { S.paperErr = "模型严格执行数据未连接（" + PAPER_URL + "）。模型严格执行在后台监控程序里运行。"; }
   renderPaper();
 }
+// 模型信号的「严格执行」成绩：后台按规则 A / B 像真实账户一样下单（同一时间只拿一单、挂单要被穿过才成交、按回测的方式平仓、分挂单 / 市价手续费），
+// 和回测逐笔一致，用来验证回测结论在实时行情里是不是一样。显示在喊单记录里「模型·此刻结论」旁边
 function renderPaper() {
-  const box = $("paper");
-  if (!S.paper) { box.innerHTML = `<p class="note">${esc(S.paperErr || "正在读取模拟盘…")}</p>`; return; }
+  const box = $("cPaper"); if (!box) return;
+  if (!S.paper) { box.textContent = S.paperErr || "严格执行成绩读取中…"; return; }
   const modeTxt = { flat: "空仓等信号", pending: "挂单中", open: "持仓中", exiting: "平仓挂单中" };
-  const fmtT = s => s ? fmtDT(Date.parse(s)) : "—";
-  box.innerHTML = ["A", "B"].map(k => {
+  const part = k => {
     const r = S.paper.rules[k], p = r.position || {};
-    const pos = r.mode === "flat" ? "" : `<div class="k">${p.side ? `<span><b>方向</b>${p.side === "long" ? "多" : "空"}</span>` : ""}${p.entry ? `<span><b>进场</b>${fmt(p.entry)}</span>` : p.px ? `<span><b>挂单价</b>${fmt(p.px)}</span>` : ""}${p.stop ? `<span><b>止损</b>${fmt(p.stop)}</span>` : ""}${p.tp ? `<span><b>止盈</b>${fmt(p.tp)}</span>` : ""}${p.entry && isFinite(S.price) ? `<span><b>浮动</b>${pct((p.side === "long" ? 1 : -1) * (S.price / p.entry - 1) * 100, 3)}</span>` : ""}</div>`;
-    const trades = (r.recent || []).slice(0, 8);
-    const table = trades.length ? `<div class="tablewrap"><table class="pt"><thead><tr><th>信号</th><th>方向</th><th>进场</th><th>平仓</th><th>收益</th><th>原因</th></tr></thead><tbody>${trades.map(x => `<tr><td>${fmtT(x.signal_time)}</td><td>${x.side === "long" ? "多" : "空"}</td><td>${fmt(x.entry)}</td><td>${fmt(x.exit)}</td><td class="${x.ret_pct > 0 ? "good" : "bad"}">${pct(x.ret_pct, 3)}</td><td>${esc(x.why)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">还没有平仓记录。</p>`;
-    return `<div class="paper-side"><h3><span>规则 ${k} · ${esc(r.name)}</span><small>${modeTxt[r.mode] || r.mode}</small></h3>${pos}
-      <div class="row"><div class="chip"><span>已平仓</span><b>${r.n} 笔</b></div><div class="chip"><span>胜率</span><b>${r.win == null ? "—" : r.win + "%"}</b></div>
-      <div class="chip"><span>每笔平均</span><b class="${r.avg > 0 ? "good" : r.avg < 0 ? "bad" : ""}">${r.avg == null ? "—" : pct(r.avg, 3)}</b></div><div class="chip"><span>累计（不含杠杆）</span><b>${pct(r.cum || 0, 2)}</b></div>${k === "A" ? `<div class="chip"><span>挂单未成交</span><b>${r.missed}</b></div>` : ""}</div>
-      ${table}<span class="bt">回测对照：${esc(r.backtest)}</span></div>`;
-  }).join("");
-  $("paperUpd").textContent = `最后处理到 ${fmtT(S.paper.last_bar)} 的 K 线 · 后台逐根执行`;
+    const pos = r.mode === "open" && p.entry ? `，持仓中：${p.side === "long" ? "多" : "空"} ${fmt(p.entry)}${isFinite(S.price) ? `（${pct((p.side === "long" ? 1 : -1) * (S.price / p.entry - 1) * 100, 2)}）` : ""}` : `，${modeTxt[r.mode] || r.mode}`;
+    return `<b>规则 ${k}</b> ${r.n} 笔${r.n ? `、胜率 ${r.win}%、每笔平均 ${pct(r.avg, 3)}、累计 <span class="${r.cum > 0 ? "good" : r.cum < 0 ? "bad" : ""}">${pct(r.cum || 0, 2)}</span>` : ""}${pos}`;
+  };
+  const t = S.paper.last_bar ? fmtDT(Date.parse(S.paper.last_bar)) : "—";
+  box.innerHTML = `模型的严格执行成绩（按真实挂单规则，同一时间只拿一单，扣手续费，不乘杠杆）：${part("A")}；${part("B")}。<small class="mut">后台处理到 ${t} 的 K 线。上面「模型·此刻结论」的喊单是每次信号都记、马上成交的打分口径；这一行是像真实账户一样执行的结果，两者会有差别。</small>`;
 }
 
 // ---------------- 交易日志与风控（localStorage，只在本机） ----------------
@@ -2068,13 +2034,13 @@ function renderRulesDoc() {
   $("rulesDoc").innerHTML = [
     sec("总原则", [
       "面板只给信息和计算，<b>不会下单</b>，也不构成投资建议。",
-      "所有判断规则都先用 2021–2026 年币安 BTCUSDT 永续合约数据回测，回测、模拟盘、面板用同一份参数（rules_spec.json）。",
+      "所有判断规则都先用 2021–2026 年币安 BTCUSDT 永续合约数据回测，回测、模型严格执行、面板用同一份参数（rules_spec.json）。",
       `手续费按挂单 ${f.maker_pct}%、市价 ${f.taker_pct}% 计算。<b>规则 A、B 扣费后都没有稳定赚钱</b>，所以出现信号也只叫「参考信号」，建议小仓位。`,
       `重大数据公布和美股开盘前 ${SPEC.event_block_min} 分钟不开新仓。`,
     ], true),
-    sec("我的风险与复盘", [
-      "页面最上面先看「我的风险」：账户余额（手填，超过 24 小时没更新会提醒）、持仓全部打到止损的总风险、止损状态（没有止损 / 只填了价格 / 已确认交易所挂单）、今日盈亏离 -15% 停手线还剩多少、新单最多能亏多少、下一个事件、实时行情和后台数据是否正常。有问题时先处理这里，再看市场判断。",
-      "此刻结论把三件事分开：市场状态（涨跌、波动、各周期均线是否一致）、策略状态（规则有没有通过验证、模拟盘成绩）、账户约束（还能承担多少亏损）。模型偏涨不等于适合做多，只有通过规则的才叫「参考信号」。",
+    sec("数据、计划与复盘", [
+      "「当前状态」里的「实时行情」「后台数据」显示数据是否正常、多久前更新、来自哪里；超过 15 分钟没更新会标红，这时新闻和模型成绩可能是旧的。",
+      "此刻结论把三件事分开：市场状态（涨跌、波动、各周期均线是否一致）、策略状态（规则有没有通过验证、模型严格执行成绩）、账户约束（还能承担多少亏损）。模型偏涨不等于适合做多，只有通过规则的才叫「参考信号」。",
       "交易日志开仓时保存一份不可修改的计划和行情快照；之后加减仓、改止损、撤止损、改持有时间都追加到变更记录。平仓后自动做亏损归因：按计划执行的结果、超计划仓位、撤止损 / 改止损、超时持有、交易成本、非 BTC 交易，加起来等于实际盈亏。",
       "喊单成绩分两套：方向成绩（到时间涨还是跌）和执行成绩（有没有成交、止盈止损谁先到、扣费后赚亏）。写了投入和杠杆的按实际金额算，没写的按默认金额模拟，两者分开显示。",
     ], true),
@@ -2274,7 +2240,7 @@ function everySecond() {
     computeProbs();
     const st = stats();
     if (st) { $("chg").textContent = pct(st.chg24) + " 24h"; $("chg").className = "chg num " + (st.chg24 >= 0 ? "good" : "bad"); }
-    renderStatus(st); renderMA(); renderUS(); renderFC(); renderVol(); renderFast(); renderSummary(st); renderCalls(); renderPositions(); renderRisk(); plan(st); renderRuler(st); mirror(st); calc(st); renderJournal();
+    renderStatus(st); renderMA(); renderUS(); renderFC(); renderVol(); renderFast(); renderSummary(st); renderCalls(); renderPositions(); plan(st); renderRuler(st); mirror(st); calc(st); renderJournal();
   } catch (err) { console.error(err); }
 }
 async function fullRefresh() {
