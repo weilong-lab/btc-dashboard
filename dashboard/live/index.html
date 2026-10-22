@@ -1312,15 +1312,15 @@ function renderSummary(st) {
     }
     const cell = (k, x) => `<div><span>${k}</span><b>${x}</b></div>`;
     let body;
-    if (pl) {
-      const z2 = fixedSize(pl.ref, pl.stop, pl.tpR ? pl.tpR * pl.stop : 0), lp = pl.ref * (1 - sgn * z2.liq);
-      body = `<div class="grid">${cell("进场", pl.entry)}${cell("止损", `${fmt(pl.ref - sgn * pl.stop)}（${(z2.sp * 100).toFixed(2)}%）`)}${pl.tpR ? cell("止盈", `${fmt(pl.ref + sgn * pl.tpR * pl.stop)}（${pl.tpR}R）`) : ""}${cell("拿多久", pl.hold)}` +
-        `${cell("投入 × 杠杆", `${fmt(z2.amt)} U × ${z2.lev} 倍`)}${cell("打到止损亏", `<span class="bad">${uTxt(-z2.loss)}</span>`)}${z2.gain != null ? cell("打到止盈赚", `<span class="good">${uTxt(z2.gain)}</span>`) : ""}${cell("强平价", fmt(lp))}</div>` +
-        (z2.liqFirst ? `<p class="if bad">${z2.lev} 倍杠杆价格反向 ${(z2.liq * 100).toFixed(2)}% 就强平，比止损还近，会亏掉全部 ${fmt(z2.amt)} U。这个止损建议不超过 ${z2.maxLev} 倍。</p>` : z2.lev > z2.maxLev ? `<p class="if warn">强平价离止损太近（不到止损距离的 2 倍），插针可能先爆仓，建议不超过 ${z2.maxLev} 倍。</p>` : "") + (pl.stopNote ? `<p class="if">${pl.stopNote}。</p>` : "");
-    } else if (vd !== "不要开") {
-      const z2 = fixedSize(P, volStop, 0);
-      body = `<p class="if">如果你还是要现在${key === "long" ? "做多" : "做空"}（持有 ${hold}）：止损放 ${fmt(P - sgn * volStop)}（${(z2.sp * 100).toFixed(2)}%，历史样本里约八成的最大逆向没超过这个距离），按 ${fmt(z2.amt)} U × ${z2.lev} 倍，打到止损约亏 <b class="bad">${fmt(z2.loss)} U</b>，强平价约 ${fmt(P * (1 - sgn * z2.liq))}。</p>` +
-        (z2.liqFirst ? `<p class="if bad">这个杠杆在止损前就会强平，会亏掉全部 ${fmt(z2.amt)} U，建议不超过 ${z2.maxLev} 倍。</p>` : "");
+    // 两边用同一套格子显示：有信号用信号的方案；没有信号用「如果你还是要做」的方案（现价进、按波动放的止损、所选持有时间、不设止盈）
+    const alt = !pl && vd !== "不要开" ? { entry: `现价 ≈ ${fmt(P)}`, ref: P, stop: volStop, tpR: 0, hold: `${hold}后平仓`, alt: true } : null;
+    const q = pl || alt;
+    if (q) {
+      const z2 = fixedSize(q.ref, q.stop, q.tpR ? q.tpR * q.stop : 0), lp = q.ref * (1 - sgn * z2.liq);
+      body = (q.alt ? `<p class="if">没有信号。如果你还是要现在${key === "long" ? "做多" : "做空"}，参考下面的方案（止损按 ${hold} 的历史 P80 逆向放：约八成样本的最大逆向没超过这个距离）：</p>` : "") +
+        `<div class="grid">${cell("进场", q.entry)}${cell("止损", `${fmt(q.ref - sgn * q.stop)}（${(z2.sp * 100).toFixed(2)}%）`)}${cell("止盈", q.tpR ? `${fmt(q.ref + sgn * q.tpR * q.stop)}（${q.tpR}R）` : "不设")}${cell("拿多久", q.hold)}` +
+        `${cell("投入 × 杠杆", `${fmt(z2.amt)} U × ${z2.lev} 倍`)}${cell("打到止损亏", `<span class="bad">${uTxt(-z2.loss)}</span>`)}${cell("打到止盈赚", z2.gain != null ? `<span class="good">${uTxt(z2.gain)}</span>` : "—")}${cell("强平价", fmt(lp))}</div>` +
+        (z2.liqFirst ? `<p class="if bad">${z2.lev} 倍杠杆价格反向 ${(z2.liq * 100).toFixed(2)}% 就强平，比止损还近，会亏掉全部 ${fmt(z2.amt)} U。这个止损建议不超过 ${z2.maxLev} 倍。</p>` : z2.lev > z2.maxLev ? `<p class="if warn">强平价离止损太近（不到止损距离的 2 倍），插针可能先爆仓，建议不超过 ${z2.maxLev} 倍。</p>` : "") + (q.stopNote ? `<p class="if">${q.stopNote}。</p>` : "");
     } else body = "";
     // 按现价开仓用的方案：有信号用信号的止损 / 止盈 / 持有时间；没有信号用「如果你还是要做」的止损和所选持有时间
     const HZM = { "1 小时": 60, "4 小时": 240, "24 小时": 1440 };
