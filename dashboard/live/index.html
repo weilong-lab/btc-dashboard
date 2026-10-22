@@ -154,6 +154,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
 .hv div.now{outline:2px solid var(--fg);outline-offset:1px}
 .hv div.hot{color:#fff}
 @media(max-width:600px){.hv{grid-template-columns:repeat(12,minmax(0,1fr))}}
+.sum-open{align-items:center;margin-top:2px}
+.sum-open .note{flex:1;min-width:160px}
 /* 交易日志：计划和归因 */
 .plan-v{display:flex;flex-direction:column;gap:3px;font-family:var(--f);white-space:normal;font-size:12.5px;line-height:1.55}
 .jt tr.planrow td{background:var(--chip)}
@@ -1236,6 +1238,12 @@ function renderSummary(st) {
       body = `<p class="if">如果你还是要现在${key === "long" ? "做多" : "做空"}（持有 ${hold}）：止损放 ${fmt(P - sgn * volStop)}（${(z2.sp * 100).toFixed(2)}%，五次里有四次不会被正常波动扫掉）` +
         (bal ? `，名义仓位最多 ${fmt(z2.notional)} U（${z2.qty.toFixed(3)} BTC），${z2.lev} 倍杠杆${z2.chosen ? "（你选的）" : ""}、保证金 ${fmt(z2.margin)} U，打到止损约亏 ${fmt(z2.loss)} U。` : `，杠杆不超过 ${z2.maxLev} 倍；填上余额可以算出仓位。`) + `</p>` + (bal ? levNote(z2, P, sgn) : "");
     } else body = "";
+    // 按现价开仓用的方案：有信号用信号的止损 / 止盈 / 持有时间；没有信号用「如果你还是要做」的止损和所选持有时间
+    const HZM = { "1 小时": 60, "4 小时": 240, "24 小时": 1440 };
+    S.sumPlan = S.sumPlan || {};
+    S.sumPlan[key] = pl ? { stop: pl.stop, tp: pl.tpR ? pl.tpR * pl.stop : 0, hz: sig[1] === "B" ? B.max_hold_bars * 5 : A.hold_bars * 5, vd, why: `规则 ${sig[1]}` }
+      : { stop: volStop, tp: 0, hz: HZM[hold] || 240, vd, why: vd };
+    body += `<div class="jbtns sum-open"><button type="button" class="btn ${vd === "有参考信号" ? "primary" : ""}" data-sumopen="${key}">按现价${key === "long" ? "开多" : "开空"}</button><span class="note">记进喊单记录（「我」），按上面的止损${pl && pl.tpR ? "、止盈" : ""}和持有时间自动核对；不会真的下单</span></div>`;
     return { key, vd, cls, html: `<div class="sum-side ${key}"><div class="hd"><h3 class="${key === "long" ? "good" : "bad"}">${key === "long" ? "做多" : "做空"}</h3><span class="vd ${cls}">${vd}</span></div><ul>${why.map(x => `<li>${esc(x)}</li>`).join("")}</ul>${body}</div>` };
   };
   // 三件事分开看：市场是什么状态、策略有没有被验证过、账户还能承受多少
@@ -1247,7 +1255,7 @@ function renderSummary(st) {
     ["账户约束", isFinite(rk.room) ? `新单最多亏 ${fmt(Math.min(rk.room, Math.max(0, rk.dayRoom)))} U` : "没填余额", rk.noStop.length ? "bad" : isFinite(rk.room) ? "" : "mut", `${rk.open.length ? `持仓总风险 ${isFinite(rk.total) ? fmt(rk.total) + " U" : "无上限"}` : isFinite(rk.room) ? "没有持仓" : "不填也能用；填了余额会算出仓位上限"}${F.blocked ? "；事件前不开新仓" : ""}`],
   ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
   const L = side("long"), Sh = side("short");
-  $("sumSides").innerHTML = L.html + Sh.html;
+  $("sumSides").innerHTML = L.html + Sh.html + (S.sumMsg && Date.now() - S.sumMsg.t < 15e3 ? `<p class="sum-line good" style="grid-column:1/-1">${S.sumMsg.html}</p>` : "");
   const mv = (() => { const b = S.b5, n = b.length; return n > 50 ? (P / b[n - 48].o - 1) * 100 : NaN; })();
   const ev = F.ev ? `${F.ev[0]} ${F.evMin < 90 ? Math.round(F.evMin) + " 分钟后" : (F.evMin / 60).toFixed(1) + " 小时后"}` : "近期无重大事件";
   const head = [L, Sh].some(x => x.vd === "有参考信号") ? `${[L, Sh].filter(x => x.vd === "有参考信号").map(x => x.key === "long" ? "做多" : "做空").join("、")}有参考信号（小仓位）` :
@@ -2023,6 +2031,25 @@ function callsInit() {
     catch (e) { $("cParseMsg").textContent = "导入失败：文件格式不对。"; }
   };
   cNames(); renderCalls();
+  // 此刻结论里的「按现价开多 / 开空」：按实时价记一条「我」的喊单（现价进），带上止损、止盈、持有时间、投入和杠杆
+  $("sumSides").addEventListener("click", ev => {
+    const key = ev.target.dataset && ev.target.dataset.sumopen; if (!key) return;
+    const plan = S.sumPlan && S.sumPlan[key], P = S.price; if (!plan || !isFinite(P)) return;
+    const sgn = key === "long" ? 1 : -1, bal = J.balance || 0;
+    let amt, lev;
+    if (bal) { const z2 = sizing(P, plan.stop, bal, J.riskPct || 2); amt = Math.round(z2.margin * 10) / 10; lev = z2.lev; }
+    else { amt = J.defAmt || 100; lev = J.lev || J.defLev || 10; }
+    const c = { id: Date.now().toString(36), t: Date.now(), who: "我", side: key, entry: "market", ref: Math.round(P * 10) / 10, refGiven: false,
+      stop: Math.round((P - sgn * plan.stop) * 10) / 10, target: plan.tp ? Math.round((P + sgn * plan.tp) * 10) / 10 : 0, hz: plan.hz, amt, lev,
+      text: `此刻结论按现价${key === "long" ? "开多" : "开空"}（当时：${plan.why}）` };
+    const e = expectPL(c);
+    const msg = `按现价 ${fmt(c.ref)} ${key === "long" ? "开多" : "开空"}？\n止损 ${fmt(c.stop)}${c.target ? `，止盈 ${fmt(c.target)}` : "，不设止盈"}，最长拿 ${HZTXT[c.hz] || c.hz + " 分钟"}\n投入 ${fmt(amt)} U × ${lev} 倍${bal ? "（按余额和每笔风险算）" : "（默认金额）"}\n` +
+      `打到止损预计 ${e.sl ? uTxt(e.sl.u) : "—"}${e.tp ? `，打到止盈预计 ${uTxt(e.tp.u)}` : ""}${plan.vd === "不要开" ? "\n\n注意：此刻结论是「不要开」。" : plan.vd === "不建议" ? "\n\n注意：此刻结论是「不建议」。" : ""}\n\n只记进喊单记录，不会真的下单。`;
+    if (!confirm(msg)) return;
+    c.u = Date.now(); C.calls.push(c); markFlips(); csave(); cNames(); renderCalls(); verifyCalls();
+    S.sumMsg = { t: Date.now(), html: `已记入喊单记录：${key === "long" ? "多" : "空"}单 ${fmt(c.ref)}，止损 ${fmt(c.stop)}${c.target ? `，止盈 ${fmt(c.target)}` : ""}。在「持仓与卖出」里盯着它，到了会提醒。` };
+    everySecond();
+  });
 }
 
 // ---------------- 规则说明（参数取自 SPEC / VOLSTAT / FASTMOVE / WEIGHTS，改参数后自动跟着变） ----------------
@@ -2085,6 +2112,7 @@ function renderRulesDoc() {
     sec("喊单记录、持仓与卖出", [
       "每一单（人工喊单、补录的历史单、模型自动记的单）进场时就写好卖出计划：止损价、止盈价、最长持有时间。",
       "进场两种：现价进（喊单那一刻就算买入）；到价再进（规定分钟内价格碰到进场价才算买入，最长持有从成交那一刻算，没碰到记「未成交」，可以撤单）。原话里有投入金额和杠杆就一起记，盈亏同时显示 U。",
+      "此刻结论里每一边都有「按现价开多 / 开空」：按点击那一刻的实时价，把这一单记进喊单记录（谁喊的 =「我」），止损、止盈、最长持有用此刻结论当时给的方案，投入和杠杆按余额和每笔风险算（没填余额就用默认金额）。之后在「持仓与卖出」里盯着、到了提醒。只是记录，不会真的下单。",
       "此刻结论的杠杆：0 = 自动；自己选 1–150 倍时，仓位不变（仍由每笔最多亏 % ÷ 止损幅度决定），只改变保证金和强平价；强平价比止损近会标红。",
       "卖出：价格先碰到止损或止盈就在那里卖（同一根 K 线两个都碰到按止损算）；都没碰到就到最长持有时间按当时收盘价卖；你也可以手动卖出。卖出时间、价格、原因、盈亏都会记下，喊单记录同步显示。",
       "对错：到期价朝喊单方向走了 0.1% 以上算对，反方向 0.1% 以上算错，其余算平。喊的价位离当时市价超过 0.15% 当作挂单，碰到才算进场。",
