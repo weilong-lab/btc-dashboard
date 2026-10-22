@@ -594,7 +594,7 @@ const US_HOLIDAYS = new Set(["2026-11-26","2026-12-25","2027-01-01","2027-01-18"
 // 监控程序不可用时的兜底事件（美东时间）
 const EVENTS = [["FOMC 利率决议","2026-10-28T14:00:00-04:00"],["美国 CPI（10 月）","2026-11-10T08:30:00-05:00"]];
 // 账户：两个人各用各的（喊单记录、交易日志、模拟盘分开存，本机和私有仓库里都分开），只是切换，不设密码
-const ACCTS = [["main", "我"], ["zhang", "张主任"]];
+const ACCTS = [["main", "陈总"], ["zhang", "张主任"]];
 const ACCT = (() => { try { const v = localStorage.getItem("btc_account"); return ACCTS.some(a => a[0] === v) ? v : "main"; } catch (e) { return "main"; } })();
 const AK = k => ACCT === "main" ? k : `${k}@${ACCT}`;      // 本机存储的键
 const AF = f => ACCT === "main" ? f : `${ACCT}/${f}`;       // 私有仓库里的文件

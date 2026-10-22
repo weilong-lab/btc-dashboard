@@ -301,7 +301,7 @@ const FAPI = "https://fapi.binance.com";
 const WS_MKT = "wss://fstream.binance.com/market/stream?streams=btcusdt@aggTrade/btcusdt@markPrice@1s/btcusdt@ticker/btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_15m/btcusdt@kline_1h/btcusdt@kline_4h/btcusdt@kline_1d";
 const WS_BOOK = "wss://fstream.binance.com/public/stream?streams=btcusdt@depth20@100ms/btcusdt@bookTicker";
 // 账户：和作战面板同一个设置（右上角切换），每个账户的模拟盘、画线、喊单分开存
-const ACCTS = [["main", "我"], ["zhang", "张主任"]];
+const ACCTS = [["main", "陈总"], ["zhang", "张主任"]];
 const ACCT = (() => { try { const v = localStorage.getItem("btc_account"); return ACCTS.some(a => a[0] === v) ? v : "main"; } catch (e) { return "main"; } })();
 const ACCT_NAME = ACCTS.find(a => a[0] === ACCT)[1];
 const AK = k => ACCT === "main" ? k : `${k}@${ACCT}`, AF = f => ACCT === "main" ? f : `${ACCT}/${f}`;
