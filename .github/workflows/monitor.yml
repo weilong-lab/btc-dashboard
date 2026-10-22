@@ -1,0 +1,61 @@
+# 后台监控在 GitHub 上跑：Mac 关机也继续。
+# 每段跑约 55 分钟（抓新闻、AI 判断、盘面异常、模拟盘、模型喊单、持仓提醒，每分钟一轮），
+# 状态每 10 分钟存到 monitor-state 分支，下一段接着跑。每 30 分钟排一次，同一时间只跑一段，
+# 前一段没结束时下一段排队等，所以基本是连续的（GitHub 定时任务高峰时可能晚几分钟）。
+#
+# 需要在仓库 Settings → Secrets and variables → Actions 里设置：
+#   DEEPSEEK_API_KEY  新闻 AI 判断（没有就用关键词规则）
+#   RECORDS_TOKEN     细粒度令牌，只勾 btc-records，Contents 读写（读人工喊单、写提醒给 Muse）
+name: 后台监控
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: monitor/requirements.txt
+
+      - name: 安装依赖
+        run: pip install -r monitor/requirements.txt
+
+      - name: 取回上一段的状态
+        run: |
+          mkdir -p monitor/out
+          if git fetch --depth 1 origin monitor-state 2>/dev/null; then
+            git archive FETCH_HEAD | tar -x -C monitor/out
+            ls -la monitor/out
+          else
+            echo "还没有保存过状态，从头开始"
+          fi
+
+      - name: 运行约 55 分钟
+        working-directory: monitor
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SAVE_STATE: "1"
+          RECORDS_REPO: weilong-lab/btc-records
+          RECORDS_TOKEN: ${{ secrets.RECORDS_TOKEN }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          MAC_NOTIFY: "0"
+          DISPLAY_TZ: Asia/Tokyo
+          PYTHONWARNINGS: ignore
+        run: python monitor.py --minutes 55 --no-push

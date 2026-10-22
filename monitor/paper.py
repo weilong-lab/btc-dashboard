@@ -32,7 +32,8 @@ MODEL_WHO = "模型·此刻结论"
 
 def cloud_calls():
     """私有记录仓库里的喊单（面板「连接云端」后写入）。需要环境变量 RECORDS_REPO 和 GITHUB_TOKEN，没配置就返回空。"""
-    repo, token = os.environ.get("RECORDS_REPO"), os.environ.get("GITHUB_TOKEN")
+    repo = os.environ.get("RECORDS_REPO")
+    token = os.environ.get("RECORDS_TOKEN") or ("" if os.environ.get("GITHUB_ACTIONS") == "true" else os.environ.get("GITHUB_TOKEN"))
     if not repo or not token:
         return []
     req = urllib.request.Request(f"https://api.github.com/repos/{repo}/contents/calls.json",
@@ -103,8 +104,9 @@ def annotate(df):
 
 
 class PaperTrader:
-    def __init__(self, out_dir, log=print):
+    def __init__(self, out_dir, log=print, notify=None):
         self.out, self.log = out_dir, log
+        self.notify = notify or mac_notify       # 本机：Mac 通知；云上：写进提醒发件箱给 Muse
         self.state_path = os.path.join(out_dir, "paper_state.json")
         self.st = json.load(open(self.state_path)) if os.path.exists(self.state_path) else {
             "last_bar": None, "A": {"mode": "flat", "trades": [], "missed": 0}, "B": {"mode": "flat", "trades": []}}
@@ -135,7 +137,7 @@ class PaperTrader:
         now_ms = time.time() * 1000
         for c in self.st["model_calls"][n_before:]:
             if now_ms - c["t"] < 15 * 60e3:   # 只提醒刚发生的（重启回放历史时不提醒）
-                mac_notify("模型买入提示", f"{'做多' if c['side'] == 'long' else '做空'} 参考价 {c['ref']:,.0f}，止损 {c['stop']:,.0f}" + (f"，止盈 {c['target']:,.0f}" if c["target"] else "") + f"，最长 {c['hz'] // 60} 小时")
+                self.notify("模型买入提示", f"{'做多' if c['side'] == 'long' else '做空'} 参考价 {c['ref']:,.0f}，止损 {c['stop']:,.0f}" + (f"，止盈 {c['target']:,.0f}" if c["target"] else "") + f"，最长 {c['hz'] // 60} 小时")
         self.update_exits(d)
         self.watch_positions(d, atr1h[-1], self.st["model_calls"])
         manual = cloud_calls()                # 人工喊单：只提醒（该卖了 / 盘面变化），记录由面板写
@@ -179,7 +181,7 @@ class PaperTrader:
             if why and key not in sent:
                 sent.append(key)
                 body = f"{c.get('who', '')} 的{'多' if sgn > 0 else '空'}单（进场 {c['ref']:,.0f}）{why}，现价 {float(d.close.iloc[-1]):,.0f}"
-                mac_notify("该卖了", body)
+                self.notify("该卖了", body)
                 self.log("该卖了：" + body)
 
     def watch_positions(self, d, atr, calls):
@@ -212,7 +214,7 @@ class PaperTrader:
                 k = f"{c['id']}:{key}"
                 if k not in sent:
                     sent.append(k)
-                    mac_notify("盘面提醒", body)
+                    self.notify("盘面提醒", body)
                     self.log("盘面提醒：" + body)
         self.st["watch_sent"] = sent[-300:]
 
@@ -237,7 +239,7 @@ class PaperTrader:
                 c["exit"] = ex
                 self.log(f"模型喊单卖出：{ex['why']}，{ex['pnl']:+.2f}%")
                 if now_ms - ex["t"] < 15 * 60e3:
-                    mac_notify("该卖了", f"模型{'多' if sgn > 0 else '空'}单（进场 {c['ref']:,.0f}）{ex['why']}，卖出价 {ex['px']:,.0f}，{ex['pnl']:+.2f}%")
+                    self.notify("该卖了", f"模型{'多' if sgn > 0 else '空'}单（进场 {c['ref']:,.0f}）{ex['why']}，卖出价 {ex['px']:,.0f}，{ex['pnl']:+.2f}%")
 
     def signals(self, b):
         """这根收盘时规则 A / B 各自是否给出信号（不管模拟盘有没有持仓），口径与面板 ruleSigs 一致。"""

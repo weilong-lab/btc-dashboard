@@ -143,6 +143,8 @@ class Notifier:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
         icon = {"red": "🔴", "yellow": "🟡", "gray": "⚪"}[level]
         log(icon, f"[{kind}]", title)
+        if level in ("red", "yellow") and getattr(self, "outbox", None):
+            self.outbox.add(level, kind, title, body)
         if level == "red":
             self._deliver(f"{icon} {title}", body)
         elif level == "yellow":
@@ -581,15 +583,27 @@ def main():
     cal = Calendar(store, notifier)
     news = News(store, notifier, lambda: market.price)
     lab = LB.Labeler(store, OUT, log)
+    from cloudstate import Outbox, StatePublisher, load_state, save_state
+    outbox = Outbox(OUT, log)
+    notifier.outbox = outbox
+    load_state(OUT, news, market, notifier, log)
+
+    def notify(title, body):
+        if sys.platform == "darwin" and os.environ.get("MAC_NOTIFY") != "0":
+            from paper import mac_notify
+            mac_notify(title, body)
+        outbox.add("red", "持仓", title, body)
     try:
         from paper import PaperTrader
-        paper = PaperTrader(OUT, log)
+        paper = PaperTrader(OUT, log, notify=notify)
         log("模拟盘已启动（规则 A / B，参数见 rules_spec.json）")
     except Exception as ex:
         paper = None
         log("模拟盘未启动（需要 pip install -r requirements.txt）:", ex)
     from publish import Publisher
     pub = Publisher(OUT, log)
+    spub = StatePublisher(OUT, log)
+    log(f"提醒发件箱：{'私有仓库 ' + outbox.repo + ' 的 alerts.json（Muse 读取）' if outbox.enabled else '只记在本地 out/outbox.json'}")
     log(f"启动。输出目录 {OUT}，时区 {TZ}。首轮抓到的新闻只入库不推送。")
     end = time.time() + args.minutes * 60 if args.minutes else None
     last_backfill = 0
@@ -610,8 +624,21 @@ def main():
         except Exception as ex:
             log("状态页写入失败:", ex)
         pub.step()
+        try:
+            save_state(OUT, news, market, notifier)
+        except Exception as ex:
+            log("状态保存失败:", ex)
+        outbox.flush()
+        spub.step()
         if args.once or (end and time.time() >= end):
             notifier.flush(force=True)
+            outbox.flush()
+            save_state(OUT, news, market, notifier)
+            if spub.enabled:
+                try:
+                    spub.push(); log("已保存状态，下一段接着跑")
+                except Exception as ex:
+                    log("退出前保存状态失败:", ex)
             break
         time.sleep(max(5, 60 - (time.time() - t0)))
 
