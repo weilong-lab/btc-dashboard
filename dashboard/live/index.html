@@ -88,6 +88,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .chip b{font-family:var(--m);font-size:15px}
 .chip span{font-size:11.5px;color:var(--muted)}
 .good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)} .mut{color:var(--muted)}
+.plv{display:block} .plv.good small,.plv.bad small,td.good small,td.bad small{color:inherit}
 .note{font-size:12px;color:var(--muted);margin:0}
 .status{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .fc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
@@ -596,9 +597,13 @@ function expectPL(c, px) {
   if (px) out.now = one(px);
   return out;
 }
-const uTxt = u => `${u >= 0 ? "+" : ""}${u.toFixed(1)} U`;
-const plCell = x => !x ? "—" : `<b class="${x.u >= 0 ? "good" : "bad"}">${uTxt(x.u)}</b><small>${pct(x.pct)}${x.liqHit ? " · 先爆仓" : ""}${x.dflt ? " · 按默认金额" : ""}</small>`;
-const moneyCell = (c, pctv) => !isFinite(pctv) ? "—" : `<b class="${pctv > 0 ? "good" : pctv < 0 ? "bad" : ""}">${uTxt(pnlU(c, pctv))}</b><small>${pct(pctv)}${sizeOf(c).dflt ? " · 按默认金额" : ""}</small>`;
+// 盈亏统一写法：赚 = 「+数字」整体绿色，亏 = 「-数字」整体红色（四舍五入到 0.1 后为 0 的不带符号、不上色）
+const r1 = u => Math.round(u * 10) / 10;
+const plCls = u => r1(u) > 0 ? "good" : r1(u) < 0 ? "bad" : "";
+const uTxt = u => `${r1(u) > 0 ? "+" : r1(u) < 0 ? "-" : ""}${Math.abs(r1(u)).toFixed(1)} U`;
+const uHtml = u => `<b class="${plCls(u)}">${uTxt(u)}</b>`;
+const plCell = x => !x ? "—" : `<span class="plv ${plCls(x.u)}"><b>${uTxt(x.u)}</b><small>${pct(x.pct)}${x.liqHit ? " · 先爆仓" : ""}${x.dflt ? " · 按默认金额" : ""}</small></span>`;
+const moneyCell = (c, pctv) => { if (!isFinite(pctv)) return "—"; const u = pnlU(c, pctv); return `<span class="plv ${plCls(u)}"><b>${uTxt(u)}</b><small>${pct(pctv)}${sizeOf(c).dflt ? " · 按默认金额" : ""}</small></span>`; };
 const tzHour = ms => +new Date(ms).toLocaleString("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }) % 24;
 const tzDay = ms => new Date(ms + TZOFF[TZ] * 6e4);              // 用 getUTC* 读出所选时区的日期
 // 监控程序给的新闻时间是东京时间字符串「MM-DD HH:MM」，换成时间戳再按所选时区显示
@@ -1310,7 +1315,7 @@ function renderSummary(st) {
         `4 小时模型的${key === "long" ? "上涨" : "下跌"}概率 ${(key === "long" ? S.prob["4 小时"] : 100 - S.prob["4 小时"]).toFixed(1)}%，规则 A 要 ≥ ${Math.round((key === "long" ? A.p_long : 1 - A.p_short) * 100)}%`);
       if (chase) why.push(`现在是急${cx.down ? "跌" : "涨"}后，顺势追${key === "long" ? "多" : "空"}要防反抽，止损不能太近`);
     }
-    const cell = (k, x) => `<div><span>${k}</span><b>${x}</b></div>`;
+    const cell = (k, x, cls = "") => `<div><span>${k}</span><b class="${cls}">${x}</b></div>`;
     let body;
     // 两边用同一套格子显示：有信号用信号的方案；没有信号用「如果你还是要做」的方案（现价进、按波动放的止损、所选持有时间、不设止盈）
     const alt = !pl && vd !== "不要开" ? { entry: `现价 ≈ ${fmt(P)}`, ref: P, stop: volStop, tpR: 0, hold: `${hold}后平仓`, alt: true } : null;
@@ -1319,7 +1324,7 @@ function renderSummary(st) {
       const z2 = fixedSize(q.ref, q.stop, q.tpR ? q.tpR * q.stop : 0), lp = q.ref * (1 - sgn * z2.liq);
       body = (q.alt ? `<p class="if">没有信号。如果你还是要现在${key === "long" ? "做多" : "做空"}，参考下面的方案（止损按 ${hold} 的历史 P80 逆向放：约八成样本的最大逆向没超过这个距离）：</p>` : "") +
         `<div class="grid">${cell("进场", q.entry)}${cell("止损", `${fmt(q.ref - sgn * q.stop)}（${(z2.sp * 100).toFixed(2)}%）`)}${cell("止盈", q.tpR ? `${fmt(q.ref + sgn * q.tpR * q.stop)}（${q.tpR}R）` : "不设")}${cell("拿多久", q.hold)}` +
-        `${cell("投入 × 杠杆", `${fmt(z2.amt)} U × ${z2.lev} 倍`)}${cell("打到止损亏", `<span class="bad">${uTxt(-z2.loss)}</span>`)}${cell("打到止盈赚", z2.gain != null ? `<span class="good">${uTxt(z2.gain)}</span>` : "—")}${cell("强平价", fmt(lp))}</div>` +
+        `${cell("投入 × 杠杆", `${fmt(z2.amt)} U × ${z2.lev} 倍`)}${cell("打到止损亏", uTxt(-z2.loss), plCls(-z2.loss))}${cell("打到止盈赚", z2.gain != null ? uTxt(z2.gain) : "—", z2.gain != null ? plCls(z2.gain) : "")}${cell("强平价", fmt(lp))}</div>` +
         (z2.liqFirst ? `<p class="if bad">${z2.lev} 倍杠杆价格反向 ${(z2.liq * 100).toFixed(2)}% 就强平，比止损还近，会亏掉全部 ${fmt(z2.amt)} U。这个止损建议不超过 ${z2.maxLev} 倍。</p>` : z2.lev > z2.maxLev ? `<p class="if warn">强平价离止损太近（不到止损距离的 2 倍），插针可能先爆仓，建议不超过 ${z2.maxLev} 倍。</p>` : "") + (q.stopNote ? `<p class="if">${q.stopNote}。</p>` : "");
     } else body = "";
     // 按现价开仓用的方案：有信号用信号的止损 / 止盈 / 持有时间；没有信号用「如果你还是要做」的止损和所选持有时间
@@ -1476,8 +1481,8 @@ function renderJournal() {
   // 只基于记录过的交易：今天平仓的单按整笔盈亏算（包括昨天开、今天平的），持仓按开仓至今的浮动算；不是账户权益的今日变化
   const openNon = open.filter(t => t.sym !== "BTCUSDT").length;
   $("risk").innerHTML = [
-    ["今天平仓的交易", today.length ? uTxt(realized) : "—", realized < 0 ? "bad" : realized > 0 ? "good" : "", `${today.length} 笔 · 按平仓日算整笔盈亏（隔夜单含昨天的涨跌）`],
-    ["持仓浮动", open.length ? uTxt(unreal) : "—", unreal < 0 ? "bad" : unreal > 0 ? "good" : "", `从开仓至今 · 只算 BTC${openNon ? `，${openNon} 笔非 BTC 持仓没计入` : ""}`],
+    ["今天平仓的交易", today.length ? uTxt(realized) : "—", plCls(realized), `${today.length} 笔 · 按平仓日算整笔盈亏（隔夜单含昨天的涨跌）`],
+    ["持仓浮动", open.length ? uTxt(unreal) : "—", plCls(unreal), `从开仓至今 · 只算 BTC${openNon ? `，${openNon} 笔非 BTC 持仓没计入` : ""}`],
     ["停手线（估算）", bal ? pct(dayPct) : "先填余额", isFinite(dayPct) && dayPct <= -15 ? "bad" : "", bal ? "上面两项合计 ÷ 余额，-15% 停止开新仓；仅基于已记录交易，不是账户权益" : ""],
     ["保证金占用", bal ? `${marginPct.toFixed(0)}%` : "—", marginPct > 33 ? "bad" : "", "上限 33%"],
     ["持仓中", `${open.length} 笔`, noStop ? "bad" : "", noStop ? `${noStop} 笔没有止损` : "都设了止损"],
@@ -1497,7 +1502,7 @@ function renderJournal() {
     const fl = jFills(t), dev = [fl.some(f => f.k === "add") ? "加过仓" : "", fl.some(f => f.k === "reduce") ? "减过仓" : "", (t.changes || []).some(c => c.kind === "撤止损" || c.kind === "改止损") ? "改过止损" : ""].filter(Boolean);
     const acts = `<button type="button" class="btn sm" data-jact="plan" data-id="${t.id}">${t._open ? "收起计划" : "计划"}</button>` + (open ? `<button type="button" class="btn sm" data-jact="stop" data-id="${t.id}">改止损</button><button type="button" class="btn sm" data-jact="size" data-id="${t.id}">加 / 减仓</button><button type="button" class="btn sm" data-jact="hold" data-id="${t.id}">改持有</button>${t.stop ? `<button type="button" class="btn sm" data-jact="ok" data-id="${t.id}">${t.stopOk ? "取消确认" : "已挂止损"}</button>` : ""}` : "");
     return `<tr><td>${fmtT(t.t)}</td><td>${esc(t.sym)}</td><td class="${t.side === "long" ? "good" : "bad"}">${t.side === "long" ? "多" : "空"}</td><td>${fmt(t.entry)}</td><td>${stopSt}</td><td>${fmt(t.notional)}</td><td>${t.lev}x</td>
-      <td class="txt">${esc(t.reason)}${t.note ? " · " + esc(t.note) : ""}${dev.length ? "<br>" + dev.map(x => `<span class="tag">${x}</span>`).join("") : ""}</td><td class="${cur > 0 ? "good" : cur < 0 ? "bad" : ""}">${isFinite(cur) ? (cur >= 0 ? "+" : "") + cur.toFixed(1) + " U" : "—"}${t.exit ? "" : "（浮动）"}</td>
+      <td class="txt">${esc(t.reason)}${t.note ? " · " + esc(t.note) : ""}${dev.length ? "<br>" + dev.map(x => `<span class="tag">${x}</span>`).join("") : ""}</td><td class="${cur > 0 ? "good" : cur < 0 ? "bad" : ""}">${isFinite(cur) ? uTxt(cur) : "—"}${t.exit ? "" : "（浮动）"}</td>
       <td>${t.exit ? fmt(t.exit) : `<input id="x_${t.id}" inputmode="decimal" placeholder="平仓价" aria-label="平仓价"> <button type="button" class="btn sm" data-close="${t.id}">平仓</button>`}</td><td class="txt">${acts}</td></tr>` +
       (t._open ? `<tr class="planrow"><td colspan="11">${jPlanHtml(t)}</td></tr>` : "");
   }).join("");
@@ -1567,8 +1572,8 @@ function renderAttribution() {
   ];
   const total = rows.reduce((s, r) => s + r[1], 0), real = closed.reduce((s, t) => s + (t.pnl || 0), 0);
   $("jatt").innerHTML = `<thead><tr><th class="t">来源</th><th>金额</th><th>涉及笔数</th><th class="t">说明</th></tr></thead><tbody>` +
-    rows.map(([n, v, c, d]) => `<tr><td class="t">${n}</td><td class="${v > 0 ? "good" : v < 0 ? "bad" : ""}">${c ? uTxt(v) : "—"}</td><td>${c}</td><td class="t"><small>${d}</small></td></tr>`).join("") +
-    `<tr><td class="t"><b>合计</b></td><td class="${total >= 0 ? "good" : "bad"}"><b>${uTxt(total)}</b></td><td>${closed.length}</td><td class="t"><small>等于这些单的实际盈亏合计 ${uTxt(real)}</small></td></tr></tbody>`;
+    rows.map(([n, v, c, d]) => `<tr><td class="t">${n}</td><td class="${c ? plCls(v) : ""}">${c ? uTxt(v) : "—"}</td><td>${c}</td><td class="t"><small>${d}</small></td></tr>`).join("") +
+    `<tr><td class="t"><b>合计</b></td><td class="${plCls(total)}"><b>${uTxt(total)}</b></td><td>${closed.length}</td><td class="t"><small>等于这些单的实际盈亏合计 ${uTxt(real)}</small></td></tr></tbody>`;
 }
 function jInit() {
   if (J.balance) $("jbal").value = J.balance;
@@ -1817,7 +1822,7 @@ function cPreview() {
   const rr = e.tp && e.sl && e.sl.pct < 0 ? (e.tp.pct / -e.sl.pct).toFixed(2) : null;
   el.hidden = false;
   el.className = "verdict" + (e.sl && e.sl.liqHit ? " badv" : "");
-  el.innerHTML = `按进场 ${fmt(c.ref)}${$("cRef").value ? "" : "（现价）"}：打到止盈预计 <b class="good">${f(e.tp)}</b>，打到止损预计 <b class="bad">${f(e.sl)}</b>${rr ? `，盈亏比 ${rr} : 1` : ""}。` +
+  el.innerHTML = `按进场 ${fmt(c.ref)}${$("cRef").value ? "" : "（现价）"}：打到止盈预计 <b class="${e.tp ? plCls(e.tp.u) : ""}">${f(e.tp)}</b>，打到止损预计 <b class="${e.sl ? plCls(e.sl.u) : ""}">${f(e.sl)}</b>${rr ? `，盈亏比 ${rr} : 1` : ""}。` +
     `（${fmt(z.amt)} U × ${z.lev} 倍${z.dflt ? "，没填投入和杠杆，按默认" : ""} = 名义 ${fmt(z.amt * z.lev)} U，已扣开平手续费约 ${(z.amt * z.lev * 0.001).toFixed(1)} U）` +
     (e.sl && e.sl.liqHit ? ` 注意：${z.lev} 倍杠杆在碰到止损之前就会强平，最多亏掉整份保证金 ${fmt(z.amt)} U。` : "") +
     (e.tp && e.tp.pct < 0 ? " 注意：止盈价在进场价的亏损一侧，检查一下方向。" : "") + (e.sl && e.sl.pct > 0 ? " 注意：止损价在进场价的盈利一侧，检查一下方向。" : "");
@@ -2047,9 +2052,9 @@ function renderCalls() {
     ["到价单成交", triggered.length ? `${triggered.filter(c => c.res && c.res.filled).length} / ${triggered.length}` : "—", "", unfilled ? `${unfilled} 条没成交或撤单` : "现价进的单都算成交"],
     ["止盈先到", withT.length ? `${Math.round(tHit / withT.length * 100)}%` : "—", "", `${tHit} / ${withT.length} 条带止盈价`],
     ["止损先到", withS.length ? `${Math.round(sFirst / withS.length * 100)}%` : "—", sFirst ? "bad" : "", `${sFirst} / ${withS.length} 条带止损价`],
-    ["实际金额 · 已卖出", realSold.length ? uTxt(rU) : "—", rU > 0 ? "good" : rU < 0 ? "bad" : "", `${realSold.length} 笔喊单里写了投入和杠杆 · 已扣手续费`],
-    ["按默认金额模拟 · 已卖出", simSold.length ? uTxt(sU) : "—", "mut", `${simSold.length} 笔没写金额，按 ${fmt(J.defAmt || 100)} U × ${J.defLev || 10} 倍假设，不是真实收益`],
-    ["持有中浮动", holding.length ? uTxt(holdU) : "—", holdU > 0 ? "good" : holdU < 0 ? "bad" : "", `${holding.length} 笔 · 按现价（含默认金额的单）`],
+    ["实际金额 · 已卖出", realSold.length ? uTxt(rU) : "—", plCls(rU), `${realSold.length} 笔喊单里写了投入和杠杆 · 已扣手续费`],
+    ["按默认金额模拟 · 已卖出", simSold.length ? uTxt(sU) : "—", plCls(sU), `${simSold.length} 笔没写金额，按 ${fmt(J.defAmt || 100)} U × ${J.defLev || 10} 倍假设，不是真实收益`],
+    ["持有中浮动", holding.length ? uTxt(holdU) : "—", plCls(holdU), `${holding.length} 笔 · 按现价（含默认金额的单）`],
   ].map(chip).join("");
   // 同一批喊单，进场后 1h / 4h / 24h 各对了多少（0.1% 以内算平，不计入）
   const hzRows = HZ_CMP.map(([m, name]) => {
@@ -2225,7 +2230,7 @@ function callsInit() {
     if (t.stop && isFinite(S.price) && (sgn > 0 ? t.stop >= S.price : t.stop <= S.price)) warn.push("止损价已经在现价的另一边，保存后会马上按止损算");
     if (t.target && isFinite(S.price) && (sgn > 0 ? t.target <= S.price : t.target >= S.price)) warn.push("止盈价已经被现价越过，保存后会马上按止盈算");
     $("edPrev").className = "verdict" + (warn.length ? " badv" : "");
-    $("edPrev").innerHTML = `打到止盈预计 ${e.tp ? `<b class="good">${uTxt(e.tp.u)}</b>（${pct(e.tp.pct)}）` : "—（不设止盈）"}；打到止损预计 ${e.sl ? `<b class="bad">${uTxt(e.sl.u)}</b>（${pct(e.sl.pct)}）` : "—（不设止损，亏损没有上限）"}。${warn.length ? "<br>" + warn.join("；") + "。" : ""}`;
+    $("edPrev").innerHTML = `打到止盈预计 ${e.tp ? `<span class="${plCls(e.tp.u)}"><b>${uTxt(e.tp.u)}</b>（${pct(e.tp.pct)}）</span>` : "—（不设止盈）"}；打到止损预计 ${e.sl ? `<span class="${plCls(e.sl.u)}"><b>${uTxt(e.sl.u)}</b>（${pct(e.sl.pct)}）</span>` : "—（不设止损，亏损没有上限）"}。${warn.length ? "<br>" + warn.join("；") + "。" : ""}`;
   };
   const edOpen = id => {
     const c = C.calls.find(x => x.id === id); if (!c || c.exit) return;
@@ -2394,13 +2399,13 @@ function calc(st) {
   const lossU = risk * qty + fee, winU = reward * qty - fee, liqBeforeStop = side === "long" ? liq > s : liq < s;
   const pnlNow = (NOW - e) * sgn * qty;
   $("outs").innerHTML = [
-    ["当前浮动盈亏", `${pnlNow >= 0 ? "+" : ""}${pnlNow.toFixed(1)} U`, `现价 ${fmt(NOW)}`],
+    ["当前浮动盈亏", uTxt(pnlNow), `现价 ${fmt(NOW)}`, plCls(pnlNow)],
     ["名义仓位", `${fmt(notional)} U`, `${qty.toFixed(4)} BTC`],
     ["止损 / 止盈距离", `${fmt(risk)} / ${fmt(reward)} 点`, `盈亏比 1 : ${(reward / risk).toFixed(2)}`],
-    ["止损时亏", `-${lossU.toFixed(1)} U`, `占保证金 ${(lossU / m * 100).toFixed(0)}%`],
-    ["止盈时赚", `+${winU.toFixed(1)} U`, `手续费约 ${fee.toFixed(2)} U`],
+    ["止损时亏", uTxt(-lossU), `占保证金 ${(lossU / m * 100).toFixed(0)}%`, plCls(-lossU)],
+    ["止盈时赚", uTxt(winU), `手续费约 ${fee.toFixed(2)} U`, plCls(winU)],
     ["逐仓强平价", `≈ ${fmt(liq)}`, liqBeforeStop ? "在止损之前，先被强平" : "止损先于强平"],
-  ].map(([a, b, c]) => `<div class="chip"><span>${a}</span><b>${b}</b><span>${c}</span></div>`).join("");
+  ].map(([a, b, c, k = ""]) => `<div class="chip"><span>${a}</span><b class="${k}">${b}</b><span>${c}</span></div>`).join("");
   const hzName = reward <= H1MED * 1.2 ? "1 小时" : "4 小时", up = S.prob[hzName], w = WEIGHTS[hzName];
   const pFavor = side === "long" ? up : 100 - up, agree = pFavor >= 50;
   // 实盘口径回测：模型的方向准确率扣费后转化不成收益，所以先到止盈的概率只按随机基准估算
