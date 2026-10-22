@@ -270,7 +270,7 @@ class PaperTrader:
                     s = SPEC["rule_b"]
                     risk = max((ref - b.lo12 + s["stop_atr"] * b.atr) if sgn > 0 else (b.hi12 + s["stop_atr"] * b.atr - ref), ref * 0.001)
                     call = dict(stop=round(ref - sgn * risk, 1), target=round(ref + sgn * s["tp_R"] * risk, 1), hz=s["max_hold_bars"] * 5,
-                                text=f"规则 B：张主任完整{'做多' if sgn > 0 else '做空'}信号 + 模型同向 + 不逆 1h 趋势，市价进，止盈 {s['tp_R']}R")
+                                text=f"规则 B：交易原则完整{'做多' if sgn > 0 else '做空'}信号 + 模型同向 + 不逆 1h 趋势，市价进，止盈 {s['tp_R']}R")
                 ms = int(close_t.timestamp() * 1000)
                 self.st["model_calls"].append(dict(id=f"m-{rule}-{side}-{ms}", t=ms, who=MODEL_WHO, side=side, ref=round(ref, 1), refGiven=False, **call))
                 self.st["model_calls"] = self.st["model_calls"][-500:]
