@@ -1900,7 +1900,7 @@ async function loadSpec() {
 
 // ---------------- 多周期均线 ----------------
 function renderMA() {
-  const TFS = [["15 分钟", S.b15, 0.02], ["30 分钟", S.b30, 0.03], ["1 小时", S.b60, 0.05], ["4 小时", S.b240, 0.1], ["1 天", S.b1d, 0.2]];
+  const TFS = [["5 分钟", S.b5, 0.01], ["15 分钟", S.b15, 0.02], ["30 分钟", S.b30, 0.03], ["1 小时", S.b60, 0.05], ["4 小时", S.b240, 0.1], ["1 天", S.b1d, 0.2]];
   const P = S.price, res = [];
   const rows = TFS.map(([name, bars, flat]) => {
     const b = (bars || []).slice(0, -1), c = b.map(x => x.c), i = c.length - 1;
@@ -1924,11 +1924,11 @@ function renderMA() {
       <td class="t">${cross || '<span class="mut">—</span>'}</td><td class="t"><span class="${pos[1]}">${pos[0]}</span></td></tr>`;
   });
   $("ma").innerHTML = `<thead><tr><th>周期</th><th>MA7<br>现价偏离</th><th>MA25<br>现价偏离</th><th>MA99<br>现价偏离</th><th class="t">排列</th><th class="t">MA7 方向</th><th class="t">近 3 根交叉</th><th class="t">现价位置</th></tr></thead><tbody>${rows.join("")}</tbody>`;
-  if (res.length === 5) {
+  if (res.length === 6) {
     const bull = res.filter(x => x.a > 0).map(x => x.name), bear = res.filter(x => x.a < 0).map(x => x.name);
-    const short = res.slice(0, 3).reduce((t, x) => t + x.a, 0), long = res.slice(3).reduce((t, x) => t + x.a, 0);
+    const short = res.slice(0, 4).reduce((t, x) => t + x.a, 0), long = res.slice(4).reduce((t, x) => t + x.a, 0);
     const relation = short > 0 && long > 0 ? "短周期和长周期都偏多，方向一致" : short < 0 && long < 0 ? "短周期和长周期都偏空，方向一致"
-      : short * long < 0 ? `短周期（15 分钟–1 小时）${short > 0 ? "偏多" : "偏空"}，长周期（4 小时–1 天）${long > 0 ? "偏多" : "偏空"}，方向冲突` : "至少一组周期均线交织，方向不明确";
+      : short * long < 0 ? `短周期（5 分钟–1 小时）${short > 0 ? "偏多" : "偏空"}，长周期（4 小时–1 天）${long > 0 ? "偏多" : "偏空"}，方向冲突` : "至少一组周期均线交织，方向不明确";
     $("maSum").className = "verdict " + (short * long > 0 ? "goodv" : "");
     $("maSum").textContent = `多头排列：${bull.join("、") || "无"}；空头排列：${bear.join("、") || "无"}。${relation}。`;
   }
