@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>BTC 模拟盘</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* 模拟合约交易：布局参照常见的 U 本位合约下单界面（K 线 · 订单簿 · 下单 · 仓位），颜色和面板一致 */
+:root{
+  --bg:#f3f5f7; --card:#ffffff; --fg:#14181d; --fg2:#4f5862; --muted:#808a95; --line:#e1e5ea; --grid:#edf0f3;
+  --accent:#2a78d6; --rise-green:#0c8f0c; --fall-red:#d03b3b; --good:var(--rise-green); --bad:var(--fall-red); --warn:#c98500; --chip:#eef2f6;
+  --f:"Noto Sans SC","PingFang SC",system-ui,sans-serif; --m:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1214; --card:#181c20; --fg:#eceef0; --fg2:#b6bdc5; --muted:#87909a; --line:#2a3036; --grid:#22272c;
+  --accent:#4b93e8; --rise-green:#36c236; --fall-red:#e66767; --good:var(--rise-green); --bad:var(--fall-red); --warn:#f0b33a; --chip:#232930; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1214; --card:#181c20; --fg:#eceef0; --fg2:#b6bdc5; --muted:#87909a; --line:#2a3036; --grid:#22272c;
+  --accent:#4b93e8; --rise-green:#36c236; --fall-red:#e66767; --good:var(--rise-green); --bad:var(--fall-red); --warn:#f0b33a; --chip:#232930; color-scheme:dark}
+:root[data-market-colors="red-up"]{--good:var(--fall-red);--bad:var(--rise-green)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f);font-size:13px;line-height:1.5;padding-bottom:env(safe-area-inset-bottom,0px)}
+button,input,select{font:inherit;color:inherit}
+.num{font-family:var(--m);font-variant-numeric:tabular-nums}
+.good{color:var(--good)} .bad{color:var(--bad)} .mut{color:var(--muted)} .warn{color:var(--warn)}
+a{color:var(--accent)}
+
+/* 顶栏 */
+.hd{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px 18px;padding:8px 14px;flex-wrap:wrap}
+.sym{display:flex;align-items:baseline;gap:6px}.sym b{font-size:16px}.sym span{color:var(--muted);font-size:12px}
+.badge{background:var(--chip);color:var(--warn)!important;border-radius:4px;padding:0 6px;font-weight:500}
+.hp{display:flex;align-items:baseline;gap:8px}.hp .big{font-size:20px;font-weight:600}
+.stats{display:flex;gap:4px 18px;flex-wrap:wrap;margin:0}.stats div{display:flex;flex-direction:column;line-height:1.3}.stats dt{color:var(--muted);font-size:11px}.stats dd{margin:0;font-family:var(--m);font-size:12px}
+.hd .sp{flex:1}
+.hd .lnk{font-size:13px;text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:4px 10px;color:var(--fg);white-space:nowrap}
+.conn{font-size:11px;color:var(--muted)}.conn i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:4px}.conn.ok i{background:var(--rise-green)}
+
+/* 主网格 */
+.grid{display:grid;gap:1px;background:var(--line);grid-template-columns:minmax(0,1fr) 290px 320px;grid-template-areas:"chart book form" "bottom bottom acct"}
+.grid>section{background:var(--card);min-width:0}
+.chartbox{grid-area:chart;display:flex;flex-direction:column}
+.bookbox{grid-area:book}
+.formbox{grid-area:form;padding:10px 12px}
+.bottom{grid-area:bottom;min-height:260px}
+.acct{grid-area:acct;padding:10px 12px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;overflow-x:auto}
+.tabs button{background:none;border:0;padding:8px 10px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent);font-weight:500}
+#chart{flex:1;min-height:440px}
+.chartbox .tabs{border-bottom:1px solid var(--line)}
+
+/* 订单簿 */
+.bcols,.brow{display:grid;grid-template-columns:1fr 1fr 1fr;padding:0 10px;font-family:var(--m);font-size:12px}
+.bcols{color:var(--muted);font-family:var(--f);font-size:11px;padding-top:6px;padding-bottom:4px}
+.bcols span:not(:first-child),.brow span:not(:first-child){text-align:right}
+.brow{position:relative;cursor:pointer;line-height:19px}
+.brow i{position:absolute;right:0;top:1px;bottom:1px;opacity:.14;pointer-events:none}
+.brow.a span:first-child{color:var(--bad)}.brow.a i{background:var(--bad)}
+.brow.b span:first-child{color:var(--good)}.brow.b i{background:var(--good)}
+.brow:hover{background:var(--chip)}
+.mid{display:flex;align-items:baseline;gap:10px;padding:6px 10px;border-block:1px solid var(--grid)}.mid b{font-size:17px;font-family:var(--m)}.mid span{color:var(--muted);font-family:var(--m);font-size:12px}
+.trow{display:grid;grid-template-columns:1fr 1fr 1fr;padding:0 10px;font-family:var(--m);font-size:12px;line-height:19px}.trow span:not(:first-child){text-align:right}.trow span:last-child{color:var(--muted)}
+
+/* 下单 */
+.mrow{display:flex;gap:6px;margin-bottom:8px}
+.mrow button{flex:1;background:var(--chip);border:0;border-radius:4px;padding:5px 0;cursor:pointer;font-weight:500}
+.otabs{display:flex;gap:14px;margin-bottom:8px}
+.otabs button{background:none;border:0;padding:2px 0;cursor:pointer;color:var(--muted)}.otabs button[aria-selected="true"]{color:var(--fg);font-weight:600}
+.av{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-bottom:6px}.av b{color:var(--fg);font-family:var(--m);font-weight:500}
+.fld{display:flex;align-items:center;background:var(--chip);border-radius:6px;margin-bottom:8px;border:1px solid transparent;padding:0 10px;height:38px}
+.fld:focus-within{border-color:var(--accent)}
+.fld label{color:var(--muted);font-size:12px;white-space:nowrap}
+.fld input{flex:1;min-width:0;border:0;background:none;text-align:right;padding:0 8px;font-family:var(--m);font-size:13.5px;outline:none}
+.fld .u{color:var(--fg2);font-size:12px;white-space:nowrap}
+.fld button{background:none;border:0;color:var(--accent);cursor:pointer;padding:0 0 0 6px;font-size:12px}
+.pct{display:flex;gap:6px;margin-bottom:8px}.pct button{flex:1;background:none;border:1px solid var(--line);border-radius:4px;padding:3px 0;cursor:pointer;font-size:12px;color:var(--fg2)}
+.pct button:hover{border-color:var(--accent)}
+.chk{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:var(--fg2)}.chk label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.tpsl{display:none}.tpsl.on{display:block}
+.costs{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:11.5px;color:var(--muted);margin-bottom:8px}.costs b{font-family:var(--m);font-weight:500;color:var(--fg2)}
+.go{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.go button{border:0;border-radius:6px;padding:10px 0;font-weight:600;font-size:14px;color:#fff;cursor:pointer}
+.go .buy{background:var(--rise-green)}.go .sell{background:var(--fall-red)}
+:root[data-market-colors="red-up"] .go .buy{background:var(--fall-red)}:root[data-market-colors="red-up"] .go .sell{background:var(--rise-green)}
+.go button:disabled{opacity:.5;cursor:default}
+.msg{min-height:18px;font-size:12px;margin-top:6px}
+
+/* 仓位 / 委托 */
+.tw{overflow-x:auto}
+table.t{border-collapse:collapse;width:100%;font-size:12px}
+.t th{color:var(--muted);font-weight:400;text-align:left;padding:6px 10px;white-space:nowrap;border-bottom:1px solid var(--grid)}
+.t td{padding:7px 10px;white-space:nowrap;border-bottom:1px solid var(--grid);font-family:var(--m)}
+.t td.f{font-family:var(--f)}
+.t small{display:block;color:var(--muted);font-size:11px}
+.sbtn{background:var(--chip);border:0;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:12px;margin-right:4px}
+.sbtn:hover{outline:1px solid var(--accent)}
+.lc{display:flex;align-items:center;gap:4px}.lc input{width:84px;background:var(--chip);border:1px solid var(--line);border-radius:4px;padding:2px 6px;font-family:var(--m);font-size:12px}
+.empty{color:var(--muted);padding:26px;text-align:center}
+.pcards{display:none}
+
+/* 账户 */
+.acct h3{margin:0 0 8px;font-size:13px}
+.kv{display:flex;justify-content:space-between;padding:3px 0;font-size:12.5px}.kv span{color:var(--muted)}.kv b{font-family:var(--m);font-weight:500}
+.acct .note{color:var(--muted);font-size:11.5px;margin:8px 0 0}
+.acct .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--card);padding:8px 14px;border-radius:8px;font-size:13px;z-index:50;max-width:92vw;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:.95}
+
+/* 弹窗 */
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
+.dlg[hidden]{display:none}
+.dlg>div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;width:min(380px,100%);display:grid;gap:10px}
+.dlg h3{margin:0;font-size:15px}
+.dlg .row{display:flex;gap:8px;justify-content:flex-end}
+.dlg .row button{padding:7px 16px;border-radius:6px;border:1px solid var(--line);background:var(--chip);cursor:pointer}
+.dlg .row .pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.levv{font-size:22px;font-family:var(--m);text-align:center;font-weight:600}
+.dlg input[type=range]{width:100%}
+.ticks{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}.ticks button{background:none;border:0;color:var(--muted);cursor:pointer;padding:0}
+.seg2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.seg2 button{padding:7px 0;border-radius:6px;border:1px solid var(--line);background:none;cursor:pointer}.seg2 button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:600}
+.hint{font-size:12px;color:var(--muted)}
+
+/* 手机：K 线可收起；下单在左、订单簿在右；仓位用卡片 */
+.mobonly{display:none}
+@media(max-width:820px){
+  .stats .dsk{display:none}
+  .grid{grid-template-columns:minmax(0,1fr) minmax(0,42%);grid-template-areas:"chart chart" "form book" "bottom bottom" "acct acct"}
+  #chart{min-height:0;height:280px;flex:none}
+  .chartbox.fold #chart,.chartbox.fold .tf{display:none}
+  .mobonly{display:inline-block}
+  .formbox{padding:8px 8px 10px}
+  .bookbox .bt{display:none}
+  .bcols,.brow{grid-template-columns:1fr 1fr;padding:0 6px}.bcols span:last-child,.brow span:last-child{display:none}
+  .fld{height:36px;padding:0 8px}.fld input{font-size:13px;padding:0 4px}
+  .go{grid-template-columns:1fr}
+  .tw.pos{display:none}.pcards{display:grid;gap:8px;padding:8px}
+  .hd{padding:6px 10px;gap:4px 12px}
+}
+.pc{border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:6px}
+.pc .h{display:flex;align-items:center;gap:6px}.pc .h b{font-size:14px}.pc .tag{font-size:11px;padding:0 5px;border-radius:3px;background:var(--chip)}
+.pc .pl{display:flex;justify-content:space-between;align-items:baseline}.pc .pl b{font-size:17px;font-family:var(--m)}
+.pc .g{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px;font-size:11.5px}.pc .g span{color:var(--muted);display:block}.pc .g b{font-family:var(--m);font-weight:500;font-size:12.5px}
+.pc .bs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.pc .bs button{background:var(--chip);border:0;border-radius:5px;padding:7px 0;cursor:pointer}
+</style>
+</head>
+<body>
+
+<header class="hd">
+  <div class="sym"><b>BTCUSDT</b><span>永续</span><span class="badge">模拟盘</span></div>
+  <div class="hp"><span class="big num" id="hLast">—</span><span class="num" id="hChg">—</span></div>
+  <dl class="stats">
+    <div><dt>标记价格</dt><dd id="hMark">—</dd></div>
+    <div class="dsk"><dt>24h 最高</dt><dd id="hHi">—</dd></div>
+    <div class="dsk"><dt>24h 最低</dt><dd id="hLo">—</dd></div>
+    <div class="dsk"><dt>24h 成交额(USDT)</dt><dd id="hQv">—</dd></div>
+    <div><dt>资金费率 / 倒计时</dt><dd id="hFund">—</dd></div>
+  </dl>
+  <span class="sp"></span>
+  <span class="conn" id="conn"><i></i><span>连接中</span></span>
+  <button type="button" class="lnk mobonly" id="chartTog">K 线</button>
+  <a class="lnk" href="./">← 作战面板</a>
+</header>
+
+<main class="grid">
+  <section class="chartbox" id="chartbox">
+    <div class="tabs tf" id="tf" role="tablist" aria-label="K 线周期"></div>
+    <div id="chart"></div>
+  </section>
+
+  <section class="bookbox">
+    <div class="tabs" role="tablist"><button type="button" aria-selected="true" data-bt="book">订单簿</button><button type="button" class="bt" aria-selected="false" data-bt="trades">最新成交</button></div>
+    <div id="bookPane">
+      <div class="bcols"><span>价格(USDT)</span><span>数量(BTC)</span><span>合计(BTC)</span></div>
+      <div id="asks"></div>
+      <div class="mid"><b id="midLast">—</b><span id="midMark">—</span></div>
+      <div id="bids"></div>
+    </div>
+    <div id="tradePane" hidden>
+      <div class="bcols"><span>价格(USDT)</span><span>数量(BTC)</span><span>时间</span></div>
+      <div id="trades"></div>
+    </div>
+  </section>
+
+  <section class="formbox">
+    <div class="mrow"><button type="button" id="modeBtn">全仓</button><button type="button" id="levBtn">20x</button></div>
+    <div class="otabs" role="tablist" id="otabs">
+      <button type="button" data-ot="limit" aria-selected="true">限价</button>
+      <button type="button" data-ot="market" aria-selected="false">市价</button>
+      <button type="button" data-ot="stop" aria-selected="false">止盈止损</button>
+    </div>
+    <div class="av"><span>可用</span><b id="fAvail">— USDT</b></div>
+    <div class="fld" id="fStopF" hidden><label for="fStop">触发价</label><input id="fStop" inputmode="decimal" autocomplete="off"><span class="u">USDT</span><button type="button" data-fill="fStop">最新</button></div>
+    <div class="fld" id="fPriceF"><label for="fPrice">价格</label><input id="fPrice" inputmode="decimal" autocomplete="off"><span class="u">USDT</span><button type="button" data-fill="fPrice">最新</button></div>
+    <div class="fld" id="fMktF" hidden><label>价格</label><input value="市价" disabled><span class="u">USDT</span></div>
+    <div class="fld"><label for="fQty">数量</label><input id="fQty" inputmode="decimal" autocomplete="off" placeholder="0"><button type="button" id="unitBtn" class="u" style="color:var(--fg2)">BTC ⇄</button></div>
+    <div class="pct" id="pct"><button type="button" data-p="10">10%</button><button type="button" data-p="25">25%</button><button type="button" data-p="50">50%</button><button type="button" data-p="75">75%</button><button type="button" data-p="100">100%</button></div>
+    <div class="chk"><label><input type="checkbox" id="fTpsl">止盈 / 止损</label><label><input type="checkbox" id="fRo">只减仓</label></div>
+    <div class="tpsl" id="tpslBox">
+      <div class="fld"><label for="fTp">止盈</label><input id="fTp" inputmode="decimal" autocomplete="off" placeholder="开多填高于进场的价"><span class="u">USDT</span></div>
+      <div class="fld"><label for="fSl">止损</label><input id="fSl" inputmode="decimal" autocomplete="off" placeholder="开多填低于进场的价"><span class="u">USDT</span></div>
+    </div>
+    <div class="costs"><span>开多成本 <b id="cBuy">—</b></span><span>开空成本 <b id="cSell">—</b></span><span>可开多 <b id="mBuy">—</b></span><span>可开空 <b id="mSell">—</b></span></div>
+    <div class="go"><button type="button" class="buy" id="goBuy">买入 / 开多</button><button type="button" class="sell" id="goSell">卖出 / 开空</button></div>
+    <div class="msg" id="fMsg"></div>
+  </section>
+
+  <section class="bottom">
+    <div class="tabs" role="tablist" id="btabs">
+      <button type="button" data-bp="pos" aria-selected="true">仓位(<span id="nPos">0</span>)</button>
+      <button type="button" data-bp="ord" aria-selected="false">当前委托(<span id="nOrd">0</span>)</button>
+      <button type="button" data-bp="hist" aria-selected="false">历史委托</button>
+      <button type="button" data-bp="fills" aria-selected="false">成交历史</button>
+      <button type="button" data-bp="ledger" aria-selected="false">资金流水</button>
+    </div>
+    <div data-pane="pos"><div class="tw pos"><table class="t" id="posT"></table></div><div class="pcards" id="posC"></div></div>
+    <div data-pane="ord" hidden><div class="tw"><table class="t" id="ordT"></table></div></div>
+    <div data-pane="hist" hidden><div class="tw"><table class="t" id="histT"></table></div></div>
+    <div data-pane="fills" hidden><div class="tw"><table class="t" id="fillT"></table></div></div>
+    <div data-pane="ledger" hidden><div class="tw"><table class="t" id="ledT"></table></div></div>
+  </section>
+
+  <section class="acct">
+    <h3>账户（模拟资金 USDT）</h3>
+    <div class="kv"><span>保证金比率</span><b id="aRatio">—</b></div>
+    <div class="kv"><span>维持保证金</span><b id="aMM">—</b></div>
+    <div class="kv"><span>保证金余额</span><b id="aMB">—</b></div>
+    <div class="kv"><span>钱包余额</span><b id="aW">—</b></div>
+    <div class="kv"><span>未实现盈亏</span><b id="aU">—</b></div>
+    <div class="kv"><span>累计盈亏（相对初始资金）</span><b id="aTot">—</b></div>
+    <div class="btns"><button type="button" class="sbtn" id="resetBtn">重置模拟账户</button><button type="button" class="sbtn cloud-on" id="cloudBtn">连接云端</button></div>
+    <p class="note" id="cloudSt"></p>
+    <p class="note">规则：单向持仓，BTCUSDT 永续。行情、订单簿、标记价格和资金费率都是币安实时公开数据。市价单按订单簿逐档吃单成交（吃单手续费 0.05%），限价单挂着等最新成交价碰到才成交（挂单手续费 0.02%），限价单价格已经穿过盘口会马上按吃单成交。止盈止损按最新成交价触发、市价平仓。强平按标记价格：保证金余额跌到维持保证金（仓位价值的 0.4%）以下就按强平价全部平掉。资金费每 8 小时按当时费率收付。页面关着时不会实时盯盘，下次打开会用 1 分钟 K 线把这段时间补算一遍（同一分钟里先按开盘 → 低/高 → 收盘的顺序走）。只是模拟，不会下真实订单。</p>
+  </section>
+</main>
+
+<div class="dlg" id="levDlg" hidden><div>
+  <h3>调整杠杆</h3>
+  <div class="levv" id="levV">20x</div>
+  <input type="range" id="levR" min="1" max="125" step="1" value="20" aria-label="杠杆">
+  <div class="ticks"><button type="button" data-l="1">1x</button><button type="button" data-l="10">10x</button><button type="button" data-l="25">25x</button><button type="button" data-l="50">50x</button><button type="button" data-l="75">75x</button><button type="button" data-l="100">100x</button><button type="button" data-l="125">125x</button></div>
+  <p class="hint" id="levHint"></p>
+  <div class="row"><button type="button" data-close>取消</button><button type="button" class="pri" id="levOk">确认</button></div>
+</div></div>
+
+<div class="dlg" id="modeDlg" hidden><div>
+  <h3>保证金模式</h3>
+  <div class="seg2"><button type="button" data-m="cross">全仓</button><button type="button" data-m="isolated">逐仓</button></div>
+  <p class="hint">全仓：整个账户的钱都给这一仓做保证金，亏损会吃掉全部余额才强平。逐仓：只有开仓时投入的保证金承担亏损，强平只亏这一份。有仓位或委托时不能切换。</p>
+  <div class="row"><button type="button" data-close>取消</button><button type="button" class="pri" id="modeOk">确认</button></div>
+</div></div>
+
+<div class="dlg" id="tpDlg" hidden><div>
+  <h3>仓位止盈止损</h3>
+  <p class="hint" id="tpInfo"></p>
+  <div class="fld"><label for="dTp">止盈价</label><input id="dTp" inputmode="decimal" autocomplete="off" placeholder="不设就空着"><span class="u">USDT</span></div>
+  <div class="fld"><label for="dSl">止损价</label><input id="dSl" inputmode="decimal" autocomplete="off" placeholder="不设就空着"><span class="u">USDT</span></div>
+  <p class="hint" id="tpEst"></p>
+  <div class="row"><button type="button" data-close>取消</button><button type="button" class="pri" id="tpOk">保存</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const FAPI = "https://fapi.binance.com";
+const WS_MKT = "wss://fstream.binance.com/market/stream?streams=btcusdt@aggTrade/btcusdt@markPrice@1s/btcusdt@ticker/btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_15m/btcusdt@kline_1h/btcusdt@kline_4h/btcusdt@kline_1d";
+const WS_BOOK = "wss://fstream.binance.com/public/stream?streams=btcusdt@depth20@100ms/btcusdt@bookTicker";
+const FEE = { maker: 0.0002, taker: 0.0005 }, MMR = 0.004, STEP = 0.001, SKEY = "btc_sim_v1";
+const jfetch = u => fetch(u, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* 存不了就只在本次有效 */ } };
+
+// 显示设置沿用作战面板（时区、涨跌配色）
+const TZ = ["Asia/Tokyo", "Asia/Shanghai"].includes(lsGet("btc_tz")) ? lsGet("btc_tz") : "Asia/Tokyo", TZOFF = { "Asia/Tokyo": 540, "Asia/Shanghai": 480 }[TZ];
+document.documentElement.dataset.marketColors = lsGet("btc_market_colors") === "red-up" ? "red-up" : "green-up";
+const fmtT = (ms, sec = true) => new Date(ms).toLocaleString("zh-CN", { timeZone: TZ, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", ...(sec ? { second: "2-digit" } : {}), hour12: false });
+const fmtHMS = ms => new Date(ms).toLocaleTimeString("zh-CN", { timeZone: TZ, hour12: false });
+const p1 = x => isFinite(x) ? x.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "—";
+const p2 = x => isFinite(x) ? x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+const q3 = x => isFinite(x) ? x.toFixed(3) : "—";
+const r3 = x => Math.floor(x / STEP + 1e-9) * STEP;
+const sgnTxt = (x, d = 2) => !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "-" : "") + Math.abs(x).toFixed(d);
+const cls = x => x > 0 ? "good" : x < 0 ? "bad" : "";
+
+// ---------------- 账户状态（本机保存 + 可选同步到私有仓库） ----------------
+const blank = bal => ({ v: 1, start: bal, wallet: bal, lev: 20, mode: "cross", pos: null, orders: [], hist: [], fills: [], ledger: [{ t: Date.now(), type: "初始资金", amt: bal }], lastT: Date.now(), nextFund: 0, seq: 0, u: Date.now() });
+let A = (() => { try { const x = JSON.parse(lsGet(SKEY)); return x && x.v === 1 ? x : null; } catch (e) { return null; } })() || blank(10000);
+const M = { last: NaN, mark: NaN, fund: NaN, fundT: 0, bid: NaN, ask: NaN, book: { b: [], a: [] }, trades: [], tk: {}, ok: false, ready: false };
+let dirty = true, saveT = 0;
+function touch() { A.u = Date.now(); dirty = true; clearTimeout(saveT); saveT = setTimeout(save, 400); cloudSoon(); }
+function save() { lsSet(SKEY, JSON.stringify(A)); }
+const nid = () => `${Date.now().toString(36)}-${(++A.seq).toString(36)}`;
+const ledger = (type, amt, t = Date.now()) => { A.ledger.unshift({ t, type, amt }); A.ledger.length = Math.min(A.ledger.length, 400); };
+let toastT = 0;
+function toast(s) { const el = $("toast"); el.textContent = s; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), 2600); }
+
+// ---------------- 计算 ----------------
+const sg = p => p.side === "long" ? 1 : -1;
+const upnl = (px = M.mark) => A.pos && isFinite(px) ? sg(A.pos) * A.pos.qty * (px - A.pos.entry) : 0;
+const posIM = () => A.pos ? A.pos.qty * A.pos.entry / A.pos.lev : 0;
+const ordIM = () => A.orders.filter(o => !o.ro).reduce((t, o) => t + o.qty * (o.price || o.stop || M.last) / A.lev, 0);
+const maint = (px = M.mark) => A.pos && isFinite(px) ? A.pos.qty * px * MMR : 0;
+function avail() {
+  if (!A.pos) return A.wallet - ordIM();
+  return A.pos.mode === "cross" ? A.wallet + Math.min(0, upnl()) - posIM() - ordIM() : A.wallet - A.pos.margin - ordIM();
+}
+// 强平价：保证金（全仓 = 钱包余额，逐仓 = 这一仓的保证金）+ 浮亏 = 维持保证金 时的标记价格
+function liqPx(p = A.pos) {
+  if (!p) return NaN;
+  const W = p.mode === "cross" ? A.wallet : p.margin, q = p.qty, e = p.entry;
+  const x = p.side === "long" ? (q * e - W) / (q * (1 - MMR)) : (W + q * e) / (q * (1 + MMR));
+  return x > 0 ? x : NaN;
+}
+// 市价单按订单簿逐档成交，返回均价
+function walk(side, qty) {
+  const lv = side === "buy" ? M.book.a : M.book.b;
+  if (!lv.length) return side === "buy" ? (M.ask || M.last) : (M.bid || M.last);
+  let left = qty, cost = 0;
+  for (const [p, q] of lv) { const take = Math.min(left, q); cost += take * p; left -= take; if (left <= 1e-12) break; }
+  if (left > 1e-12) cost += left * lv.at(-1)[0];
+  return cost / qty;
+}
+// 按方向能开 / 能平的最大数量
+function maxQty(side, px) {
+  if (!isFinite(px) || px <= 0) return 0;
+  const dir = side === "buy" ? 1 : -1, closeQ = A.pos && sg(A.pos) !== dir ? A.pos.qty : 0;
+  return r3(closeQ + Math.max(0, avail()) * A.lev / (px * (1 + FEE.taker * A.lev)));
+}
+
+// ---------------- 成交 ----------------
+function fill(side, qty, px, role, why, ro, t = Date.now()) {
+  const dir = side === "buy" ? 1 : -1;
+  let q = qty, realized = 0;
+  if (ro) q = A.pos && sg(A.pos) !== dir ? Math.min(q, A.pos.qty) : 0;
+  q = r3(q); if (q <= 0) return 0;
+  const fee = q * px * FEE[role];
+  A.wallet -= fee; ledger("手续费", -fee, t);
+  let rest = q;
+  if (A.pos && sg(A.pos) !== dir) {
+    const c = Math.min(rest, A.pos.qty);
+    realized = sg(A.pos) * c * (px - A.pos.entry);
+    A.wallet += realized; ledger("已实现盈亏", realized, t);
+    if (A.pos.mode === "isolated") A.pos.margin -= A.pos.margin * c / A.pos.qty;
+    A.pos.qty = r3(A.pos.qty - c + 1e-9); rest = r3(rest - c + 1e-9);
+    if (A.pos.qty <= 0) { A.pos = null; A.orders = A.orders.filter(o => !o.ro); }
+  }
+  if (rest > 0) {
+    if (!A.pos) A.pos = { side: dir > 0 ? "long" : "short", qty: 0, entry: px, lev: A.lev, mode: A.mode, margin: 0, t, tp: null, sl: null };
+    const p = A.pos;
+    p.entry = (p.entry * p.qty + px * rest) / (p.qty + rest); p.qty = r3(p.qty + rest + 1e-9);
+    if (p.mode === "isolated") p.margin += rest * px / p.lev;
+  }
+  if (A.wallet < 0) A.wallet = 0;
+  A.fills.unshift({ t, side, px, qty: q, fee, realized, role, why });
+  A.fills.length = Math.min(A.fills.length, 500);
+  touch();
+  return q;
+}
+const hist = (o, status, px, t = Date.now()) => { A.hist.unshift({ ...o, status, fillPx: px, done: t }); A.hist.length = Math.min(A.hist.length, 300); };
+
+// 每个成交价：挂单、条件单、仓位止盈止损
+function onPrice(px, t) {
+  if (!isFinite(px)) return;
+  for (const o of A.orders.slice()) {
+    let hit = false, at = px, role = "taker";
+    if (o.type === "limit" && ((o.side === "buy" && px <= o.price) || (o.side === "sell" && px >= o.price))) { hit = true; at = o.price; role = "maker"; }
+    if (o.type === "stop" && (o.dir > 0 ? px >= o.stop : px <= o.stop)) hit = true;
+    if (!hit) continue;
+    A.orders = A.orders.filter(x => x.id !== o.id);
+    const q = fill(o.side, o.qty, at, role, o.type === "limit" ? "限价成交" : "条件单触发", o.ro, t);
+    hist(o, q > 0 ? "已成交" : "已取消（无仓可减）", at, t);
+    if (q > 0 && !o.ro && (o.tp || o.sl) && A.pos) { A.pos.tp = o.tp || A.pos.tp; A.pos.sl = o.sl || A.pos.sl; }
+    if (q > 0) toast(`${o.type === "limit" ? "限价单" : "条件单"}成交：${o.side === "buy" ? "买入" : "卖出"} ${q3(q)} BTC @ ${p1(at)}`);
+    touch();
+  }
+  const p = A.pos;
+  if (p) {
+    const L = p.side === "long";
+    const slHit = p.sl && (L ? px <= p.sl : px >= p.sl), tpHit = p.tp && (L ? px >= p.tp : px <= p.tp);
+    if (slHit || tpHit) {
+      const q = p.qty;
+      fill(L ? "sell" : "buy", q, px, "taker", slHit ? "止损" : "止盈", true, t);
+      toast(`${slHit ? "止损" : "止盈"}触发：${q3(q)} BTC 已按 ${p1(px)} 市价平仓`);
+    }
+  }
+}
+// 标记价格：强平；资金费
+function onMark(mk, t) {
+  if (!isFinite(mk)) return;
+  const p = A.pos;
+  if (p) {
+    const bal = (p.mode === "cross" ? A.wallet : p.margin) + upnl(mk);
+    if (bal <= maint(mk)) {
+      const lp = liqPx(p), at = isFinite(lp) ? lp : mk, q = p.qty, w0 = A.wallet, m0 = p.mode === "cross" ? A.wallet : p.margin;
+      fill(p.side === "long" ? "sell" : "buy", q, at, "taker", "强平", true, t);
+      // 强平后剩下的那点维持保证金也拿不回来（交易所收作强平清算费）：逐仓亏掉整份保证金，全仓余额清零
+      const extra = Math.max(0, Math.min(A.wallet, m0 - (w0 - A.wallet)));
+      if (extra > 0) { A.wallet -= extra; ledger("强平清算费", -extra, t); }
+      if (p.mode === "cross") A.orders.forEach(o => hist(o, "已取消（强平）", NaN, t)), A.orders = [];
+      toast(`仓位被强平：${q3(q)} BTC @ ${p1(at)}`);
+    }
+  }
+  if (A.nextFund && t >= A.nextFund) {
+    if (A.pos && isFinite(M.fund)) { const amt = -sg(A.pos) * A.pos.qty * mk * M.fund; A.wallet += amt; ledger("资金费用", amt, A.nextFund); touch(); }
+    A.nextFund = 0;
+  }
+  if (!A.nextFund && M.fundT > t) A.nextFund = M.fundT;
+}
+
+// ---------------- 下单 ----------------
+let OT = "limit", UNIT = lsGet("btc_sim_unit") === "usdt" ? "usdt" : "btc";
+function refPx() { return OT === "limit" ? +$("fPrice").value : OT === "stop" ? +$("fStop").value : M.last; }
+function qtyIn(px) { const v = +$("fQty").value; return UNIT === "usdt" ? r3(v / px) : r3(v); }
+function place(side) {
+  const msg = s => { $("fMsg").textContent = s; $("fMsg").className = "msg bad"; };
+  if (!M.ready) return msg("行情还没连上，稍等");
+  const dir = side === "buy" ? 1 : -1, ro = $("fRo").checked;
+  const price = OT === "limit" ? +$("fPrice").value : NaN, stop = OT === "stop" ? +$("fStop").value : NaN;
+  if (OT === "limit" && !(price > 0)) return msg("先填价格");
+  if (OT === "stop" && !(stop > 0)) return msg("先填触发价");
+  const px = OT === "limit" ? price : OT === "stop" ? stop : (side === "buy" ? M.ask : M.bid) || M.last;
+  const qty = qtyIn(px);
+  if (!(qty >= STEP)) return msg(`数量至少 ${STEP} BTC（约 ${p1(STEP * px)} USDT）`);
+  const closeQ = A.pos && sg(A.pos) !== dir ? A.pos.qty : 0;
+  if (ro && !closeQ) return msg("只减仓：现在没有可以减的反向仓位");
+  const openQ = ro ? 0 : Math.max(0, qty - closeQ), need = openQ * px / A.lev + qty * px * FEE.taker;
+  if (openQ > 0 && need > avail()) return msg(`可用余额不足：需要约 ${p2(need)} USDT，可用 ${p2(avail())} USDT`);
+  let tp = null, sl = null;
+  if ($("fTpsl").checked && !ro) {
+    tp = +$("fTp").value || null; sl = +$("fSl").value || null;
+    if (tp && (dir > 0 ? tp <= px : tp >= px)) return msg(`止盈价要${dir > 0 ? "高" : "低"}于进场价`);
+    if (sl && (dir > 0 ? sl >= px : sl <= px)) return msg(`止损价要${dir > 0 ? "低" : "高"}于进场价`);
+  }
+  const o = { id: nid(), t: Date.now(), type: OT, side, qty, price: isFinite(price) ? price : null, stop: isFinite(stop) ? stop : null, ro, tp, sl };
+  if (OT === "market" || (OT === "limit" && (side === "buy" ? price >= M.ask : price <= M.bid))) {
+    const w = walk(side, qty), at = OT === "market" ? w : side === "buy" ? Math.min(price, w) : Math.max(price, w);
+    const q = fill(side, qty, at, "taker", OT === "market" ? "市价" : "限价（立即成交）", ro);
+    hist(o, "已成交", at);
+    if (q > 0 && !ro && (tp || sl) && A.pos) { A.pos.tp = tp || A.pos.tp; A.pos.sl = sl || A.pos.sl; }
+    $("fMsg").className = "msg good"; $("fMsg").textContent = `已成交：${side === "buy" ? "买入" : "卖出"} ${q3(q)} BTC，均价 ${p1(at)}`;
+  } else {
+    if (OT === "stop") o.dir = stop >= M.last ? 1 : -1;
+    A.orders.unshift(o); touch();
+    $("fMsg").className = "msg"; $("fMsg").textContent = `已挂单：${OT === "limit" ? "限价" : "条件市价"} ${side === "buy" ? "买入" : "卖出"} ${q3(qty)} BTC @ ${p1(OT === "limit" ? price : stop)}`;
+  }
+  $("fQty").value = "";
+  touch();
+}
+function closeMarket() {
+  if (!A.pos) return;
+  const side = A.pos.side === "long" ? "sell" : "buy", q = A.pos.qty, at = walk(side, q);
+  fill(side, q, at, "taker", "市价平仓", true);
+  hist({ id: nid(), t: Date.now(), type: "market", side, qty: q, ro: true }, "已成交", at);
+  toast(`已市价平仓 ${q3(q)} BTC，均价 ${p1(at)}`);
+}
+function closeLimit(price) {
+  if (!A.pos || !(price > 0)) return toast("先填平仓价格");
+  const side = A.pos.side === "long" ? "sell" : "buy", q = A.pos.qty;
+  if (side === "sell" ? price <= M.bid : price >= M.ask) { closeMarket(); return; }
+  A.orders.unshift({ id: nid(), t: Date.now(), type: "limit", side, qty: q, price, stop: null, ro: true }); touch();
+  toast(`已挂限价平仓单 ${q3(q)} BTC @ ${p1(price)}`);
+}
+
+// ---------------- 行情 ----------------
+let chart, cs, vs, TF = lsGet("btc_sim_tf") || "15m", lines = [];
+const TFS = [["1m", "1分"], ["5m", "5分"], ["15m", "15分"], ["1h", "1小时"], ["4h", "4小时"], ["1d", "1日"]];
+const sh = ms => Math.floor(ms / 1000) + TZOFF * 60;     // 图表横轴按所选时区显示
+function cssv(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function initChart() {
+  if (!window.LightweightCharts) { $("chart").innerHTML = '<p class="empty">K 线组件加载失败（网络问题），不影响下单</p>'; return; }
+  chart = LightweightCharts.createChart($("chart"), { autoSize: true, layout: { background: { color: cssv("--card") }, textColor: cssv("--muted"), fontFamily: "IBM Plex Mono, monospace" },
+    grid: { vertLines: { color: cssv("--grid") }, horzLines: { color: cssv("--grid") } }, rightPriceScale: { borderColor: cssv("--line") },
+    timeScale: { borderColor: cssv("--line"), timeVisible: true, secondsVisible: false }, crosshair: { mode: 0 } });
+  const up = cssv("--good"), dn = cssv("--bad");
+  cs = chart.addCandlestickSeries({ upColor: up, downColor: dn, wickUpColor: up, wickDownColor: dn, borderVisible: false, priceFormat: { type: "price", precision: 1, minMove: 0.1 } });
+  vs = chart.addHistogramSeries({ priceScaleId: "", priceFormat: { type: "volume" } });
+  vs.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+  $("tf").innerHTML = TFS.map(([k, n]) => `<button type="button" data-tf="${k}" aria-selected="${k === TF}">${n}</button>`).join("");
+  $("tf").onclick = e => { const b = e.target.closest("[data-tf]"); if (!b) return; TF = b.dataset.tf; lsSet("btc_sim_tf", TF); [...$("tf").children].forEach(x => x.setAttribute("aria-selected", x === b)); loadKl(); };
+  loadKl();
+}
+async function loadKl() {
+  if (!cs) return;
+  const k = await jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=${TF}&limit=500`).catch(() => null);
+  if (!k) return;
+  cs.setData(k.map(x => ({ time: sh(+x[0]), open: +x[1], high: +x[2], low: +x[3], close: +x[4] })));
+  vs.setData(k.map(x => ({ time: sh(+x[0]), value: +x[5], color: (+x[4] >= +x[1] ? cssv("--good") : cssv("--bad")) + "66" })));
+  drawLines(true);
+}
+let lineKey = "";
+function drawLines(force) {
+  if (!cs) return;
+  const p = A.pos, lp = liqPx();
+  const want = [];
+  if (p) {
+    want.push([p.entry, cssv("--accent"), `${p.side === "long" ? "多" : "空"} ${q3(p.qty)}`, 0]);
+    if (isFinite(lp)) want.push([lp, cssv("--warn"), "强平", 2]);
+    if (p.tp) want.push([p.tp, cssv("--good"), "止盈", 2]);
+    if (p.sl) want.push([p.sl, cssv("--bad"), "止损", 2]);
+  }
+  A.orders.forEach(o => want.push([o.price || o.stop, cssv("--muted"), `${o.side === "buy" ? "买" : "卖"} ${q3(o.qty)}`, 1]));
+  const key = JSON.stringify(want.map(w => [Math.round(w[0] * 10), w[2]]));
+  if (!force && key === lineKey) return;
+  lineKey = key;
+  lines.forEach(l => cs.removePriceLine(l));
+  lines = want.map(([price, color, title, style]) => cs.createPriceLine({ price, color, title, lineStyle: style, lineWidth: 1, axisLabelVisible: true }));
+}
+function connMkt() {
+  const ws = new WebSocket(WS_MKT);
+  ws.onopen = () => { M.ok = true; renderConn(); };
+  ws.onclose = () => { M.ok = false; renderConn(); setTimeout(connMkt, 3000); };
+  ws.onmessage = m => {
+    const { stream, data: d } = JSON.parse(m.data);
+    if (stream.endsWith("@aggTrade")) {
+      M.last = +d.p; M.ready = M.ready || isFinite(M.mark);
+      M.trades.unshift([+d.p, +d.q, d.T, d.m]); M.trades.length = Math.min(M.trades.length, 40);
+      A.lastT = d.T;
+      if (M.ready) onPrice(M.last, d.T);
+      dirty = true;
+    } else if (stream.includes("@markPrice")) {
+      M.mark = +d.p; M.fund = +d.r; M.fundT = +d.T;
+      if (M.ready) onMark(M.mark, d.E);
+      M.ready = M.ready || isFinite(M.last); dirty = true;
+    } else if (stream.endsWith("@ticker")) {
+      M.tk = { chg: +d.P, hi: +d.h, lo: +d.l, qv: +d.q };
+    } else if (stream.includes("@kline_")) {
+      const k = d.k; if (k.i !== TF || !cs) return;
+      try {
+        cs.update({ time: sh(k.t), open: +k.o, high: +k.h, low: +k.l, close: +k.c });
+        vs.update({ time: sh(k.t), value: +k.v, color: (+k.c >= +k.o ? cssv("--good") : cssv("--bad")) + "66" });
+      } catch (e) { /* 切换周期时旧数据还没换完，跳过这一根 */ }
+    }
+  };
+}
+function connBook() {
+  const ws = new WebSocket(WS_BOOK);
+  ws.onclose = () => setTimeout(connBook, 3000);
+  ws.onmessage = m => {
+    const { stream, data: d } = JSON.parse(m.data);
+    if (stream.includes("@depth")) { M.book = { b: d.b.map(x => [+x[0], +x[1]]), a: d.a.map(x => [+x[0], +x[1]]) }; dirty = true; }
+    else { M.bid = +d.b; M.ask = +d.a; }
+  };
+}
+function renderConn() { $("conn").className = "conn" + (M.ok ? " ok" : ""); $("conn").lastChild.textContent = M.ok ? "实时" : "重连中"; }
+
+// 页面关着的那段时间：用 1 分钟 K 线和历史资金费率补算
+async function catchUp() {
+  const from = A.lastT || 0, now = Date.now();
+  if (!from || now - from < 90e3 || (!A.pos && !A.orders.length)) { A.lastT = now; return; }
+  const start = Math.max(from, now - 5 * 864e5);
+  let bars = [], s = start;
+  for (let i = 0; i < 6 && s < now; i++) {
+    const k = await jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=1m&limit=1500&startTime=${s}`).catch(() => []);
+    if (!k.length) break; bars.push(...k); s = +k.at(-1)[0] + 6e4;
+  }
+  const fr = await jfetch(`${FAPI}/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=${start}&limit=100`).catch(() => []);
+  const funds = fr.map(x => ({ t: +x.fundingTime, r: +x.fundingRate })).filter(x => x.t > from);
+  const nFill = A.fills.length, w0 = A.wallet;
+  A.nextFund = 0;   // 这段时间的资金费按历史费率单独算，避免重复
+  for (const k of bars) {
+    const t = +k[0], o = +k[1], h = +k[2], l = +k[3], c = +k[4];
+    if (t + 6e4 <= from) continue;
+    while (funds.length && funds[0].t <= t) {
+      const f = funds.shift();
+      if (A.pos) { const amt = -sg(A.pos) * A.pos.qty * o * f.r; A.wallet += amt; ledger("资金费用", amt, f.t); }
+    }
+    for (const px of (c >= o ? [o, l, h, c] : [o, h, l, c])) { onPrice(px, t); onMark(px, t); }
+  }
+  A.lastT = now; A.nextFund = 0;
+  const n = A.fills.length - nFill;
+  touch();
+  toast(`页面关了 ${((now - from) / 36e5).toFixed(1)} 小时，已按 1 分钟 K 线补算：${n} 笔成交，余额变化 ${sgnTxt(A.wallet - w0)} USDT`);
+}
+
+// ---------------- 渲染 ----------------
+function setTxt(id, v, c) { const el = $(id); if (el.textContent !== v) el.textContent = v; if (c !== undefined) el.className = c; }
+function renderTop() {
+  const prev = renderTop.prev; renderTop.prev = M.last;
+  setTxt("hLast", p1(M.last), "big num " + (M.last > prev ? "good" : M.last < prev ? "bad" : $("hLast").className.replace("big num ", "")));
+  setTxt("hChg", isFinite(M.tk.chg) ? sgnTxt(M.tk.chg) + "%" : "—", "num " + cls(M.tk.chg));
+  setTxt("hMark", p1(M.mark)); setTxt("hHi", p1(M.tk.hi)); setTxt("hLo", p1(M.tk.lo));
+  setTxt("hQv", isFinite(M.tk.qv) ? (M.tk.qv / 1e9).toFixed(2) + "B" : "—");
+  const left = M.fundT - Date.now(), hh = Math.max(0, Math.floor(left / 36e5)), mm = Math.max(0, Math.floor(left % 36e5 / 6e4)), ss = Math.max(0, Math.floor(left % 6e4 / 1e3));
+  setTxt("hFund", isFinite(M.fund) ? `${(M.fund * 100).toFixed(4)}% / ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : "—");
+  document.title = `${p1(M.last)} BTC 模拟盘`;
+}
+const MOB = matchMedia("(max-width:820px)");
+function renderBook() {
+  const n = MOB.matches ? 8 : 13;
+  const a = M.book.a.slice(0, n), b = M.book.b.slice(0, n);
+  let ca = 0, cb = 0; const ac = a.map(x => (ca += x[1])), bc = b.map(x => (cb += x[1])), mx = Math.max(ca, cb) || 1;
+  $("asks").innerHTML = a.map((x, i) => `<div class="brow a" data-px="${x[0]}"><i style="width:${ac[i] / mx * 100}%"></i><span>${p1(x[0])}</span><span>${q3(x[1])}</span><span>${q3(ac[i])}</span></div>`).reverse().join("");
+  $("bids").innerHTML = b.map((x, i) => `<div class="brow b" data-px="${x[0]}"><i style="width:${bc[i] / mx * 100}%"></i><span>${p1(x[0])}</span><span>${q3(x[1])}</span><span>${q3(bc[i])}</span></div>`).join("");
+  setTxt("midLast", p1(M.last), M.trades[0] ? (M.trades[0][3] ? "bad" : "good") : "");
+  setTxt("midMark", "标记 " + p1(M.mark));
+  if (!$("tradePane").hidden) $("trades").innerHTML = M.trades.slice(0, 26).map(x => `<div class="trow"><span class="${x[3] ? "bad" : "good"}">${p1(x[0])}</span><span>${q3(x[1])}</span><span>${fmtHMS(x[2])}</span></div>`).join("");
+}
+function renderForm() {
+  $("modeBtn").textContent = A.mode === "cross" ? "全仓" : "逐仓";
+  $("levBtn").textContent = A.lev + "x";
+  setTxt("fAvail", `${p2(avail())} USDT`);
+  const px = OT === "market" ? M.last : refPx() || M.last;
+  const mb = maxQty("buy", px), ms = maxQty("sell", px), u = UNIT === "usdt";
+  setTxt("mBuy", u ? `${p2(mb * px)} USDT` : `${q3(mb)} BTC`); setTxt("mSell", u ? `${p2(ms * px)} USDT` : `${q3(ms)} BTC`);
+  const q = qtyIn(px), cost = dir => { if (!(q > 0)) return "—"; const closeQ = A.pos && sg(A.pos) !== dir ? A.pos.qty : 0; return p2(Math.max(0, q - closeQ) * px / A.lev) + " USDT"; };
+  setTxt("cBuy", cost(1)); setTxt("cSell", cost(-1));
+  $("unitBtn").textContent = (u ? "USDT" : "BTC") + " ⇄";
+  $("fQty").placeholder = u ? "名义金额" : "0.000";
+}
+function posRow(p) {
+  const L = p.side === "long", lp = liqPx(p), u = upnl(), im = p.mode === "cross" ? posIM() : p.margin, roe = im ? u / im * 100 : NaN;
+  const mb = (p.mode === "cross" ? A.wallet : p.margin) + u, ratio = mb > 0 ? maint() / mb * 100 : 100;
+  return { L, lp, u, im, roe, ratio };
+}
+function renderPos() {
+  const p = A.pos;
+  setTxt("nPos", p ? "1" : "0"); setTxt("nOrd", String(A.orders.length));
+  const keep = document.activeElement && document.activeElement.id === "lcPx" ? $("lcPx").value : null;
+  if (!p) { $("posT").innerHTML = `<tbody><tr><td class="empty f">没有仓位</td></tr></tbody>`; $("posC").innerHTML = `<p class="empty">没有仓位</p>`; return; }
+  const { L, lp, u, im, roe, ratio } = posRow(p);
+  const side = `<b class="${L ? "good" : "bad"}">${L ? "多" : "空"}</b>`;
+  const tpsl = `${p.tp ? p1(p.tp) : "—"} / ${p.sl ? p1(p.sl) : "—"}`;
+  if (!keep) $("posT").innerHTML = `<thead><tr><th>合约</th><th>数量(BTC)</th><th>开仓价格</th><th>标记价格</th><th>强平价格</th><th>保证金比率</th><th>保证金</th><th>未实现盈亏（回报率）</th><th>止盈 / 止损</th><th>平仓</th></tr></thead><tbody><tr>
+    <td class="f">${side} BTCUSDT 永续<small>${p.mode === "cross" ? "全仓" : "逐仓"} ${p.lev}x</small></td><td class="${L ? "good" : "bad"}">${L ? "" : "-"}${q3(p.qty)}</td><td>${p1(p.entry)}</td><td>${p1(M.mark)}</td><td class="warn">${p1(lp)}</td>
+    <td class="${ratio > 80 ? "bad" : ""}">${ratio.toFixed(2)}%</td><td>${p2(im)}<small>${p.mode === "cross" ? "全仓" : "逐仓"}</small></td>
+    <td class="${cls(u)}">${sgnTxt(u)} USDT<small class="${cls(u)}">${sgnTxt(roe)}%</small></td>
+    <td>${tpsl} <button type="button" class="sbtn" data-act="tpsl">✎</button></td>
+    <td class="f"><div class="lc"><button type="button" class="sbtn" data-act="mkt">市价</button><input id="lcPx" inputmode="decimal" placeholder="价格"><button type="button" class="sbtn" data-act="lmt">限价</button></div></td></tr></tbody>`;
+  else { const r = $("posT").querySelector("tbody tr"); if (r) { r.cells[3].textContent = p1(M.mark); r.cells[7].innerHTML = `${sgnTxt(u)} USDT<small class="${cls(u)}">${sgnTxt(roe)}%</small>`; r.cells[7].className = cls(u); } }
+  $("posC").innerHTML = `<div class="pc"><div class="h">${side}<b>BTCUSDT 永续</b><span class="tag">${p.mode === "cross" ? "全仓" : "逐仓"} ${p.lev}x</span></div>
+    <div class="pl"><span class="mut">未实现盈亏(USDT)</span><span class="mut">回报率</span></div>
+    <div class="pl"><b class="${cls(u)}">${sgnTxt(u)}</b><b class="${cls(u)}">${sgnTxt(roe)}%</b></div>
+    <div class="g"><div><span>数量(BTC)</span><b>${q3(p.qty)}</b></div><div><span>保证金</span><b>${p2(im)}</b></div><div><span>保证金比率</span><b class="${ratio > 80 ? "bad" : ""}">${ratio.toFixed(2)}%</b></div>
+      <div><span>开仓价格</span><b>${p1(p.entry)}</b></div><div><span>标记价格</span><b>${p1(M.mark)}</b></div><div><span>强平价格</span><b class="warn">${p1(lp)}</b></div>
+      <div><span>止盈</span><b>${p.tp ? p1(p.tp) : "—"}</b></div><div><span>止损</span><b>${p.sl ? p1(p.sl) : "—"}</b></div></div>
+    <div class="bs"><button type="button" data-act="tpsl">止盈止损</button><button type="button" data-act="lmtp">限价平仓</button><button type="button" data-act="mkt">市价平仓</button></div></div>`;
+}
+const TYPE = { limit: "限价", market: "市价", stop: "条件市价" };
+function renderTables() {
+  $("ordT").innerHTML = A.orders.length ? `<thead><tr><th>时间</th><th>类型</th><th>方向</th><th>价格 / 触发价</th><th>数量(BTC)</th><th>只减仓</th><th>止盈 / 止损</th><th></th></tr></thead><tbody>` +
+    A.orders.map(o => `<tr><td>${fmtT(o.t)}</td><td class="f">${TYPE[o.type]}</td><td class="f ${o.side === "buy" ? "good" : "bad"}">${o.side === "buy" ? "买入" : "卖出"}</td><td>${p1(o.price || o.stop)}${o.type === "stop" ? `<small>${o.dir > 0 ? "≥" : "≤"} 触发</small>` : ""}</td><td>${q3(o.qty)}</td><td class="f">${o.ro ? "是" : "否"}</td><td>${o.tp ? p1(o.tp) : "—"} / ${o.sl ? p1(o.sl) : "—"}</td><td><button type="button" class="sbtn" data-cancel="${o.id}">撤单</button></td></tr>`).join("") +
+    `</tbody>` + (A.orders.length > 1 ? `<tfoot><tr><td colspan="8"><button type="button" class="sbtn" data-cancel="all">全部撤单</button></td></tr></tfoot>` : "") : `<tbody><tr><td class="empty f">没有委托</td></tr></tbody>`;
+  $("histT").innerHTML = A.hist.length ? `<thead><tr><th>时间</th><th>类型</th><th>方向</th><th>委托价</th><th>成交均价</th><th>数量(BTC)</th><th>状态</th></tr></thead><tbody>` +
+    A.hist.slice(0, 100).map(o => `<tr><td>${fmtT(o.done)}</td><td class="f">${TYPE[o.type] || o.type}${o.ro ? "<small>只减仓</small>" : ""}</td><td class="f ${o.side === "buy" ? "good" : "bad"}">${o.side === "buy" ? "买入" : "卖出"}</td><td>${o.price ? p1(o.price) : o.stop ? p1(o.stop) : "市价"}</td><td>${p1(o.fillPx)}</td><td>${q3(o.qty)}</td><td class="f">${o.status}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="empty f">没有记录</td></tr></tbody>`;
+  $("fillT").innerHTML = A.fills.length ? `<thead><tr><th>时间</th><th>方向</th><th>价格</th><th>数量(BTC)</th><th>手续费</th><th>角色</th><th>已实现盈亏</th><th>原因</th></tr></thead><tbody>` +
+    A.fills.slice(0, 150).map(f => `<tr><td>${fmtT(f.t)}</td><td class="f ${f.side === "buy" ? "good" : "bad"}">${f.side === "buy" ? "买入" : "卖出"}</td><td>${p1(f.px)}</td><td>${q3(f.qty)}</td><td>${f.fee.toFixed(4)}</td><td class="f">${f.role === "maker" ? "挂单" : "吃单"}</td><td class="${cls(f.realized)}">${f.realized ? sgnTxt(f.realized) : "0.00"}</td><td class="f">${esc(f.why)}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="empty f">没有成交</td></tr></tbody>`;
+  $("ledT").innerHTML = `<thead><tr><th>时间</th><th>类型</th><th>金额(USDT)</th></tr></thead><tbody>` +
+    A.ledger.slice(0, 200).map(x => `<tr><td>${fmtT(x.t)}</td><td class="f">${x.type}</td><td class="${cls(x.amt)}">${sgnTxt(x.amt, 4)}</td></tr>`).join("") + "</tbody>";
+}
+function renderAcct() {
+  const u = upnl(), mb = A.wallet + u, mm = maint();
+  setTxt("aRatio", A.pos ? (maint() / Math.max(1e-9, A.pos.mode === "cross" ? mb : A.pos.margin + u) * 100).toFixed(2) + "%" : "0.00%");
+  setTxt("aMM", p2(mm)); setTxt("aMB", p2(mb)); setTxt("aW", p2(A.wallet));
+  setTxt("aU", sgnTxt(u), cls(u)); setTxt("aTot", `${sgnTxt(mb - A.start)}（${sgnTxt((mb / A.start - 1) * 100)}%）`, cls(mb - A.start));
+}
+let tblKey = "", HOLD = 0;
+document.addEventListener("pointerdown", e => { if (e.target.closest(".bottom,.bookbox")) HOLD = Date.now() + 1200; }, true);
+function render() {
+  if (!dirty) return; dirty = false;
+  const held = Date.now() < HOLD;
+  renderTop(); if (!held) { renderBook(); renderPos(); } renderForm(); renderAcct(); drawLines();
+  if (held) dirty = true;
+  const k = A.u + "|" + A.orders.length; if (k !== tblKey) { tblKey = k; renderTables(); }
+}
+
+// ---------------- 交互 ----------------
+document.querySelectorAll("[data-bt]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-bt]").forEach(x => x.setAttribute("aria-selected", x === b));
+  $("bookPane").hidden = b.dataset.bt !== "book"; $("tradePane").hidden = b.dataset.bt !== "trades"; dirty = true;
+});
+$("btabs").onclick = e => { const b = e.target.closest("[data-bp]"); if (!b) return;
+  [...$("btabs").children].forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll("[data-pane]").forEach(p => p.hidden = p.dataset.pane !== b.dataset.bp); };
+$("otabs").onclick = e => { const b = e.target.closest("[data-ot]"); if (!b) return; OT = b.dataset.ot;
+  [...$("otabs").children].forEach(x => x.setAttribute("aria-selected", x === b));
+  $("fPriceF").hidden = OT !== "limit"; $("fStopF").hidden = OT !== "stop"; $("fMktF").hidden = OT !== "market";
+  if (OT === "limit" && !$("fPrice").value && isFinite(M.last)) $("fPrice").value = M.last.toFixed(1);
+  dirty = true; };
+document.querySelectorAll("[data-fill]").forEach(b => b.onclick = () => { if (isFinite(M.last)) { $(b.dataset.fill).value = M.last.toFixed(1); dirty = true; } });
+["asks", "bids"].forEach(id => $(id).onclick = e => { const r = e.target.closest("[data-px]"); HOLD = 0; if (!r) return;
+  if (OT === "market") $("otabs").querySelector('[data-ot="limit"]').click();
+  $(OT === "stop" ? "fStop" : "fPrice").value = (+r.dataset.px).toFixed(1); dirty = true; });
+$("pct").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return;
+  const px = (OT === "market" ? M.last : refPx()) || M.last, f = +b.dataset.p / 100;
+  const m = Math.max(maxQty("buy", px), maxQty("sell", px)), q = r3(m * f);
+  $("fQty").value = UNIT === "usdt" ? (q * px).toFixed(2) : q.toFixed(3); dirty = true; };
+$("unitBtn").onclick = () => { const px = refPx() || M.last, v = +$("fQty").value;
+  UNIT = UNIT === "btc" ? "usdt" : "btc"; lsSet("btc_sim_unit", UNIT);
+  if (v && px) $("fQty").value = UNIT === "usdt" ? (v * px).toFixed(2) : r3(v / px).toFixed(3); dirty = true; };
+["fQty", "fPrice", "fStop"].forEach(id => $(id).addEventListener("input", () => { dirty = true; }));
+$("fTpsl").onchange = () => $("tpslBox").classList.toggle("on", $("fTpsl").checked);
+$("goBuy").onclick = () => place("buy"); $("goSell").onclick = () => place("sell");
+document.querySelectorAll(".dlg").forEach(d => d.addEventListener("click", e => { if (e.target === d || e.target.hasAttribute("data-close")) d.hidden = true; }));
+// 杠杆
+$("levBtn").onclick = () => {
+  if (A.pos && A.pos.mode === "isolated") return toast("逐仓有仓位时不能改杠杆，先平仓");
+  $("levR").value = A.lev; $("levV").textContent = A.lev + "x"; levHint(); $("levDlg").hidden = false; };
+function levHint() { const l = +$("levR").value; $("levV").textContent = l + "x";
+  $("levHint").textContent = `${l} 倍：价格反向约 ${(100 / l - MMR * 100).toFixed(2)}% 就会强平（逐仓按投入的保证金算；全仓要亏光整个账户才强平）。可开最大名义约 ${p2(Math.max(0, avail()) * l)} USDT。`; }
+$("levR").oninput = levHint;
+document.querySelectorAll("[data-l]").forEach(b => b.onclick = () => { $("levR").value = b.dataset.l; levHint(); });
+$("levOk").onclick = () => { const l = +$("levR").value;
+  if (A.pos && A.pos.mode === "cross" && A.wallet + upnl() < A.pos.qty * A.pos.entry / l) return toast("余额不够支撑这么低的杠杆");
+  A.lev = l; if (A.pos) A.pos.lev = l; touch(); $("levDlg").hidden = true; };
+// 保证金模式
+let modeSel = A.mode;
+$("modeBtn").onclick = () => { if (A.pos || A.orders.length) return toast("有仓位或委托时不能切换保证金模式");
+  modeSel = A.mode; document.querySelectorAll("[data-m]").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === modeSel)); $("modeDlg").hidden = false; };
+document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { modeSel = b.dataset.m; document.querySelectorAll("[data-m]").forEach(x => x.setAttribute("aria-pressed", x === b)); });
+$("modeOk").onclick = () => { A.mode = modeSel; touch(); $("modeDlg").hidden = true; };
+// 仓位操作
+function tpEst() { const p = A.pos; if (!p) return; const tp = +$("dTp").value, sl = +$("dSl").value, f = x => sg(p) * p.qty * (x - p.entry) - p.qty * x * FEE.taker;
+  $("tpEst").innerHTML = `${tp ? `打到止盈预计 <b class="${cls(f(tp))}">${sgnTxt(f(tp))} USDT</b>` : "不设止盈"}；${sl ? `打到止损预计 <b class="${cls(f(sl))}">${sgnTxt(f(sl))} USDT</b>` : "不设止损"}（已扣平仓手续费）`; }
+["dTp", "dSl"].forEach(id => $(id).oninput = tpEst);
+$("tpOk").onclick = () => { const p = A.pos; if (!p) return; const tp = +$("dTp").value || null, sl = +$("dSl").value || null, L = p.side === "long";
+  if (tp && (L ? tp <= M.last : tp >= M.last)) return toast(`止盈价要${L ? "高" : "低"}于现价`);
+  if (sl && (L ? sl >= M.last : sl <= M.last)) return toast(`止损价要${L ? "低" : "高"}于现价`);
+  p.tp = tp; p.sl = sl; touch(); $("tpDlg").hidden = true; toast("止盈止损已保存"); };
+document.querySelector(".bottom").addEventListener("click", e => {
+  const b = e.target.closest("[data-act],[data-cancel]"); if (!b) return;
+  HOLD = 0; dirty = true;
+  if (b.dataset.cancel) { const all = b.dataset.cancel === "all";
+    A.orders.filter(o => all || o.id === b.dataset.cancel).forEach(o => hist(o, "已撤销", NaN));
+    A.orders = all ? [] : A.orders.filter(o => o.id !== b.dataset.cancel); touch(); return; }
+  const a = b.dataset.act, p = A.pos; if (!p) return;
+  if (a === "mkt") { if (confirm(`按市价平掉全部 ${q3(p.qty)} BTC ${p.side === "long" ? "多" : "空"}单？`)) closeMarket(); }
+  if (a === "lmt") closeLimit(+$("lcPx").value);
+  if (a === "lmtp") { const v = prompt("限价平仓价格（USDT）", isFinite(M.last) ? M.last.toFixed(1) : ""); if (v) closeLimit(+v); }
+  if (a === "tpsl") { $("tpInfo").textContent = `${p.side === "long" ? "多" : "空"} ${q3(p.qty)} BTC · 开仓 ${p1(p.entry)} · 现价 ${p1(M.last)}。价格碰到就按市价全部平仓。`;
+    $("dTp").value = p.tp || ""; $("dSl").value = p.sl || ""; tpEst(); $("tpDlg").hidden = false; }
+});
+$("resetBtn").onclick = () => { const v = prompt("重置模拟账户：清空仓位、委托和全部记录。初始资金（USDT）：", "10000"); if (v === null) return;
+  const bal = Math.max(10, +v || 10000); A = blank(bal); touch(); dirty = true; tblKey = ""; toast(`已重置，初始资金 ${p2(bal)} USDT`); };
+$("chartTog").onclick = () => { const f = $("chartbox").classList.toggle("fold"); lsSet("btc_sim_fold", f ? "1" : "0"); };
+// 手机默认收起 K 线（先看下单和订单簿），点「K 线」展开；记住上次的选择
+{ const f = lsGet("btc_sim_fold"); if (f === "1" || (f === null && matchMedia("(max-width:820px)").matches)) $("chartbox").classList.add("fold"); }
+MOB.addEventListener("change", () => { dirty = true; });
+
+// ---------------- 云端：存在私有仓库 btc-records 的 sim.json（和作战面板用同一个令牌） ----------------
+const REC_REPO = "weilong-lab/btc-records", TKEY = "btc_gh_token";
+const CLOUD = { token: lsGet(TKEY) || "", sha: null, pushedU: 0, timer: 0, err: "", ro: false, busy: false };
+const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), c => c.charCodeAt(0)));
+async function cloudGet() {
+  const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/sim.json?t=${Date.now()}`, { headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" }, cache: "no-store" });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(r.status === 401 ? "令牌无效或过期" : r.status === 403 ? "令牌没有这个仓库的权限" : "读取失败 " + r.status);
+  const j = await r.json(); CLOUD.sha = j.sha; return JSON.parse(b64d(j.content));
+}
+async function cloudSync() {
+  if (!CLOUD.token || CLOUD.busy) return;
+  CLOUD.busy = true;
+  try {
+    const remote = await cloudGet();
+    if (remote && remote.v === 1 && (remote.u || 0) > (A.u || 0)) { const lt = Math.max(A.lastT || 0, remote.lastT || 0); A = remote; A.lastT = lt; save(); dirty = true; tblKey = ""; CLOUD.pushedU = A.u; }
+    else if (!CLOUD.ro && (!remote || (A.u || 0) > (remote.u || 0))) {
+      const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/sim.json`, { method: "PUT", headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" },
+        body: JSON.stringify({ message: "模拟盘同步", content: b64e(JSON.stringify(A)), ...(CLOUD.sha ? { sha: CLOUD.sha } : {}) }) });
+      if (r.status === 403 || r.status === 404) CLOUD.ro = true;
+      else if (r.status === 409 || r.status === 422) { CLOUD.busy = false; return cloudSoon(); }
+      else if (!r.ok) throw new Error("写入失败 " + r.status);
+      else { CLOUD.sha = (await r.json()).content.sha; CLOUD.pushedU = A.u; }
+    }
+    CLOUD.err = ""; CLOUD.last = Date.now();
+  } catch (e) { CLOUD.err = e.message || String(e); }
+  finally { CLOUD.busy = false; renderCloud(); }
+}
+function cloudSoon() { if (!CLOUD.token) return; clearTimeout(CLOUD.timer); CLOUD.timer = setTimeout(cloudSync, 3000); }
+function renderCloud() {
+  $("cloudBtn").hidden = !!CLOUD.token;
+  $("cloudSt").className = "note " + (CLOUD.err ? "bad" : "");
+  $("cloudSt").textContent = !CLOUD.token ? "云端未连接：模拟账户只存在这台设备的浏览器里。在作战面板连过云端的设备会自动连上。"
+    : CLOUD.err ? `云端同步出错：${CLOUD.err}（先存在本机，恢复后自动补传）`
+    : CLOUD.ro ? "云端只读：能看到云端的模拟账户，这台设备上的操作不会传上去"
+    : `云端已连接 · 最近同步 ${CLOUD.last ? fmtHMS(CLOUD.last) : "—"} · 换设备打开也是同一个模拟账户`;
+}
+$("cloudBtn").onclick = () => { const v = prompt(`粘贴 GitHub 细粒度令牌（只勾 ${REC_REPO}，权限 Contents：Read and write）。令牌只存在这台设备的浏览器里。`);
+  if (!v) return; CLOUD.token = v.trim(); lsSet(TKEY, CLOUD.token); renderCloud(); cloudSync(); };
+
+// ---------------- 启动 ----------------
+(async function boot() {
+  renderCloud();
+  initChart();
+  const [pi, dp] = await Promise.all([jfetch(`${FAPI}/fapi/v1/premiumIndex?symbol=BTCUSDT`).catch(() => null), jfetch(`${FAPI}/fapi/v1/depth?symbol=BTCUSDT&limit=20`).catch(() => null)]);
+  if (pi) { M.mark = +pi.markPrice; M.fund = +pi.lastFundingRate; M.fundT = +pi.nextFundingTime; }
+  if (dp) { M.book = { b: dp.bids.map(x => [+x[0], +x[1]]), a: dp.asks.map(x => [+x[0], +x[1]]) }; M.bid = M.book.b[0][0]; M.ask = M.book.a[0][0]; M.last = (M.bid + M.ask) / 2; }
+  if (CLOUD.token) await cloudSync();
+  await catchUp();
+  connMkt(); connBook();
+  if (isFinite(M.last)) $("fPrice").value = M.last.toFixed(1);
+  dirty = true;
+  setInterval(() => { dirty = true; }, 1000);
+  setInterval(() => lsSet(SKEY, JSON.stringify(A)), 10000);
+  setInterval(cloudSync, 60000);
+  (function loop() { render(); requestAnimationFrame(loop); })();
+})();
+addEventListener("pagehide", save);
+</script>
+</body>
+</html>
