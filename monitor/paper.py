@@ -265,7 +265,7 @@ class PaperTrader:
                 if rule == "A":
                     stop_d = p80_4h() * atr1h
                     call = dict(stop=round(ref - sgn * stop_d, 1), target=0, hz=SPEC["rule_a"]["hold_bars"] * 5,
-                                text=f"规则 A：4 小时模型上涨概率 {b.p4h * 100:.1f}%，挂限价 {ref:,.0f}，{SPEC['rule_a']['hold_bars'] * 5 // 60} 小时后平仓（保险止损按 4 小时 P80 逆向）")
+                                text=f"方案 A′（规则 A + 保险止损，未验证的变体）：4 小时模型上涨概率 {b.p4h * 100:.1f}%，挂限价 {ref:,.0f}，{SPEC['rule_a']['hold_bars'] * 5 // 60} 小时后平仓，保险止损按 4 小时 P80 逆向")
                 else:
                     s = SPEC["rule_b"]
                     risk = max((ref - b.lo12 + s["stop_atr"] * b.atr) if sgn > 0 else (b.hi12 + s["stop_atr"] * b.atr - ref), ref * 0.001)
