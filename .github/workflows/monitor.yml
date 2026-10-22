@@ -12,6 +12,11 @@ on:
   schedule:
     - cron: "*/30 * * * *"
   workflow_dispatch:
+    inputs:
+      diagnose:
+        description: "只检查各数据源能不能连上（不运行后台）"
+        type: boolean
+        default: false
 
 concurrency:
   group: monitor
@@ -21,7 +26,27 @@ permissions:
   contents: write
 
 jobs:
+  diagnose:
+    if: ${{ inputs.diagnose }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检查数据源
+        run: |
+          for u in \
+            "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=5m&limit=2" \
+            "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=2" \
+            "https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=2" \
+            "https://www.okx.com/api/v5/market/candles?instId=BTC-USDT-SWAP&bar=5m&limit=2" \
+            "https://www.okx.com/api/v5/public/open-interest?instId=BTC-USDT-SWAP" \
+            "https://api.bybit.com/v5/market/kline?category=linear&symbol=BTCUSDT&interval=5&limit=2" \
+            "https://api.hyperliquid.xyz/info" \
+            "https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=BTC_USDT&interval=5m&limit=2" \
+            "https://contract.mexc.com/api/v1/contract/kline/BTC_USDT?interval=Min5" \
+            "https://api.bitget.com/api/v2/mix/market/candles?symbol=BTCUSDT&productType=usdt-futures&granularity=5m&limit=2" ; do
+            code=$(curl -s -o /tmp/r -w "%{http_code}" -m 15 "$u"); echo "$code  $u  $(head -c 120 /tmp/r)"; done
+
   run:
+    if: ${{ !inputs.diagnose }}
     runs-on: ubuntu-latest
     timeout-minutes: 70
     steps:
