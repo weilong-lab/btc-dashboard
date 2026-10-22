@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 作战面板</title>
-<meta name="dashboard-release" content="2026-10-22-pnl-columns-v5">
+<meta name="dashboard-release" content="2026-10-22-market-colors-v6">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 .fee-cols{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:16px}.fee-cols>.plv+ .plv{border-left:1px solid var(--line);padding-left:16px}
@@ -13,18 +13,18 @@
 :root{
   --bg:#f3f5f7; --card:#ffffff; --fg:#14181d; --fg2:#4f5862; --muted:#808a95; --line:#e1e5ea; --grid:#edf0f3;
   --accent:#2a78d6; --band1:rgba(42,120,214,.16); --band2:rgba(42,120,214,.08);
-  --good:#0c8f0c; --warn:#c98500; --bad:#d03b3b; --chip:#eef2f6;
+  --rise-green:#0c8f0c; --fall-red:#d03b3b; --good:var(--rise-green); --warn:#c98500; --bad:var(--fall-red); --chip:#eef2f6;
   --f:"Noto Sans SC","PingFang SC",system-ui,sans-serif; --m:"IBM Plex Mono",ui-monospace,Menlo,monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1214; --card:#181c20; --fg:#eceef0; --fg2:#b6bdc5; --muted:#87909a; --line:#2a3036; --grid:#22272c;
   --accent:#4b93e8; --band1:rgba(75,147,232,.22); --band2:rgba(75,147,232,.10);
-  --good:#36c236; --warn:#f0b33a; --bad:#e66767; --chip:#232930; color-scheme:dark}}
+  --rise-green:#36c236; --fall-red:#e66767; --good:var(--rise-green); --warn:#f0b33a; --bad:var(--fall-red); --chip:#232930; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1214; --card:#181c20; --fg:#eceef0; --fg2:#b6bdc5; --muted:#87909a; --line:#2a3036; --grid:#22272c;
   --accent:#4b93e8; --band1:rgba(75,147,232,.22); --band2:rgba(75,147,232,.10);
-  --good:#36c236; --warn:#f0b33a; --bad:#e66767; --chip:#232930; color-scheme:dark}
+  --rise-green:#36c236; --fall-red:#e66767; --good:var(--rise-green); --warn:#f0b33a; --bad:var(--fall-red); --chip:#232930; color-scheme:dark}
 *{box-sizing:border-box}
 html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f);font-size:14.5px;line-height:1.6;
@@ -34,12 +34,13 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--card);border-bottom:1px solid var(--line);
   margin:0 calc(-1 * max(12px,env(safe-area-inset-left,0px)));padding:8px max(12px,env(safe-area-inset-left,0px));display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
 .top .px{font-size:26px;font-weight:600;transition:color .25s}
+:root[data-market-colors="red-up"]{--good:var(--fall-red);--bad:var(--rise-green)}
 .top .px.up{color:var(--good)} .top .px.dn{color:var(--bad)}
 .top .chg{font-weight:500}
 .conn{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .conn i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
-.conn.ok i{background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
-.conn.bad i{background:var(--bad)}
+.conn.ok i{background:var(--rise-green);box-shadow:0 0 0 3px color-mix(in srgb,var(--rise-green) 25%,transparent)}
+.conn.bad i{background:var(--fall-red)}
 /* 盘口、成交数字位数变化时不要让顶栏忽高忽低 */
 .top .conn{white-space:nowrap}
 .tzseg{margin-left:auto;flex:none}
@@ -261,6 +262,10 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
   <div class="seg tzseg" role="group" aria-label="时区">
     <button type="button" data-tz="Asia/Tokyo" aria-pressed="true">东京时间</button>
     <button type="button" data-tz="Asia/Shanghai" aria-pressed="false">北京时间</button>
+  </div>
+  <div class="seg tzseg" role="group" aria-label="涨跌配色">
+    <button type="button" data-market-colors="green-up" aria-pressed="true">绿涨红跌</button>
+    <button type="button" data-market-colors="red-up" aria-pressed="false">红涨绿跌</button>
   </div>
   <button class="refresh" id="refresh" type="button">手动刷新</button>
   <nav class="toc" id="toc" aria-label="目录"></nav>
@@ -771,7 +776,7 @@ function renderNews() {
   const ul = $("news");
   if (!S.news) { ul.innerHTML = `<li><span class="t">—</span><span>${esc(S.newsErr || "正在读取新闻源…")}</span></li>`; return; }
   const lean = s => !s ? "" : `<em class="lean ${s.startsWith("利多") ? "bull" : s.startsWith("利空") ? "bear" : "neu"}">${esc(s)}</em>`;
-  const color = { red: css("--bad"), yellow: css("--warn"), gray: css("--muted") };
+  const color = { red: css("--fall-red"), yellow: css("--warn"), gray: css("--muted") };
   const alerts = (S.news.alerts || []).filter(a => a.kind !== "新闻").slice(0, 3).map(a =>
     `<li><span class="t">${esc(fmtClock(Date.parse(a.time)))}</span><span><i class="dot" style="background:${color[a.level]}"></i>${esc(a.title)}<small>${esc(a.kind)} · ${esc((a.body || "").split("\n")[0])}</small></span></li>`);
   const news = (S.news.news || []).slice(0, 15).map(x =>
@@ -1707,12 +1712,12 @@ function jInit() {
 }
 // 时区切换：重画所有带时间的地方；喊单时间输入框保持同一时刻
 function tzApply() {
-  document.querySelectorAll(".tzseg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.tz === TZ));
+  document.querySelectorAll("button[data-tz]").forEach(b => b.setAttribute("aria-pressed", b.dataset.tz === TZ));
   document.querySelectorAll(".tzn").forEach(el => el.textContent = tzName());
   document.querySelectorAll(".tzdc").forEach(el => el.textContent = fmtClock(Date.UTC(2026, 0, 1)));
 }
 function tzInit() {
-  document.querySelectorAll(".tzseg button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("button[data-tz]").forEach(b => b.onclick = () => {
     if (b.dataset.tz === TZ) return;
     const keep = parseDT($("cTime").value);
     TZ = b.dataset.tz; try { localStorage.setItem("btc_tz", TZ); } catch (e) { /* 只在本次有效 */ }
@@ -2581,6 +2586,20 @@ jInit();
 callsInit();
 cloudInit();
 tzInit();
+(() => {
+  const apply = mode => {
+    document.documentElement.dataset.marketColors = mode === "red-up" ? "red-up" : "green-up";
+    document.querySelectorAll("button[data-market-colors]").forEach(b => b.setAttribute("aria-pressed", b.dataset.marketColors === document.documentElement.dataset.marketColors));
+  };
+  let saved = "green-up";
+  try { saved = localStorage.getItem("btc_market_colors") || saved; } catch (e) {}
+  apply(saved);
+  document.querySelectorAll("button[data-market-colors]").forEach(b => b.onclick = () => {
+    apply(b.dataset.marketColors);
+    try { localStorage.setItem("btc_market_colors", document.documentElement.dataset.marketColors); } catch (e) {}
+    everySecond(); renderMood(); renderNews(); renderPaper(); renderCalls(); renderPositions(); renderJournal(); renderAttribution();
+  });
+})();
 // 目录：取每张卡片标题（不含小字说明），点击直接跳到该卡片，滚动时高亮当前卡片
 // 目录 + 卡片顺序：取每张卡片标题（不含小字说明），点击直接跳到该卡片，滚动时高亮当前卡片；
 // 顺序可以在「调整顺序」里拖动或用 ↑ ↓ 改，保存在本机浏览器（每个人可以不一样）
