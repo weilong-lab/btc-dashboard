@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 作战面板</title>
-<meta name="dashboard-release" content="2026-10-22-a-experiment-v1">
+<meta name="dashboard-release" content="2026-10-22-margin-roi-v2">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /* 布局：手机优先的单列卡片流，宽屏两列；顶部价格条吸顶 */
@@ -340,6 +340,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 
   <section class="card span" id="moodCard">
     <h2>情绪盘 <small id="moodUpd">大户 vs 散户 · 恐惧贪婪 · 主动买卖</small></h2>
+    <div class="status" id="moodSplit"></div>
     <div class="verdict" id="moodSum">读取中…</div>
     <div class="status" id="mood"></div>
     <div class="tablewrap"><table class="ma" id="moodTbl"></table></div>
@@ -587,6 +588,11 @@ function pnlU(c, pctv) {
   const z = sizeOf(c), notional = z.amt * z.lev, liq = Math.max(0, 1 / z.lev - 0.004) * 100;
   return pctv < 0 && -pctv >= liq ? -z.amt : notional * pctv / 100 - notional * 0.001;
 }
+// 保证金收益率：扣费后的盈亏 U ÷ 投入保证金 U；价格涨跌幅仍留给方向核对。
+function marginROI(c, pricePct) {
+  const amt = sizeOf(c).amt;
+  return amt > 0 ? pnlU(c, pricePct) / amt * 100 : NaN;
+}
 // 打到止盈 / 止损时预计赚多少、亏多少
 function expectPL(c, px) {
   const sgn = c.side === "long" ? 1 : -1, ref = c.ref, out = {};
@@ -595,7 +601,7 @@ function expectPL(c, px) {
   const one = target => {
     if (!target) return null;
     const p = sgn * (target / ref - 1) * 100;
-    return { pct: p, u: pnlU(c, p), liqHit: p < 0 && -p >= liq, dflt: z.dflt };
+    return { pct: p, roi: marginROI(c, p), u: pnlU(c, p), liqHit: p < 0 && -p >= liq, dflt: z.dflt };
   };
   out.tp = one(c.target); out.sl = one(c.stop);
   if (px) out.now = one(px);
@@ -606,8 +612,8 @@ const r1 = u => Math.round(u * 10) / 10;
 const plCls = u => r1(u) > 0 ? "good" : r1(u) < 0 ? "bad" : "";
 const uTxt = u => `${r1(u) > 0 ? "+" : r1(u) < 0 ? "-" : ""}${Math.abs(r1(u)).toFixed(1)} U`;
 const uHtml = u => `<b class="${plCls(u)}">${uTxt(u)}</b>`;
-const plCell = x => !x ? "—" : `<span class="plv ${plCls(x.u)}"><b>${uTxt(x.u)}</b><small>${pct(x.pct)}${x.liqHit ? " · 先爆仓" : ""}${x.dflt ? " · 按默认金额" : ""}</small></span>`;
-const moneyCell = (c, pctv) => { if (!isFinite(pctv)) return "—"; const u = pnlU(c, pctv); return `<span class="plv ${plCls(u)}"><b>${uTxt(u)}</b><small>${pct(pctv)}${sizeOf(c).dflt ? " · 按默认金额" : ""}</small></span>`; };
+const plCell = x => !x ? "—" : `<span class="plv ${plCls(x.u)}"><b>${uTxt(x.u)}</b><small>${pct(x.roi)} · 占投入${x.liqHit ? " · 先爆仓" : ""}${x.dflt ? " · 按默认金额" : ""}</small></span>`;
+const moneyCell = (c, pctv) => { if (!isFinite(pctv)) return "—"; const u = pnlU(c, pctv); return `<span class="plv ${plCls(u)}"><b>${uTxt(u)}</b><small>${pct(marginROI(c, pctv))} · 占投入${sizeOf(c).dflt ? " · 按默认金额" : ""}</small></span>`; };
 const tzHour = ms => +new Date(ms).toLocaleString("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }) % 24;
 const tzDay = ms => new Date(ms + TZOFF[TZ] * 6e4);              // 用 getUTC* 读出所选时区的日期
 // 监控程序给的新闻时间是东京时间字符串「MM-DD HH:MM」，换成时间戳再按所选时区显示
@@ -836,8 +842,17 @@ async function pollMood() {
   S.mood = { topA: topA.value, topP: topP.value, retail: retail.value, taker: taker.value, fng: fng.value && fng.value.data, at: Date.now() };
   renderMood();
 }
+// 使用全体账户公开的多头比例；空头为补数，四舍五入后仍合计 100%。
+function accountSplit(rows) {
+  const x = rows && rows.at(-1);
+  if (!x || !Number.isFinite(x.l) || x.l < 0 || x.l > 1 || !Number.isFinite(x.t)) return null;
+  const long = Math.round(x.l * 1000) / 10;
+  return { long, short: Math.round((100 - long) * 10) / 10, at: x.t };
+}
 function renderMood() {
   const m = S.mood; if (!m || !$("mood")) return;
+  const split = accountSplit(m.retail);
+  $("moodSplit").innerHTML = split ? `<div class="chip"><span>看多 · 多头账户占比</span><b class="good">${split.long.toFixed(1)}%</b></div><div class="chip"><span>看空 · 空头账户占比</span><b class="bad">${split.short.toFixed(1)}%</b></div><p class="note">合计 100% · 币安 BTCUSDT 合约全体账户持仓方向，包含大户；不是发帖观点投票。数据截至 ${fmtDT(split.at)}${Date.now() - split.at > 3 * 36e5 ? " · 已过时" : ""}。</p>` : '<p class="note">看多 — · 看空 — · 全体账户数据不可用，暂不估算。</p>';
   const now = Date.now(), last = a => a && a.length ? a.at(-1) : null, ago = (a, h) => a && a.length > h ? a.at(-1 - h) : null;
   const chg = (a, h) => last(a) && ago(a, h) ? last(a).v - ago(a, h).v : NaN;
   const fresh = (a, maxMs) => last(a) ? now - last(a).t <= maxMs : false;
@@ -2024,7 +2039,7 @@ function renderPositions() {
       <td>${isFinite(s.toStop) ? fmt(s.toStop) : "—"}</td><td>${isFinite(s.toTgt) ? fmt(s.toTgt) : "—"}</td><td class="txt">${s.why ? `<b class="bad">该卖了：${s.why}</b>` : x.w && x.w.length ? x.w.map(a => `<span class="${a.lv}">⚠ ${esc(a.text.split("。")[0])}</span>`).join("<br>") : "持有中 · 盘面正常"}</td>
       <td class="txt"><button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}</td></tr>`; }).join("") + "</tbody>" : "";
   const done = C.calls.filter(c => c.exit).sort((a, b) => b.exit.t - a.exit.t).slice(0, 10);
-  $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏（扣手续费）</th><th>拿了多久</th></tr></thead><tbody>` +
+  $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏（扣手续费）<br>收益率 = 盈亏 ÷ 投入 U</th><th>拿了多久</th></tr></thead><tbody>` +
     done.map(c => `<tr><td>${fmtDTs(c.exit.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)} → ${fmt(c.exit.px)}</td><td>${sizeTxt(c)}</td>
       <td>${c.exit.why}</td><td>${moneyCell(c, c.exit.pnl)}</td><td>${dur(c.exit.t - c.res.filled)}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="txt">还没有卖出记录。</td></tr></tbody>`;
 }
@@ -2125,7 +2140,7 @@ function renderCalls() {
       <td>${r && r.filled ? fmt(r.adv) : "—"}</td><td>${r && r.filled ? fmt(r.fav) : "—"}</td>
       <td class="acts">${act}<button type="button" class="btn sm" data-cdel="${c.id}">删除</button></td></tr>`;
   }).join("");
-  $("cTable").innerHTML = list.length ? `<thead><tr><th>喊单时间</th><th>谁</th><th>方向</th><th>原话</th><th>进场</th><th>投入 × 杠杆</th><th>止盈</th><th>止损</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长持有</th><th>结果</th><th>卖出</th><th>盈亏（扣手续费）</th><th>最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "";
+  $("cTable").innerHTML = list.length ? `<thead><tr><th>喊单时间</th><th>谁</th><th>方向</th><th>原话</th><th>进场</th><th>投入 × 杠杆</th><th>止盈</th><th>止损</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长持有</th><th>结果</th><th>卖出</th><th>盈亏（扣手续费）<br>收益率 = 盈亏 ÷ 投入 U</th><th>最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "";
 }
 // 同一个人：上一条还没到期就喊了反方向 → 上一条标改口（保存、导入、删除后整体重算）
 function markFlips() {
