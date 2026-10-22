@@ -394,7 +394,7 @@ class Market:
             sym = r["symbol"]
             name, th = S.CROSS_ASSETS.get(sym, (sym, 1))
             q = r["response"][0]
-            closes = [c for c in q["indicators"]["quote"][0]["close"] if c is not None]
+            closes = [c for c in (q.get("indicators", {}).get("quote") or [{}])[0].get("close") or [] if c is not None]   # Yahoo 偶尔返回空数据
             ts = q.get("timestamp", [])
             if len(closes) < 4 or not ts or time.time() - ts[-1] > 900:
                 cross[name] = None  # 休市或数据过旧
