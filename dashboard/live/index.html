@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 作战面板</title>
+<meta name="dashboard-release" content="2026-10-22-a-experiment-v1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /* 布局：手机优先的单列卡片流，宽屏两列；顶部价格条吸顶 */
@@ -295,7 +296,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
       <label>名义仓位 · 强平距离<span class="levinfo" id="sinfo">—</span></label>
     </form>
     <div class="sum-sides" id="sumSides"></div>
-    <p class="note">判断顺序：先看硬性禁止（重大数据前 60 分钟、今日亏损超 15%、保证金占用超三分之一），再看规则 A / B 有没有触发，最后看是不是在急涨急跌后逆势进场。规则 A / B 在扣手续费的真实挂单回测里都没有稳定赚钱，所以即使出现信号也只叫「有参考信号」，建议小仓位。仓位按上面填的买入金额 × 杠杆算（名义仓位），每一边显示打到止损亏多少、打到止盈赚多少（都扣了约 0.1% 的开平手续费）和强平价；强平价比止损还近会标红，并给出这个止损下建议的最高杠杆（强平距离至少是止损距离的 2 倍，按 1 ÷ 杠杆 − 0.4% 估算）。买入金额和杠杆会同步到云端，也是喊单记录里没写金额时的默认值。</p>
+    <p class="note">判断顺序：先看硬性禁止（重大数据前 60 分钟、今日亏损超 15%、保证金占用超三分之一），再看规则 A / B 有没有触发，最后看是不是在急涨急跌后逆势进场。规则 A / B 在扣手续费的真实挂单回测里都没有稳定赚钱，所以即使出现信号也只叫「有参考信号」，仅供模拟验证。仓位按上面填的买入金额 × 杠杆算（名义仓位），每一边显示打到止损亏多少、打到止盈赚多少（都扣了约 0.1% 的开平手续费）和强平价；强平价比止损还近会标红，并给出这个止损下建议的最高杠杆（强平距离至少是止损距离的 2 倍，按 1 ÷ 杠杆 − 0.4% 估算）。买入金额和杠杆会同步到云端，也是喊单记录里没写金额时的默认值。</p>
   </section>
 
   <section class="card span" id="fastCard">
@@ -379,7 +380,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <h2>做多信号 / 做空信号 <small>完全镜像 · 5 分钟 / 15 分钟 / 1 小时同时看</small></h2>
     <div class="mirror" id="mirror"></div>
     <details class="rules"><summary>为什么结论不只看交易原则</summary>
-      <p>结论只看已收盘的 K 线，过滤条件和回测、模型严格执行完全一致。用 2020 年以来的全部数据检验：只看 5 分钟信号，做多做空都显著亏损（t 值 -3.8 / -4.7，7 年里最多 1 年为正）；加 1 小时趋势过滤、三周期共振、排除周末低量，或者把信号放到 15 分钟 / 1 小时 / 4 小时 K 线上，都没有变成稳定盈利。按真实挂单执行回测，规则 A（4 小时模型高把握）和规则 B（交易原则完整信号 + 过滤）也都没有通过，所以这里出现的只是「参考信号」，由模型严格执行继续验证。</p>
+      <p>结论只看已收盘的 K 线，过滤条件和回测、模型严格执行完全一致。用 2020 年以来的全部数据检验：只看 5 分钟信号，做多做空都显著亏损（t 值 -3.8 / -4.7，7 年里最多 1 年为正）；加 1 小时趋势过滤、三周期共振、排除周末低量，或者把信号放到 15 分钟 / 1 小时 / 4 小时 K 线上，都没有变成稳定盈利。按真实挂单执行回测，规则 A（4 小时反弹 / 回落假设实验）和规则 B（交易原则完整信号 + 过滤）也都没有通过，所以这里出现的只是「参考信号」，由模型严格执行继续验证。</p>
     </details>
   </section>
 
@@ -486,6 +487,9 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
       <button type="button" class="btn" id="cExport">导出</button>
       <label class="btn" for="cImport">导入<input type="file" id="cImport" accept="application/json" hidden></label>
     </div>
+    <h3 class="sub-h">规则 A · 重复假设分组 <small>反弹 / 回落实验，不是独立的买入确认</small></h3>
+    <p class="note">多单在检验反弹假设，空单在检验回落假设，并非已确认止跌或见顶。同方向相邻信号间隔不超过 4 小时且中间没有反向 A 信号，归为同组；这只是固定时间分组，不代表识别出真实行情阶段。原始记录、盈亏和策略均保留。组内信号相关，不能当作独立样本计算置信度。只有假设或执行条件改变才另立策略版本，不能覆盖旧成绩。</p>
+    <div class="tablewrap"><table class="jt" id="aGroups"></table></div>
     <div class="tablewrap"><table class="jt ct" id="cTable"></table></div>
     <p class="note">进场有两种：「现价进」= 喊单那一刻就算买入；「到价再进」= 价格在规定分钟内碰到进场价才算买入（比如「30 分钟内回踩 82500 再多」），没碰到记「未成交」，也可以点「撤单」。止盈价就是「到这个价卖」。原话里说了投入多少 U、几倍杠杆就一起记下，盈亏会同时显示 U；没说就只看百分比。每条持有中的记录都有「卖出」按钮，按现价记一笔卖出，持仓与卖出、云端同步一起更新。时间精确到秒。核对方法：从喊单时间到验证时间，逐根取币安 BTCUSDT 永续 K 线（24 小时内用 1 分钟，3 天内用 5 分钟，更长用 1 小时）。到期价比参考价朝喊单方向走了 0.1% 以上算「对」，反方向 0.1% 以上算「错」，其余算「平」。目标价和止损价按 K 线最高 / 最低判断谁先到，同一根里两个都碰到按先打止损算。上方的对比表不管每条喊单自己的验证周期，统一看进场后 1 小时、4 小时、24 小时的方向，用来判断方向判断在多长时间内最准、止盈该放多远。「中途最大逆向」是到期前价格朝反方向走的最远距离，用来看「方向对了但拿不住」：止损如果比它小，就会在方向兑现之前被扫掉。喊的价位离当时市价超过 0.15% 时当作挂单：价格碰到这个价才算进场，进场前的波动不计，到期都没碰到记「未成交」，不算对错。「模型·此刻结论」是自动记录的：顶部「此刻结论」每出现一次参考信号（规则 A 或 B），就按当时给出的进场价、止损、止盈和持有时间记一条，同一规则同方向 60 分钟内只记一次。浏览器开着时面板自己记；后台监控程序运行时，浏览器关着也会记，打开面板后自动合并。在「统计范围」里选它，就能看到模型自己的成绩。同一个人在上一条还没到期时喊了反方向，上一条标「改口」，照常核对，单独计数。</p>
   </section>
@@ -541,7 +545,7 @@ async function resolveData() {
 }
 // rules_spec.json 读不到时的兜底（和仓库里的文件保持一致）
 const SPEC_DEFAULT = {"fees":{"maker_pct":0.02,"taker_pct":0.05},"event_block_min":60,
-  "rule_a":{"name":"4 小时模型高把握","p_long":0.58,"p_short":0.42,"limit_valid_bars":3,"hold_bars":48,"insurance_stop_pct":2.0,"use_insurance_stop":false,"status":"参考","backtest":"2021–2026 按真实挂单执行：每年约 750 笔，胜率 52.5%，每笔扣费 -0.04%，6 年 1 年为正；不计费约 +0.02%。未通过。"},
+  "rule_a":{"name":"4 小时反弹 / 回落假设实验","p_long":0.58,"p_short":0.42,"limit_valid_bars":3,"hold_bars":48,"insurance_stop_pct":2.0,"use_insurance_stop":false,"status":"参考","backtest":"2021–2026 按真实挂单执行：每年约 750 笔，胜率 52.5%，每笔扣费 -0.04%，6 年 1 年为正；不计费约 +0.02%。未通过。"},
   "rule_b":{"name":"交易原则完整信号 + 检验过的过滤","trend_filter":"1h","stop_atr":0.5,"tp_R":2,"max_hold_bars":288,"status":"参考","backtest":"2021–2026：每年约 45 笔，胜率 31%，每笔扣费 -0.08%，6 年 2 年为正。加关键价位（等待计划）：每年约 10 笔，每笔 -0.15%。未通过。"}};
 let SPEC = SPEC_DEFAULT;
 // 美股（NYSE）休市日
@@ -1150,7 +1154,7 @@ function mirror(st) {
     const blockers = filt.filter(x => !x[1]).map(x => x[0]);
     const zb = Z[0][1], ruleB = zb && (sd.key === "long" ? zb.now.longB : zb.now.shortB) && !blockers.length;
     let word, cls, why;
-    if (sd.ruleA && !F.blocked) { word = "规则 A 信号"; cls = "warn"; why = `4 小时模型高把握（${p4.toFixed(1)}%）。参考信号：按真实挂单执行回测未通过，模型严格执行正在验证。`; }
+    if (sd.ruleA && !F.blocked) { word = "规则 A 信号"; cls = "warn"; why = `模型输出达到阈值（${p4.toFixed(1)}%），并非已验证的盈利概率。反弹 / 回落假设实验，真实执行回测未通过。`; }
     else if (ruleB) { word = "规则 B 信号"; cls = "warn"; why = "5 分钟完整信号收盘确认，四项过滤全部通过。参考信号：回测未通过，模型严格执行正在验证。"; }
     else if (Math.max(...cnt) >= 3) { word = "准备中"; cls = "mut"; why = `交易原则最多满足 ${Math.max(...cnt)}/5（${Z[cnt.indexOf(Math.max(...cnt))][0]}）${blockers.length ? "；不利因素：" + blockers.join("、") : ""}。`; }
     else { word = "无信号"; cls = "mut"; why = blockers.length ? "不利因素：" + blockers.join("、") + "。" : "条件不足。"; }
@@ -1299,7 +1303,7 @@ function renderSummary(st) {
     if (hard.length) { vd = "不要开"; cls = "bad"; why = hard.slice(); }
     else if (sig) {
       vd = "有参考信号"; cls = "warn";
-      why.push(`规则 ${sig[1]}：${sig[2]}`, "回测扣费后没有稳定赚钱，只用小仓位");
+      why.push(`规则 ${sig[1]}：${sig[2]}`, "回测扣费后没有稳定赚钱，仅供模拟验证，不作为自动买入依据");
       if (sig[1] === "B") pl = { entry: `市价 ≈ ${fmt(P)}`, ref: P, stop: ruleBStop(c5, z, sgn, P), tpR: B.tp_R, hold: `最长 ${B.max_hold_bars * 5 / 60} 小时（到止盈或止损先平）` };
       else pl = { entry: `挂限价 ${fmt(c5.at(-1).c)}，${A.limit_valid_bars * 5} 分钟内不成交就撤`, ref: c5.at(-1).c, stop: VOLSTAT.mae_atr["4 小时"].p80 * v.atr, hold: `${A.hold_bars * 5 / 60} 小时后平仓`, stopNote: "这里给的是方案 A′ = 规则 A + 按 4 小时 P80 逆向放的保险止损。回测和「模型严格执行」验证的都是不设止损的原版规则 A，A′ 本身还没有验证，它的成绩只看喊单记录里「模型·此刻结论」标 A′ 的单" };
     } else if (fade && !z.now[key === "long" ? "trigL" : "trigS"]) {
@@ -1342,7 +1346,7 @@ function renderSummary(st) {
     ["市场状态", `4 小时 ${pct(mv4)} · 波动${v.state}`, "", `${S.maRel || "均线读取中"}${cx && cx.key ? "；刚" + (cx.down ? "急跌超卖" : "急涨超买") : ""}`],
   ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
   // 策略状态：一行小字，提醒参考信号还没被验证过
-  $("sumStrat").textContent = `策略状态：参考，未通过验证——规则 A / B 扣费回测都没有稳定赚钱${pr ? `；模型严格执行 A ${pr.A.n} 笔累计 ${pct(pr.A.cum || 0)}、B ${pr.B.n} 笔累计 ${pct(pr.B.cum || 0)}` : ""}${mine.length ? `；模型自动记单已卖 ${mine.length} 笔，${uTxt(mineU)}（按默认金额）` : ""}。出现信号也别下重注。`;
+  $("sumStrat").textContent = `策略状态：参考，未通过验证——规则 A / B 扣费回测都没有稳定赚钱${pr ? `；模型严格执行 A ${pr.A.n} 笔累计 ${pct(pr.A.cum || 0)}、B ${pr.B.n} 笔累计 ${pct(pr.B.cum || 0)}` : ""}${mine.length ? `；模型自动记单已卖 ${mine.length} 笔，${uTxt(mineU)}（按默认金额）` : ""}。仅作模拟验证；模型输出不是已验证的赚钱概率。`;
   { const amt = J.defAmt || 100, lev = J.defLev || 10; $("sinfo").textContent = `${fmt(amt * lev)} U · 反向 ${(Math.max(0, 1 / lev - 0.004) * 100).toFixed(2)}% 强平`; }
   const L = side("long"), Sh = side("short");
   $("sumSides").innerHTML = L.html + Sh.html + (S.sumMsg && Date.now() - S.sumMsg.t < 15e3 ? `<p class="sum-line good" style="grid-column:1/-1">${S.sumMsg.html}</p>` : "");
@@ -1360,8 +1364,8 @@ function renderSummary(st) {
 // 规则 A / B 是否触发（交易计划和顶部「此刻结论」共用，保证两处一致）
 function ruleSigs(z, F) {
   const A = SPEC.rule_a, p4 = S.prob["4 小时"] / 100, pm = (S.prob["15 分钟"] + S.prob["1 小时"]) / 200, sigs = [];
-  if (!F.blocked && p4 >= A.p_long) sigs.push(["long", "A", `4 小时模型上涨概率 ${(p4 * 100).toFixed(1)}%（≥ ${Math.round(A.p_long * 100)}%）`]);
-  if (!F.blocked && p4 <= A.p_short) sigs.push(["short", "A", `4 小时模型上涨概率 ${(p4 * 100).toFixed(1)}%（≤ ${Math.round(A.p_short * 100)}%）`]);
+  if (!F.blocked && p4 >= A.p_long) sigs.push(["long", "A", `4 小时模型上涨输出值 ${(p4 * 100).toFixed(1)}%（≥ ${Math.round(A.p_long * 100)}%）`]);
+  if (!F.blocked && p4 <= A.p_short) sigs.push(["short", "A", `4 小时模型上涨输出值 ${(p4 * 100).toFixed(1)}%（≤ ${Math.round(A.p_short * 100)}%）`]);
   const okB = !F.weekend && !F.volLow && !F.blocked;
   if (okB && z.now.longB && !F.tr.dn && pm >= 0.5) sigs.push(["long", "B", "交易原则完整做多信号 + 模型同向 + 不逆 1h 趋势"]);
   if (okB && z.now.shortB && !F.tr.up && pm <= 0.5) sigs.push(["short", "B", "交易原则完整做空信号 + 模型同向 + 不逆 1h 趋势"]);
@@ -1387,7 +1391,7 @@ function plan(st) {
   if (!sigs.length) {
     const why = [];
     if (F.blocked) why.push(`${Math.round(F.evMin)} 分钟后${F.ev[0]}，事件前不开新仓。`);
-    why.push(`4 小时模型上涨概率 ${(p4 * 100).toFixed(1)}%，没到 ${Math.round(A.p_long * 100)}% / ${Math.round(A.p_short * 100)}%。`);
+    why.push(`4 小时模型上涨输出值 ${(p4 * 100).toFixed(1)}%，没到 ${Math.round(A.p_long * 100)}% / ${Math.round(A.p_short * 100)}%。`);
     why.push(`交易原则完整信号：做多 ${z.now.longB ? "✓" : "✗"}，做空 ${z.now.shortB ? "✓" : "✗"}。`);
     if (F.weekend) why.push("周末不做规则 B。");
     html = `<span class="act mut">没有信号</span><span class="why">${why.map(esc).join(" ")}</span>`;
@@ -1419,7 +1423,7 @@ function plan(st) {
       <p>「价格到关键位 + 交易原则扳机」再进场，回测每年约 10 笔、每笔 -0.15%，比不挑价位更差，所以不作为等待计划。</p></div>`;
   }
   $("ruleText").innerHTML = [
-    `<b>规则 A · ${esc(A.name)}</b>：4 小时模型上涨概率 ≥ ${Math.round(A.p_long * 100)}% 做多、≤ ${Math.round(A.p_short * 100)}% 做空；收盘价挂限价单，${A.limit_valid_bars * 5} 分钟内未被穿过就撤；持有 ${A.hold_bars * 5 / 60} 小时后挂单平仓，${A.limit_valid_bars * 5} 分钟未成交改市价；事件前 ${SPEC.event_block_min} 分钟不开。<br><span class="mut">回测：${esc(A.backtest)}</span>`,
+    `<b>规则 A · ${esc(A.name)}</b>：4 小时模型上涨输出值 ≥ ${Math.round(A.p_long * 100)}% 做多、≤ ${Math.round(A.p_short * 100)}% 做空；收盘价挂限价单，${A.limit_valid_bars * 5} 分钟内未被穿过就撤；持有 ${A.hold_bars * 5 / 60} 小时后挂单平仓，${A.limit_valid_bars * 5} 分钟未成交改市价；事件前 ${SPEC.event_block_min} 分钟不开。<br><span class="mut">回测：${esc(A.backtest)}</span>`,
     `<b>规则 B · ${esc(B.name)}</b>：5 分钟交易原则完整信号收盘确认；15m 与 1h 模型平均同向；不逆 1 小时趋势；非周末、非低量、事件前 ${SPEC.event_block_min} 分钟不开；下一根开盘市价进场，止损 = 近 12 根高 / 低点外加 ${B.stop_atr} 个 ATR，止盈 ${B.tp_R}R，最长 ${B.max_hold_bars * 5 / 60} 小时。<br><span class="mut">回测：${esc(B.backtest)}</span>`,
     `手续费按挂单 ${SPEC.fees.maker_pct}% / 市价 ${SPEC.fees.taker_pct}% 计算。参数文件 rules_spec.json 同时供回测、模型严格执行和这个面板使用，改参数后先跑回测。`,
   ].map(x => `<li>${x}</li>`).join("");
@@ -2024,11 +2028,39 @@ function renderPositions() {
     done.map(c => `<tr><td>${fmtDTs(c.exit.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)} → ${fmt(c.exit.px)}</td><td>${sizeTxt(c)}</td>
       <td>${c.exit.why}</td><td>${moneyCell(c, c.exit.pnl)}</td><td>${dur(c.exit.t - c.res.filled)}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="txt">还没有卖出记录。</td></tr></tbody>`;
 }
+// 展示层分组，不写回记录，不改变触发、成交、退出及历史成绩。
+function groupAExperiments(calls) {
+  const groups = [], byId = new Map();
+  const sorted = calls.filter(c => c.id && c.id.startsWith("m-A-")).slice().sort((a, b) => a.t - b.t || a.id.localeCompare(b.id));
+  for (const c of sorted) {
+    let g = groups.at(-1);
+    if (!g || g.side !== c.side || c.t - g.last > 4 * 3600e3) {
+      g = { id: c.id, side: c.side, start: c.t, last: c.t, calls: [] }; groups.push(g);
+    }
+    const prior = g.calls.slice();
+    byId.set(c.id, { group: g, nth: prior.length + 1,
+      losses: prior.filter(p => p.exit && p.exit.t <= c.t && p.exit.pnl < 0).length,
+      open: prior.filter(p => (!p.exit || p.exit.t > c.t) && !(p.res && p.res.done && !p.res.filled) && p.t + (p.hz || 240) * 6e4 > c.t).length });
+    g.calls.push(c); g.last = c.t;
+  }
+  return { groups, byId };
+}
+function renderAGroups(grouped, who) {
+  const el = $("aGroups"); if (!el) return;
+  const gs = grouped.groups.filter(g => g.calls.some(c => !who || c.who === who)).slice().reverse();
+  el.innerHTML = gs.length ? `<thead><tr><th>组起点</th><th>假设</th><th>触发次数</th><th>已退出亏损 / 已退出</th><th>尚无退出记录</th></tr></thead><tbody>` + gs.map(g => {
+    const exited = g.calls.filter(c => c.exit), pending = g.calls.filter(c => !c.exit && !(c.res && c.res.done && !c.res.filled));
+    return `<tr><td>${fmtDTs(g.start)}</td><td>${g.side === "long" ? "反弹假设" : "回落假设"}</td><td>${g.calls.length} 次（相关信号）</td><td>${exited.filter(c => c.exit.pnl < 0).length} / ${exited.length}（按退出价格，未扣费）</td><td>${pending.length} 条（含待核对）</td></tr>`;
+  }).join("") + "</tbody>" : '<tbody><tr><td>当前范围没有规则 A 实验记录。</td></tr></tbody>';
+}
 function renderCalls() {
   if (!$("cTable")) return;
+  const grouped = groupAExperiments(C.calls);
+  renderAGroups(grouped, $("cFilter").value);
   const who = $("cFilter").value, all = C.calls.slice().sort((a, b) => b.t - a.t), list = all.filter(c => !who || c.who === who);
   const done = list.filter(c => c.res && c.res.done), good = done.filter(c => c.res.grade === "对"), bad = done.filter(c => c.res.grade === "错");
-  const dec = good.length + bad.length, acc = dec ? good.length / dec * 100 : NaN, err = dec ? 98 / Math.sqrt(dec) : NaN;
+  const correlated = list.some(c => grouped.byId.has(c.id));
+  const dec = good.length + bad.length, acc = dec ? good.length / dec * 100 : NaN, err = dec && !correlated ? 98 / Math.sqrt(dec) : NaN;
   // 止盈 / 止损谁先到：先后顺序不确定的单不计入
   const withT = done.filter(c => c.target && !c.res.amb), tHit = withT.filter(c => c.res.first === "target").length;
   const withS = done.filter(c => c.stop && !c.res.amb), sFirst = withS.filter(c => c.res.first === "stop").length;
@@ -2041,7 +2073,7 @@ function renderCalls() {
   const chip = ([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`;
   $("cStats").innerHTML = [
     ["已到期", `${done.length} 条`, "", `进行中 ${list.length - done.length} 条`],
-    ["方向准确率", isFinite(acc) ? `${acc.toFixed(0)}%` : "—", isFinite(acc) && acc - err > 50 ? "good" : "", dec ? `对 ${good.length} / 错 ${bad.length} / 平 ${done.filter(c => c.res.grade === "平").length} · ±${err.toFixed(0)}%` : "对 / 错 / 平"],
+    ["方向准确率", isFinite(acc) ? `${acc.toFixed(0)}%` : "—", isFinite(acc) && acc - err > 50 ? "good" : "", dec ? `对 ${good.length} / 错 ${bad.length} / 平 ${done.filter(c => c.res.grade === "平").length} · ${correlated ? "含相关信号，不估计独立样本误差" : "±" + err.toFixed(0) + "%"}` : "对 / 错 / 平"],
     ["对的单中途先扛", goodAdv.length ? `${fmt(med(goodAdv))} 美元` : "—", "", goodAdv.length ? `中位数 · 最大 ${fmt(Math.max(...goodAdv))}` : "方向对的单到期前的最大逆向"],
     ["改口", `${flips} 次`, flips ? "warn" : "", "上一条没到期就喊反方向"],
   ].map(chip).join("");
@@ -2059,16 +2091,16 @@ function renderCalls() {
   // 同一批喊单，进场后 1h / 4h / 24h 各对了多少（0.1% 以内算平，不计入）
   const hzRows = HZ_CMP.map(([m, name]) => {
     const v = list.map(c => c.hzRes && c.hzRes[m]).filter(x => x != null), g = v.filter(x => x >= 0.1).length, b = v.filter(x => x <= -0.1).length, n = g + b;
-    const a = n ? g / n * 100 : NaN, e = n ? 98 / Math.sqrt(n) : NaN, avg = v.length ? v.reduce((s, x) => s + x, 0) / v.length : NaN;
+    const a = n ? g / n * 100 : NaN, e = n && !correlated ? 98 / Math.sqrt(n) : NaN, avg = v.length ? v.reduce((s, x) => s + x, 0) / v.length : NaN;
     return { name, n: v.length, g, b, a, e, avg };
   });
   $("cHzTbl").innerHTML = hzRows.some(r => r.n) ? `<thead><tr><th>进场后</th><th>样本</th><th>方向对 / 错</th><th>准确率</th><th>平均涨跌（按喊单方向，不含手续费）</th></tr></thead><tbody>` +
-    hzRows.map(r => `<tr><td class="t">${r.name}</td><td>${r.n}</td><td>${r.g} / ${r.b}</td><td class="${r.a - r.e > 50 ? "good" : ""}">${isFinite(r.a) ? `${r.a.toFixed(0)}% ±${r.e.toFixed(0)}` : "—"}</td><td class="${r.avg > 0 ? "good" : r.avg < 0 ? "bad" : ""}">${pct(r.avg, 2)}</td></tr>`).join("") + "</tbody>" : "";
+    hzRows.map(r => `<tr><td class="t">${r.name}</td><td>${r.n}</td><td>${r.g} / ${r.b}</td><td class="${r.a - r.e > 50 ? "good" : ""}">${isFinite(r.a) ? `${r.a.toFixed(0)}%${correlated ? "（相关信号）" : " ±" + r.e.toFixed(0)}` : "—"}</td><td class="${r.avg > 0 ? "good" : r.avg < 0 ? "bad" : ""}">${pct(r.avg, 2)}</td></tr>`).join("") + "</tbody>" : "";
   const best = hzRows.filter(r => r.n >= 5).sort((x, y) => y.a - x.a)[0];
   if (done.length) {
     $("cSum").className = "verdict";
-    $("cSum").textContent = `${who || "所有人"}已到期 ${done.length} 条：方向对 ${good.length} 条、错 ${bad.length} 条${dec >= 20 ? `，准确率 ${acc.toFixed(0)}% ±${err.toFixed(0)}%${acc - err > 50 ? "，明显好于抛硬币" : "，还看不出比抛硬币好"}` : "，样本还少（至少 20 条才看得出准确率）"}。` +
-      (best && hzRows.filter(r => r.n >= 5).length > 1 ? ` 按进场后的时间看，${best.name}的方向准确率最高（${best.a.toFixed(0)}%）${best.a - best.e > 50 ? (best.name === "1 小时" ? "，说明判断的优势很短，止盈应该放在 1 小时以内" : "") : `，但还在误差范围内${best.name === "1 小时" ? "；样本多了如果仍是 1 小时最准，止盈就应该放在 1 小时以内" : ""}`}。` : "") +
+    $("cSum").textContent = `${who || "所有人"}已到期 ${done.length} 条：方向对 ${good.length} 条、错 ${bad.length} 条${dec >= 20 && !correlated ? `，准确率 ${acc.toFixed(0)}% ±${err.toFixed(0)}%${acc - err > 50 ? "，明显好于抛硬币" : "，还看不出比抛硬币好"}` : correlated ? "，含重复相关信号；准确率仅作描述，不作独立样本显著性判断" : "，样本还少（至少 20 条才看得出准确率）"}。` +
+      (!correlated && best && hzRows.filter(r => r.n >= 5).length > 1 ? ` 按进场后的时间看，${best.name}的方向准确率最高（${best.a.toFixed(0)}%）${best.a - best.e > 50 ? (best.name === "1 小时" ? "，说明判断的优势很短，止盈应该放在 1 小时以内" : "") : `，但还在误差范围内${best.name === "1 小时" ? "；样本多了如果仍是 1 小时最准，止盈就应该放在 1 小时以内" : ""}`}。` : "") +
       (good.length ? ` 方向对的 ${good.length} 条里，有 ${swept} 条到期前曾逆向 ${fmt(fixed)} 美元以上——用 ${fmt(fixed)} 美元的止损，这些对的单会先被扫掉（止损对照值在「波动与扛单」里改）。` : "");
   }
   const fmtT = fmtDT;
@@ -2078,7 +2110,9 @@ function renderCalls() {
     const cur = c.exit ? c.exit.pnl : r && r.filled && !r.done && isFinite(S.price) ? sgn * (S.price / c.ref - 1) * 100 : r && r.filled ? r.chg : NaN;
     const st = !r ? "核对中…" : c.exit && !r.done ? `<b class="${c.exit.pnl > 0 ? "good" : "bad"}">已卖出</b>` : r.done ? `<b class="${r.grade === "对" ? "good" : r.grade === "错" ? "bad" : "mut"}">${r.grade}</b>`
       : !r.filled ? `等成交 · 剩 ${dur(c.t + validMs(c) - now)}` : `持有中 · 剩 ${dur(callExp(c) - now)}`;
-    const tags = [r && r.first === "target" ? "止盈先到" : "", r && r.first === "stop" ? "止损先到" : "", c.flip ? `改口 ${fmtT(c.flip)}` : "", (c.mods || []).length ? `改过 ${c.mods.length} 次止盈止损` : "", r && r.amb ? "同一分钟先后不确定" : ""].filter(Boolean).map(x => `<span class="tag">${x}</span>`).join("");
+    const ag = grouped.byId.get(c.id);
+    const groupTag = ag ? `A 实验组 ${fmtDTs(ag.group.start)} · 第 ${ag.nth} 次；此前退出亏损 ${ag.losses} 条；触发时此前仍在计划持有期且无退出记录 ${ag.open} 条。重复触发不代表确认增强` : "";
+    const tags = [groupTag, r && r.first === "target" ? "止盈先到" : "", r && r.first === "stop" ? "止损先到" : "", c.flip ? `改口 ${fmtT(c.flip)}` : "", (c.mods || []).length ? `改过 ${c.mods.length} 次止盈止损` : "", r && r.amb ? "同一分钟先后不确定" : ""].filter(Boolean).map(x => `<span class="tag">${x}</span>`).join("");
     const entryTxt = c.entry === "limit" || (r && r.limit) ? `到 ${fmt(c.ref)} 再进${c.validMin ? `<small>${c.validMin} 分钟内 · ${r && r.filled ? fmtT(r.filled).slice(-5) + " 成交" : "未成交"}</small>` : `<small>${r && r.filled ? fmtT(r.filled).slice(-5) + " 成交" : "未成交"}</small>`}`
       : `现价 ${c.ref ? fmt(c.ref) : "—"}`;
     const open = r && r.filled && !c.exit, pend = r && !r.filled && !r.done;
@@ -2115,7 +2149,7 @@ function recordModelCalls(c5, z, F, v) {
       if (rule === "A") {
         const d = VOLSTAT.mae_atr["4 小时"].p80 * v.atr;
         call = { stop: Math.round((ref - sgn * d) * 10) / 10, target: 0, hz: A.hold_bars * 5,
-          text: `方案 A′（规则 A + 保险止损，未验证的变体）：4 小时模型上涨概率 ${S.prob["4 小时"].toFixed(1)}%，挂限价 ${fmt(ref)}，${A.hold_bars * 5 / 60} 小时后平仓，保险止损按 4 小时 P80 逆向` };
+          text: `方案 A′（规则 A + 保险止损，未验证的变体）：4 小时模型上涨输出值 ${S.prob["4 小时"].toFixed(1)}%（达到实验阈值，非盈利概率），挂限价 ${fmt(ref)}，${A.hold_bars * 5 / 60} 小时后平仓，保险止损按 4 小时 P80 逆向` };
       } else {
         const r = ruleBStop(c5, z, sgn, ref);
         call = { stop: Math.round((ref - sgn * r) * 10) / 10, target: Math.round((ref + sgn * B.tp_R * r) * 10) / 10, hz: B.max_hold_bars * 5,
