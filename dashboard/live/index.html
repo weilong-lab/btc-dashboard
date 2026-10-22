@@ -413,6 +413,10 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
   <section class="card span" id="callsCard">
     <h2>喊单记录与验证 <small>到期自动按币安行情核对 · 连接云端后存在私有 GitHub 仓库</small></h2>
     <div class="jbtns"><button type="button" class="btn cloud-on">连接云端</button><button type="button" class="btn cloud-now cloud-off">立即同步</button><button type="button" class="btn cloud-off">断开云端</button><span class="cloud-st note"></span></div>
+    <form class="sum-in" onsubmit="return false">
+      <label for="cDefAmt">没写金额时每单按投入（U）<input id="cDefAmt" inputmode="decimal" value="100"></label>
+      <label for="cDefLev">没写杠杆时按（倍）<input id="cDefLev" inputmode="numeric" value="10"></label>
+    </form>
     <div class="status" id="cStats"></div>
     <div class="tablewrap"><table class="ma" id="cHzTbl"></table></div>
     <div class="verdict" id="cSum">还没有记录。把张主任（或任何人、包括你自己）的喊单原话贴进来，识别后确认保存，到期面板会自动核对。</div>
@@ -531,25 +535,32 @@ const tzName = () => TZNAME[TZ];
 const fmtClock = (ms, sec) => new Date(ms).toLocaleTimeString("zh-CN", { timeZone: TZ, hour12: false, hour: "2-digit", minute: "2-digit", ...(sec ? { second: "2-digit" } : {}) });
 const fmtDT = ms => new Date(ms).toLocaleString("zh-CN", { timeZone: TZ, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
 const fmtDTs = ms => new Date(ms).toLocaleString("zh-CN", { timeZone: TZ, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-// 有投入金额和杠杆时，把百分比换成 U（不含手续费）；没有就只看百分比
-const pnlU = (c, pctv) => c.amt && c.lev && isFinite(pctv) ? c.amt * c.lev * pctv / 100 : NaN;
-const sizeTxt = c => c.amt || c.lev ? `${c.amt ? fmt(c.amt) + " U" : "—"} × ${c.lev ? c.lev + " 倍" : "—"}` : "—";
-// 打到止盈 / 止损时预计赚多少、亏多少：有投入和杠杆就算成 U（扣开平各 0.05% 市价手续费），没有就只给百分比；
-// 杠杆太高、止损在强平价外面时，最多亏掉整份保证金
+// 每单的投入和杠杆：喊单里说了就用说的；没说就用「没写金额时按」的默认值（标「默认」）
+const sizeOf = c => c.amt && c.lev ? { amt: c.amt, lev: c.lev, dflt: false } : { amt: J.defAmt || 100, lev: J.defLev || 10, dflt: true };
+const sizeTxt = c => { const z = sizeOf(c); return `${fmt(z.amt)} U × ${z.lev} 倍${z.dflt ? "<small>默认</small>" : ""}`; };
+// 百分比换成 U：名义仓位 × 涨跌幅，扣开平各 0.05% 市价手续费；亏到强平价就按亏光保证金算
+function pnlU(c, pctv) {
+  if (!isFinite(pctv)) return NaN;
+  const z = sizeOf(c), notional = z.amt * z.lev, liq = Math.max(0, 1 / z.lev - 0.004) * 100;
+  return pctv < 0 && -pctv >= liq ? -z.amt : notional * pctv / 100 - notional * 0.001;
+}
+// 打到止盈 / 止损时预计赚多少、亏多少
 function expectPL(c, px) {
   const sgn = c.side === "long" ? 1 : -1, ref = c.ref, out = {};
   if (!ref) return out;
-  const money = c.amt && c.lev, notional = money ? c.amt * c.lev : 0, fee = notional * 0.001, liq = c.lev ? Math.max(0, 1 / c.lev - 0.004) * 100 : Infinity;
+  const z = sizeOf(c), liq = Math.max(0, 1 / z.lev - 0.004) * 100;
   const one = target => {
     if (!target) return null;
-    const p = sgn * (target / ref - 1) * 100, liqHit = p < 0 && -p >= liq;
-    return { pct: liqHit ? -liq : p, u: money ? (liqHit ? -c.amt : notional * p / 100 - fee) : NaN, liqHit };
+    const p = sgn * (target / ref - 1) * 100;
+    return { pct: p, u: pnlU(c, p), liqHit: p < 0 && -p >= liq, dflt: z.dflt };
   };
   out.tp = one(c.target); out.sl = one(c.stop);
   if (px) out.now = one(px);
   return out;
 }
-const plCell = (x, kind) => !x ? "—" : `<span class="${x.pct >= 0 ? "good" : "bad"}">${isFinite(x.u) ? `${x.u >= 0 ? "+" : ""}${x.u.toFixed(1)} U` : pct(x.pct)}</span>${isFinite(x.u) ? `<small>${pct(x.pct)}${x.liqHit ? " · 先爆仓" : ""}</small>` : `<small>${kind}，没填投入和杠杆</small>`}`;
+const uTxt = u => `${u >= 0 ? "+" : ""}${u.toFixed(1)} U`;
+const plCell = x => !x ? "—" : `<b class="${x.u >= 0 ? "good" : "bad"}">${uTxt(x.u)}</b><small>${pct(x.pct)}${x.liqHit ? " · 先爆仓" : ""}${x.dflt ? " · 按默认金额" : ""}</small>`;
+const moneyCell = (c, pctv) => !isFinite(pctv) ? "—" : `<b class="${pctv > 0 ? "good" : pctv < 0 ? "bad" : ""}">${uTxt(pnlU(c, pctv))}</b><small>${pct(pctv)}${sizeOf(c).dflt ? " · 按默认金额" : ""}</small>`;
 const tzHour = ms => +new Date(ms).toLocaleString("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }) % 24;
 const tzDay = ms => new Date(ms + TZOFF[TZ] * 6e4);              // 用 getUTC* 读出所选时区的日期
 // 监控程序给的新闻时间是东京时间字符串「MM-DD HH:MM」，换成时间戳再按所选时区显示
@@ -1425,7 +1436,7 @@ async function ghPut(path, obj, sha) {
 const CALL_FIELDS = ["id", "t", "who", "side", "text", "entry", "ref", "refGiven", "validMin", "target", "stop", "hz", "amt", "lev", "manualExit", "cancel", "u"];
 const pickCall = c => Object.fromEntries(CALL_FIELDS.filter(k => c[k] !== undefined).map(k => [k, c[k]]));
 const callsDoc = () => ({ calls: C.calls.map(pickCall).sort((a, b) => a.t - b.t || (a.id < b.id ? -1 : 1)), deleted: [...new Set(C.deleted || [])].sort() });
-const journalDoc = () => ({ balance: J.balance || 0, riskPct: J.riskPct || 2, lev: J.lev || 0, u: J.u || 0, trades: J.trades.slice().sort((a, b) => a.t - b.t), deleted: [...new Set(J.deleted || [])].sort() });
+const journalDoc = () => ({ balance: J.balance || 0, riskPct: J.riskPct || 2, lev: J.lev || 0, defAmt: J.defAmt || 100, defLev: J.defLev || 10, u: J.u || 0, trades: J.trades.slice().sort((a, b) => a.t - b.t), deleted: [...new Set(J.deleted || [])].sort() });
 function mergeById(local, remote, deleted) {
   const m = new Map();
   for (const x of [...remote, ...local]) { const o = m.get(x.id); if (!o || (x.u || 0) > (o.u || 0)) m.set(x.id, o ? { ...o, ...x } : x); }
@@ -1445,7 +1456,7 @@ async function cloudSync() {
       // 交易日志
       const delJ = new Set([...(J.deleted || []), ...((rj.obj && rj.obj.deleted) || [])]);
       J.trades = mergeById(J.trades, (rj.obj && rj.obj.trades) || [], delJ); J.deleted = [...delJ];
-      if (rj.obj && (rj.obj.u || 0) > (J.u || 0)) { J.balance = rj.obj.balance; J.riskPct = rj.obj.riskPct; J.lev = rj.obj.lev || 0; J.u = rj.obj.u; if ($("slev")) $("slev").value = $("slevr").value = J.lev; if ($("jbal")) { $("jbal").value = $("sbal").value = J.balance || ""; $("jrisk").value = $("srisk").value = J.riskPct; } }
+      if (rj.obj && (rj.obj.u || 0) > (J.u || 0)) { J.balance = rj.obj.balance; J.riskPct = rj.obj.riskPct; J.lev = rj.obj.lev || 0; J.defAmt = rj.obj.defAmt || 100; J.defLev = rj.obj.defLev || 10; J.u = rj.obj.u; if ($("cDefAmt")) { $("cDefAmt").value = J.defAmt; $("cDefLev").value = J.defLev; } if ($("slev")) $("slev").value = $("slevr").value = J.lev; if ($("jbal")) { $("jbal").value = $("sbal").value = J.balance || ""; $("jrisk").value = $("srisk").value = J.riskPct; } }
       try { localStorage.setItem(CKEY, JSON.stringify(C)); localStorage.setItem(JKEY, JSON.stringify(J)); } catch (e) { /* 只是缓存 */ }
       markFlips();
       const cd = callsDoc(), jd = journalDoc();
@@ -1537,13 +1548,13 @@ function cPreview() {
   const c = { side: C.side, ref: +$("cRef").value || S.price, target: +$("cTarget").value || 0, stop: +$("cStop").value || 0, amt: +$("cAmt").value || 0, lev: +$("cLev").value || 0 };
   const el = $("cPreview");
   if (!c.side || (!c.target && !c.stop)) { el.hidden = true; return; }
-  const e = expectPL(c), f = x => !x ? "—" : isFinite(x.u) ? `${x.u >= 0 ? "+" : ""}${x.u.toFixed(1)} U（${pct(x.pct)}）` : pct(x.pct);
+  const e = expectPL(c), z = sizeOf(c), f = x => !x ? "—" : `${uTxt(x.u)}（${pct(x.pct)}）`;
   const rr = e.tp && e.sl && e.sl.pct < 0 ? (e.tp.pct / -e.sl.pct).toFixed(2) : null;
   el.hidden = false;
   el.className = "verdict" + (e.sl && e.sl.liqHit ? " badv" : "");
   el.innerHTML = `按进场 ${fmt(c.ref)}${$("cRef").value ? "" : "（现价）"}：打到止盈预计 <b class="good">${f(e.tp)}</b>，打到止损预计 <b class="bad">${f(e.sl)}</b>${rr ? `，盈亏比 ${rr} : 1` : ""}。` +
-    (c.amt && c.lev ? `（${fmt(c.amt)} U × ${c.lev} 倍 = 名义 ${fmt(c.amt * c.lev)} U，已扣开平手续费约 ${(c.amt * c.lev * 0.001).toFixed(1)} U）` : "没填投入和杠杆，只按百分比算。") +
-    (e.sl && e.sl.liqHit ? ` 注意：${c.lev} 倍杠杆在碰到止损之前就会强平，最多亏掉整份保证金 ${fmt(c.amt)} U。` : "") +
+    `（${fmt(z.amt)} U × ${z.lev} 倍${z.dflt ? "，没填投入和杠杆，按默认" : ""} = 名义 ${fmt(z.amt * z.lev)} U，已扣开平手续费约 ${(z.amt * z.lev * 0.001).toFixed(1)} U）` +
+    (e.sl && e.sl.liqHit ? ` 注意：${z.lev} 倍杠杆在碰到止损之前就会强平，最多亏掉整份保证金 ${fmt(z.amt)} U。` : "") +
     (e.tp && e.tp.pct < 0 ? " 注意：止盈价在进场价的亏损一侧，检查一下方向。" : "") + (e.sl && e.sl.pct > 0 ? " 注意：止损价在进场价的盈利一侧，检查一下方向。" : "");
 }
 function cEntryUI() { const lim = $("cEntry").value === "limit"; $("cValidL").hidden = !lim; $("cRefL").firstChild.textContent = lim ? "到这个价再进场" : "进场价（空着 = 喊单时的市价）"; }
@@ -1671,15 +1682,15 @@ function renderPositions() {
     : watching.length ? `盘面提醒：${watching.map(x => `${x.c.who} ${x.c.side === "long" ? "多" : "空"}单——${x.w[0].text}`).join("；")}`
     : open.length ? `持有中 ${open.length} 单，盘面正常，暂时都不用卖。` : "现在没有持有中的单。";
   if (!sell.length && watching.length) $("pAlert").className = "verdict " + (watching.some(x => x.w.some(a => a.lv === "bad")) ? "badv" : "");
-  $("pOpen").innerHTML = open.length ? `<thead><tr><th>进场</th><th>谁</th><th>方向</th><th>进场价</th><th>投入 × 杠杆</th><th>止损</th><th>止盈</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长到</th><th>现价盈亏</th><th>离止损</th><th>离止盈</th><th>状态 / 盘面提醒</th><th></th></tr></thead><tbody>` +
+  $("pOpen").innerHTML = open.length ? `<thead><tr><th>进场</th><th>谁</th><th>方向</th><th>进场价</th><th>投入 × 杠杆</th><th>止损</th><th>止盈</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长到</th><th>现在盈亏（扣手续费）</th><th>离止损</th><th>离止盈</th><th>状态 / 盘面提醒</th><th></th></tr></thead><tbody>` +
     open.map(x => { const { c, s } = x; return `<tr class="${s && s.why ? "sell" : ""}"><td>${fmtDTs(c.res.filled)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)}</td>
-      <td>${sizeTxt(c)}${c.amt && c.lev ? `<small>名义 ${fmt(c.amt * c.lev)} U</small>` : ""}</td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${plCell(expectPL(c).tp, "止盈")}</td><td>${plCell(expectPL(c).sl, "止损")}</td><td>${fmtT(s.exp)}（剩 ${dur(s.exp - now)}）</td><td class="${s.pnl > 0 ? "good" : "bad"}">${pct(s.pnl)}${isFinite(pnlU(c, s.pnl)) ? `<small>${pnlU(c, s.pnl) >= 0 ? "+" : ""}${pnlU(c, s.pnl).toFixed(1)} U</small>` : ""}</td>
+      <td>${sizeTxt(c)}<small>名义 ${fmt(sizeOf(c).amt * sizeOf(c).lev)} U</small></td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${fmtT(s.exp)}（剩 ${dur(s.exp - now)}）</td><td>${moneyCell(c, s.pnl)}</td>
       <td>${isFinite(s.toStop) ? fmt(s.toStop) : "—"}</td><td>${isFinite(s.toTgt) ? fmt(s.toTgt) : "—"}</td><td class="txt">${s.why ? `<b class="bad">该卖了：${s.why}</b>` : x.w && x.w.length ? x.w.map(a => `<span class="${a.lv}">⚠ ${esc(a.text.split("。")[0])}</span>`).join("<br>") : "持有中 · 盘面正常"}</td>
       <td><button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button></td></tr>`; }).join("") + "</tbody>" : "";
   const done = C.calls.filter(c => c.exit).sort((a, b) => b.exit.t - a.exit.t).slice(0, 10);
-  $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏</th><th>拿了多久</th></tr></thead><tbody>` +
+  $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏（扣手续费）</th><th>拿了多久</th></tr></thead><tbody>` +
     done.map(c => `<tr><td>${fmtDTs(c.exit.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)} → ${fmt(c.exit.px)}</td><td>${sizeTxt(c)}</td>
-      <td>${c.exit.why}</td><td class="${c.exit.pnl > 0 ? "good" : "bad"}">${pct(c.exit.pnl)}${isFinite(pnlU(c, c.exit.pnl)) ? `<small>${pnlU(c, c.exit.pnl) >= 0 ? "+" : ""}${pnlU(c, c.exit.pnl).toFixed(1)} U</small>` : ""}</td><td>${dur(c.exit.t - c.res.filled)}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="txt">还没有卖出记录。</td></tr></tbody>`;
+      <td>${c.exit.why}</td><td>${moneyCell(c, c.exit.pnl)}</td><td>${dur(c.exit.t - c.res.filled)}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="txt">还没有卖出记录。</td></tr></tbody>`;
 }
 function renderCalls() {
   if (!$("cTable")) return;
@@ -1691,6 +1702,9 @@ function renderCalls() {
   const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[s.length >> 1] : NaN; };
   const goodAdv = good.map(c => c.res.adv), flips = list.filter(c => c.flip).length, fixed = +($("volFixed") && $("volFixed").value) || 500;
   const swept = good.filter(c => c.res.adv >= fixed).length;
+  const sold = list.filter(c => c.exit), soldU = sold.reduce((t, c) => t + pnlU(c, c.exit.pnl), 0);
+  const holding = list.filter(c => c.res && c.res.filled && !c.exit && !c.res.done && isFinite(S.price) && c.ref);
+  const holdU = holding.reduce((t, c) => t + pnlU(c, (c.side === "long" ? 1 : -1) * (S.price / c.ref - 1) * 100), 0);
   $("cStats").innerHTML = [
     ["已到期", `${done.length} 条`, "", `进行中 ${list.length - done.length} 条${done.some(c => c.res.grade === "未成交") ? ` · 未成交 ${done.filter(c => c.res.grade === "未成交").length} 条` : ""}`],
     ["方向准确率", isFinite(acc) ? `${acc.toFixed(0)}%` : "—", isFinite(acc) && acc - err > 50 ? "good" : "", dec ? `对 ${good.length} / 错 ${bad.length} / 平 ${done.filter(c => c.res.grade === "平").length} · ±${err.toFixed(0)}%` : "对 / 错 / 平"],
@@ -1698,6 +1712,8 @@ function renderCalls() {
     ["先打止损", withS.length ? `${Math.round(sFirst / withS.length * 100)}%` : "—", sFirst ? "bad" : "", `${sFirst} / ${withS.length} 条带止损价`],
     ["对的单中途先扛", goodAdv.length ? `${fmt(med(goodAdv))} 美元` : "—", "", goodAdv.length ? `中位数 · 最大 ${fmt(Math.max(...goodAdv))}` : "方向对的单到期前的最大逆向"],
     ["改口", `${flips} 次`, flips ? "warn" : "", "上一条没到期就喊反方向"],
+    ["已卖出合计", sold.length ? uTxt(soldU) : "—", soldU > 0 ? "good" : soldU < 0 ? "bad" : "", `${sold.length} 笔 · 已扣手续费`],
+    ["持有中浮动", holding.length ? uTxt(holdU) : "—", holdU > 0 ? "good" : holdU < 0 ? "bad" : "", `${holding.length} 笔 · 按现价`],
   ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
   // 同一批喊单，进场后 1h / 4h / 24h 各对了多少（0.1% 以内算平，不计入）
   const hzRows = HZ_CMP.map(([m, name]) => {
@@ -1724,17 +1740,17 @@ function renderCalls() {
     const tags = [r && r.first === "target" ? "止盈先到" : "", r && r.first === "stop" ? "止损先到" : "", c.flip ? `改口 ${fmtT(c.flip)}` : ""].filter(Boolean).map(x => `<span class="tag">${x}</span>`).join("");
     const entryTxt = c.entry === "limit" || (r && r.limit) ? `到 ${fmt(c.ref)} 再进${c.validMin ? `<small>${c.validMin} 分钟内 · ${r && r.filled ? fmtT(r.filled).slice(-5) + " 成交" : "未成交"}</small>` : `<small>${r && r.filled ? fmtT(r.filled).slice(-5) + " 成交" : "未成交"}</small>`}`
       : `现价 ${c.ref ? fmt(c.ref) : "—"}`;
-    const u = pnlU(c, cur), open = r && r.filled && !c.exit, pend = r && !r.filled && !r.done;
+    const open = r && r.filled && !c.exit, pend = r && !r.filled && !r.done;
     const act = open ? `<button type="button" class="btn sm" data-psell="${c.id}">卖出</button>` : pend ? `<button type="button" class="btn sm" data-ccancel="${c.id}">撤单</button>` : "";
     return `<tr><td>${fmtDTs(c.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td>
-      <td class="txt">${esc(c.text || "—")}</td><td>${entryTxt}</td><td>${sizeTxt(c)}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${plCell(expectPL(c).tp, "止盈")}</td><td>${plCell(expectPL(c).sl, "止损")}</td><td>${HZTXT[c.hz] || c.hz + " 分钟"}</td>
+      <td class="txt">${esc(c.text || "—")}</td><td>${entryTxt}</td><td>${sizeTxt(c)}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${HZTXT[c.hz] || c.hz + " 分钟"}</td>
       <td>${st}${tags ? "<br>" + tags : ""}</td>
       <td>${c.exit ? `${fmtDTs(c.exit.t)}<small>${fmt(c.exit.px)} · ${c.exit.why}</small>` : open ? "持有中" : "—"}</td>
-      <td class="${cur > 0 ? "good" : cur < 0 ? "bad" : ""}">${isFinite(cur) ? pct(cur) : "—"}${isFinite(u) ? `<small>${u >= 0 ? "+" : ""}${u.toFixed(1)} U</small>` : ""}</td>
+      <td>${moneyCell(c, cur)}</td>
       <td>${r && r.filled ? fmt(r.adv) : "—"}</td><td>${r && r.filled ? fmt(r.fav) : "—"}</td>
       <td class="acts">${act}<button type="button" class="btn sm" data-cdel="${c.id}">删除</button></td></tr>`;
   }).join("");
-  $("cTable").innerHTML = list.length ? `<thead><tr><th>喊单时间</th><th>谁</th><th>方向</th><th>原话</th><th>进场</th><th>投入 × 杠杆</th><th>止盈</th><th>止损</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长持有</th><th>结果</th><th>卖出</th><th>盈亏</th><th>最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "";
+  $("cTable").innerHTML = list.length ? `<thead><tr><th>喊单时间</th><th>谁</th><th>方向</th><th>原话</th><th>进场</th><th>投入 × 杠杆</th><th>止盈</th><th>止损</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长持有</th><th>结果</th><th>卖出</th><th>盈亏（扣手续费）</th><th>最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "";
 }
 // 同一个人：上一条还没到期就喊了反方向 → 上一条标改口（保存、导入、删除后整体重算）
 function markFlips() {
@@ -1796,7 +1812,7 @@ function cNames() {
 function sellCall(id) {
   const c = C.calls.find(x => x.id === id);
   if (!c || !isFinite(S.price) || !c.res || !c.res.filled || c.exit) return;
-  const pnl = (c.side === "long" ? 1 : -1) * (S.price / c.ref - 1) * 100, u = pnlU(c, pnl);
+  const pnl = (c.side === "long" ? 1 : -1) * (S.price / c.ref - 1) * 100, u = pnlU(c, pnl);   // 按喊单的投入和杠杆（没写就按默认）
   if (!confirm(`按现价 ${fmt(S.price)} 卖出？\n${c.who} ${c.side === "long" ? "多" : "空"}单，进场 ${fmt(c.ref)}，盈亏 ${pct(pnl)}${isFinite(u) ? `（${u >= 0 ? "+" : ""}${u.toFixed(1)} U）` : ""}`)) return;
   c.manualExit = { t: Date.now(), px: S.price }; c.u = Date.now(); c.exit = { ...c.manualExit, why: "手动卖出", pnl };
   csave(); renderPositions(); renderCalls();
@@ -1833,6 +1849,11 @@ function callsInit() {
   };
   $("cFilter").onchange = renderCalls;
   $("cEntry").onchange = () => { cEntryUI(); cPreview(); };
+  $("cDefAmt").value = J.defAmt || 100; $("cDefLev").value = J.defLev || 10;
+  ["cDefAmt", "cDefLev"].forEach(id => $(id).addEventListener("change", () => {
+    J.defAmt = Math.max(1, +$("cDefAmt").value || 100); J.defLev = Math.max(1, Math.min(150, Math.round(+$("cDefLev").value || 10))); J.u = Date.now();
+    $("cDefAmt").value = J.defAmt; $("cDefLev").value = J.defLev; jsave(); renderCalls(); renderPositions();
+  }));
   ["cRef", "cTarget", "cStop", "cAmt", "cLev"].forEach(id => $(id).addEventListener("input", cPreview));
   ["c-long", "c-short", "cParse"].forEach(id => $(id).addEventListener("click", () => setTimeout(cPreview, 0)));
   $("pOpen").addEventListener("click", ev => { const id = ev.target.dataset && ev.target.dataset.psell; if (id) sellCall(id); });
