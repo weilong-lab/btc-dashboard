@@ -55,6 +55,8 @@ a{color:var(--accent)}
 .tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent);font-weight:500}
 .chartwrap{position:relative}
 #chart{height:440px}
+/* 手机：上下划交给页面滚动，左右划和双指缩放交给图表 */
+@media(pointer:coarse){#chart{touch-action:pan-y}}
 #lgd .lg{position:absolute;left:8px;right:70px;z-index:3;display:flex;flex-wrap:wrap;gap:0 10px;font-family:var(--m);font-size:11px;pointer-events:none;color:var(--fg2);line-height:1.5}
 #lgd .lgn{color:var(--muted)}
 .indbar{display:flex;gap:4px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap}
@@ -599,6 +601,9 @@ function defsOf(k) {
 }
 // 图表刚建好、还没画出来时取格子尺寸会报错，先当 0
 const paneSz = i => { try { return chart.paneSize(i); } catch (e) { return { width: 0, height: 0 }; } };
+// 手机上手指在图表上：左右划 = 拖动 K 线，上下划 = 滚动整个页面（和交易所 App 一样），两指捏合 = 缩放
+const SCROLL_OPT = () => ({ mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false });
+const SCALE_OPT = () => ({ mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: !isMob() }, axisDoubleClickReset: true });
 const isMob = () => matchMedia("(max-width:820px)").matches;
 function buildChart() {
   if (!window.LightweightCharts) { $("chart").innerHTML = '<p class="empty">K 线组件加载失败（网络问题），不影响下单</p>'; return; }
@@ -608,7 +613,7 @@ function buildChart() {
   const LC = LightweightCharts;
   chart = LC.createChart($("chart"), { autoSize: true, layout: { background: { color: cssv("--card") }, textColor: cssv("--muted"), fontFamily: "IBM Plex Mono, monospace", attributionLogo: false, panes: { separatorColor: cssv("--line") } },
     grid: { vertLines: { color: cssv("--grid") }, horzLines: { color: cssv("--grid") } }, rightPriceScale: { borderColor: cssv("--line") },
-    timeScale: { borderColor: cssv("--line"), timeVisible: true, secondsVisible: false }, crosshair: { mode: 0 } });
+    timeScale: { borderColor: cssv("--line"), timeVisible: true, secondsVisible: false }, crosshair: { mode: 0 }, handleScroll: SCROLL_OPT(), handleScale: SCALE_OPT() });
   const up = cssv("--good"), dn = cssv("--bad");
   cs = chart.addSeries(LC.CandlestickSeries, { upColor: up, downColor: dn, wickUpColor: up, wickDownColor: dn, borderVisible: false, priceFormat: { type: "price", precision: 1, minMove: 0.1 } }, 0);
   SER = []; lines = []; lineKey = "";
@@ -771,7 +776,7 @@ function hitTest(pt) {
 }
 function setTool(t) {
   DR.tool = t; DR.pend = null; DR.hover = null;
-  if (chart) chart.applyOptions({ handleScroll: t === "ptr", handleScale: t === "ptr" });   // 画线时不拖动图表
+  if (chart) chart.applyOptions({ handleScroll: t === "ptr" ? SCROLL_OPT() : false, handleScale: t === "ptr" ? SCALE_OPT() : false });   // 画线时不拖动图表
   renderDrawBar(); drawCanvas();
 }
 function renderDrawBar() {
