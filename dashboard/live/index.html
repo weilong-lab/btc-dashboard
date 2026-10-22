@@ -279,6 +279,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <button type="button" data-market-colors="green-up" aria-pressed="true">绿涨红跌</button>
     <button type="button" data-market-colors="red-up" aria-pressed="false">红涨绿跌</button>
   </div>
+  <div class="seg tzseg acctseg" role="group" aria-label="账户" id="acctSw"></div>
   <button class="refresh" id="refresh" type="button">手动刷新</button>
   <a class="refresh simlnk" href="sim.html">模拟盘 →</a>
   <nav class="toc" id="toc" aria-label="目录"></nav>
@@ -592,6 +593,11 @@ let SPEC = SPEC_DEFAULT;
 const US_HOLIDAYS = new Set(["2026-11-26","2026-12-25","2027-01-01","2027-01-18","2027-02-15","2027-03-26","2027-05-31","2027-06-18","2027-07-05","2027-09-06","2027-11-25","2027-12-24"]);
 // 监控程序不可用时的兜底事件（美东时间）
 const EVENTS = [["FOMC 利率决议","2026-10-28T14:00:00-04:00"],["美国 CPI（10 月）","2026-11-10T08:30:00-05:00"]];
+// 账户：两个人各用各的（喊单记录、交易日志、模拟盘分开存，本机和私有仓库里都分开），只是切换，不设密码
+const ACCTS = [["main", "我"], ["zhang", "张主任"]];
+const ACCT = (() => { try { const v = localStorage.getItem("btc_account"); return ACCTS.some(a => a[0] === v) ? v : "main"; } catch (e) { return "main"; } })();
+const AK = k => ACCT === "main" ? k : `${k}@${ACCT}`;      // 本机存储的键
+const AF = f => ACCT === "main" ? f : `${ACCT}/${f}`;       // 私有仓库里的文件
 const FAPI = "https://fapi.binance.com";
 // 币安合约推送已拆分：/market = 成交、K 线、标记价格；/public = 盘口（毫秒级）
 const WS = "wss://fstream.binance.com/market/stream?streams=btcusdt@aggTrade/btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_15m/btcusdt@kline_30m/btcusdt@kline_1h/btcusdt@kline_4h/btcusdt@kline_1d/btcusdt@markPrice@1s/btcusdt@forceOrder";
@@ -1520,7 +1526,7 @@ function renderPaper() {
 }
 
 // ---------------- 交易日志与风控（localStorage，只在本机） ----------------
-const JKEY = "btc_journal_v1";
+const JKEY = AK("btc_journal_v1");
 const J = (() => { try { return JSON.parse(localStorage.getItem(JKEY)) || {}; } catch (e) { return {}; } })();
 J.trades = J.trades || []; J.side = J.side || "long";
 function jsave() { try { localStorage.setItem(JKEY, JSON.stringify(J)); } catch (e) { /* 隐私模式等情况下无法保存 */ } cloudSoon(); }
@@ -1788,7 +1794,7 @@ async function cloudSync() {
   CLOUD.busy = true;
   try {
     for (let attempt = 0; attempt < 3; attempt++) {
-      const [rc, rj, rs] = await Promise.all([ghGet("calls.json"), ghGet("journal.json"), ghGet("sim.json").catch(() => ({ obj: null }))]);
+      const [rc, rj, rs] = await Promise.all([ghGet(AF("calls.json")), ghGet(AF("journal.json")), ghGet(AF("sim.json")).catch(() => ({ obj: null }))]);
       // 喊单
       const delC = new Set([...(C.deleted || []), ...((rc.obj && rc.obj.deleted) || [])]);
       const keep = new Map(C.calls.map(c => [c.id, c]));
@@ -1803,8 +1809,8 @@ async function cloudSync() {
       markFlips();
       const cd = callsDoc(), jd = journalDoc();
       const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-      const sc = CLOUD.ro || same(cd, rc.obj) ? rc.sha : await ghPut("calls.json", cd, rc.sha);
-      const sj = CLOUD.ro || same(jd, rj.obj) ? rj.sha : await ghPut("journal.json", jd, rj.sha);
+      const sc = CLOUD.ro || same(cd, rc.obj) ? rc.sha : await ghPut(AF("calls.json"), cd, rc.sha);
+      const sj = CLOUD.ro || same(jd, rj.obj) ? rj.sha : await ghPut(AF("journal.json"), jd, rj.sha);
       if (sc !== null && sj !== null) break;
     }
     CLOUD.last = Date.now(); CLOUD.err = "";
@@ -1838,7 +1844,7 @@ function cloudInit() {
 }
 
 // ---------------- 喊单记录与验证（本机缓存 + 云端同步） ----------------
-const CKEY = "btc_calls_v1";
+const CKEY = AK("btc_calls_v1");
 const C = (() => { try { return JSON.parse(localStorage.getItem(CKEY)) || {}; } catch (e) { return {}; } })();
 C.calls = C.calls || [];
 function csave() { try { localStorage.setItem(CKEY, JSON.stringify(C)); } catch (e) { /* 隐私模式等情况下无法保存 */ } cloudSoon(); }
@@ -2297,8 +2303,8 @@ function syncSim(sim, render = true) {
   if (ch && render) { markFlips(); csave(); cNames(); renderCalls(); renderPositions(); verifyCalls(); }
   return ch;
 }
-const simLocal = () => { try { return JSON.parse(localStorage.getItem("btc_sim_v1")); } catch (e) { return null; } };
-addEventListener("storage", e => { if (e.key === "btc_sim_v1") syncSim(simLocal()); });
+const simLocal = () => { try { return JSON.parse(localStorage.getItem(AK("btc_sim_v1"))); } catch (e) { return null; } };
+addEventListener("storage", e => { if (e.key === AK("btc_sim_v1")) syncSim(simLocal()); });
 function callsInit() {
   $("cTime").value = localDT(Date.now());
   $("c-long").onclick = () => cSetSide("long"); $("c-short").onclick = () => cSetSide("short");
@@ -2400,7 +2406,7 @@ function callsInit() {
     const key = ev.target.dataset && ev.target.dataset.sumopen; if (!key) return;
     const plan = S.sumPlan && S.sumPlan[key], P = S.price; if (!plan || !isFinite(P)) return;
     const sgn = key === "long" ? 1 : -1, amt = J.defAmt || 100, lev = J.defLev || 10;    // 按此刻结论上面填的买入金额和杠杆
-    const c = { id: Date.now().toString(36), t: Date.now(), who: "我", side: key, entry: "market", ref: Math.round(P * 10) / 10, refGiven: false,
+    const c = { id: Date.now().toString(36), t: Date.now(), who: ACCTS.find(x => x[0] === ACCT)[1], side: key, entry: "market", ref: Math.round(P * 10) / 10, refGiven: false,
       stop: Math.round((P - sgn * plan.stop) * 10) / 10, target: plan.tp ? Math.round((P + sgn * plan.tp) * 10) / 10 : 0, hz: plan.hz, amt, lev,
       text: `此刻结论按现价${key === "long" ? "开多" : "开空"}（当时：${plan.why}）` };
     const e = expectPL(c);
@@ -2739,6 +2745,19 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && (!
 jInit();
 callsInit();
 syncSim(simLocal());
+// 账户切换：先把这个账户的改动传到云端，再换账户重新载入
+(function acctInit() {
+  const el = $("acctSw");
+  el.innerHTML = ACCTS.map(([id, n]) => `<button type="button" data-acct="${id}" aria-pressed="${id === ACCT}">${n}</button>`).join("");
+  el.onclick = async e => {
+    const b = e.target.closest("[data-acct]"); if (!b || b.dataset.acct === ACCT) return;
+    el.querySelectorAll("button").forEach(x => x.disabled = true); b.textContent = "切换中…";
+    try { csave(); jsave(); if (CLOUD.token) { clearTimeout(CLOUD.timer); await cloudSync(); } } catch (err) { /* 本机已存好，云端下次再传 */ }
+    try { localStorage.setItem("btc_account", b.dataset.acct); } catch (err) { /* 存不了就切不了 */ }
+    location.reload();
+  };
+  document.title = `BTC 作战面板 · ${ACCTS.find(a => a[0] === ACCT)[1]}`;
+})();
 cloudInit();
 tzInit();
 (() => {

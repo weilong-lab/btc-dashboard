@@ -37,6 +37,8 @@ a{color:var(--accent)}
 .hp{display:flex;align-items:baseline;gap:8px}.hp .big{font-size:20px;font-weight:600}
 .stats{display:flex;gap:4px 18px;flex-wrap:wrap;margin:0}.stats div{display:flex;flex-direction:column;line-height:1.3}.stats dt{color:var(--muted);font-size:11px}.stats dd{margin:0;font-family:var(--m);font-size:12px}
 .hd .sp{flex:1}
+.acctsw{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}.acctsw button{background:none;border:0;padding:4px 10px;font-size:13px;cursor:pointer;color:var(--muted)}
+.acctsw button[aria-pressed="true"]{background:var(--accent);color:#fff}
 .hd .lnk{font-size:13px;text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:4px 10px;color:var(--fg);white-space:nowrap}
 .conn{font-size:11px;color:var(--muted)}.conn i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:4px}.conn.ok i{background:var(--rise-green)}
 
@@ -172,6 +174,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
   </dl>
   <span class="sp"></span>
   <span class="conn" id="conn"><i></i><span>连接中</span></span>
+  <span class="acctsw" id="acctSw" role="group" aria-label="账户"></span>
   <button type="button" class="lnk mobonly" id="chartTog">K 线</button>
   <a class="lnk" href="./">← 作战面板</a>
 </header>
@@ -284,7 +287,12 @@ const $ = id => document.getElementById(id);
 const FAPI = "https://fapi.binance.com";
 const WS_MKT = "wss://fstream.binance.com/market/stream?streams=btcusdt@aggTrade/btcusdt@markPrice@1s/btcusdt@ticker/btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_15m/btcusdt@kline_1h/btcusdt@kline_4h/btcusdt@kline_1d";
 const WS_BOOK = "wss://fstream.binance.com/public/stream?streams=btcusdt@depth20@100ms/btcusdt@bookTicker";
-const FEE = { maker: 0.0002, taker: 0.0005 }, MMR = 0.004, STEP = 0.001, SKEY = "btc_sim_v1";
+// 账户：和作战面板同一个设置（右上角切换），每个账户的模拟盘、画线、喊单分开存
+const ACCTS = [["main", "我"], ["zhang", "张主任"]];
+const ACCT = (() => { try { const v = localStorage.getItem("btc_account"); return ACCTS.some(a => a[0] === v) ? v : "main"; } catch (e) { return "main"; } })();
+const ACCT_NAME = ACCTS.find(a => a[0] === ACCT)[1];
+const AK = k => ACCT === "main" ? k : `${k}@${ACCT}`, AF = f => ACCT === "main" ? f : `${ACCT}/${f}`;
+const FEE = { maker: 0.0002, taker: 0.0005 }, MMR = 0.004, STEP = 0.001, SKEY = AK("btc_sim_v1");
 const jfetch = u => fetch(u, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -907,7 +915,7 @@ function renderTop() {
   setTxt("hQv", isFinite(M.tk.qv) ? (M.tk.qv / 1e9).toFixed(2) + "B" : "—");
   const left = M.fundT - Date.now(), hh = Math.max(0, Math.floor(left / 36e5)), mm = Math.max(0, Math.floor(left % 36e5 / 6e4)), ss = Math.max(0, Math.floor(left % 6e4 / 1e3));
   setTxt("hFund", isFinite(M.fund) ? `${(M.fund * 100).toFixed(4)}% / ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : "—");
-  document.title = `${p1(M.last)} BTC 模拟盘`;
+  document.title = `${p1(M.last)} BTC 模拟盘 · ${ACCT_NAME}`;
 }
 const MOB = matchMedia("(max-width:820px)");
 function renderBook() {
@@ -1067,7 +1075,7 @@ const CLOUD = { token: lsGet(TKEY) || "", sha: null, pushedU: 0, timer: 0, err: 
 const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), c => c.charCodeAt(0)));
 async function cloudGet() {
-  const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/sim.json?t=${Date.now()}`, { headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" }, cache: "no-store" });
+  const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${AF("sim.json")}?t=${Date.now()}`, { headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" }, cache: "no-store" });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(r.status === 401 ? "令牌无效或过期" : r.status === 403 ? "令牌没有这个仓库的权限" : "读取失败 " + r.status);
   const j = await r.json(); CLOUD.sha = j.sha; return JSON.parse(b64d(j.content));
@@ -1079,7 +1087,7 @@ async function cloudSync() {
     const remote = await cloudGet();
     if (remote && remote.v === 1 && (remote.u || 0) > (A.u || 0)) { const lt = Math.max(A.lastT || 0, remote.lastT || 0); A = remote; A.lastT = lt; A.draws = A.draws || []; A.trades = A.trades || []; save(); dirty = true; tblKey = ""; drawCanvas(); CLOUD.pushedU = A.u; }
     else if (!CLOUD.ro && (!remote || (A.u || 0) > (remote.u || 0))) {
-      const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/sim.json`, { method: "PUT", headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" },
+      const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${AF("sim.json")}`, { method: "PUT", headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" },
         body: JSON.stringify({ message: "模拟盘同步", content: b64e(JSON.stringify(A)), ...(CLOUD.sha ? { sha: CLOUD.sha } : {}) }) });
       if (r.status === 403 || r.status === 404) CLOUD.ro = true;
       else if (r.status === 409 || r.status === 422) { CLOUD.busy = false; return cloudSoon(); }
@@ -1106,8 +1114,8 @@ $("cloudBtn").onclick = () => { const v = prompt(`粘贴 GitHub 细粒度令牌�
 async function fromCall() {
   const id = new URLSearchParams(location.search).get("call"); if (!id) return;
   let c = null;
-  try { c = (JSON.parse(lsGet("btc_calls_v1")) || {}).calls?.find(x => x.id === id); } catch (e) { /* 本机没有就去云端找 */ }
-  if (!c && CLOUD.token) { try { const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/calls.json?t=${Date.now()}`, { headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" }, cache: "no-store" });
+  try { c = (JSON.parse(lsGet(AK("btc_calls_v1"))) || {}).calls?.find(x => x.id === id); } catch (e) { /* 本机没有就去云端找 */ }
+  if (!c && CLOUD.token) { try { const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${AF("calls.json")}?t=${Date.now()}`, { headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" }, cache: "no-store" });
     if (r.ok) c = JSON.parse(b64d((await r.json()).content)).calls.find(x => x.id === id); } catch (e) { /* 找不到就算了 */ } }
   if (!c) { $("fMsg").className = "msg bad"; $("fMsg").textContent = "没找到这条喊单（可能在别的设备上，先在作战面板连上云端）"; return; }
   FROM = { id: c.id, who: c.who, t: c.t };
@@ -1115,7 +1123,7 @@ async function fromCall() {
   $("otabs").querySelector(`[data-ot="${limit ? "limit" : "market"}"]`).click();
   if (limit) $("fPrice").value = (+c.ref).toFixed(1);
   if (c.lev && (!A.pos || A.pos.mode === "cross")) { A.lev = Math.min(125, Math.max(1, Math.round(c.lev))); if (A.pos) A.pos.lev = A.lev; touch(); }
-  let calls; try { calls = JSON.parse(lsGet("btc_journal_v1")) || {}; } catch (e) { calls = {}; }
+  let calls; try { calls = JSON.parse(lsGet(AK("btc_journal_v1"))) || {}; } catch (e) { calls = {}; }
   const amt = c.amt || calls.defAmt || 100, lev = c.lev || calls.defLev || A.lev, px = limit ? +c.ref : M.last || +c.ref;
   const qty = r3(amt * lev / px);
   UNIT = "btc"; lsSet("btc_sim_unit", UNIT); $("fQty").value = qty.toFixed(3);
@@ -1125,6 +1133,18 @@ async function fromCall() {
   $("fMsg").textContent = `已按 ${c.who} ${fmtT(c.t, false)} 的喊单填好：${long ? "看多" : "看空"}，${limit ? `到 ${p1(+c.ref)} 再进` : "现价进"}，${c.amt ? `${c.amt} U` : `${amt} U（默认）`} × ${lev} 倍 ≈ ${q3(qty)} BTC${c.stop ? `，止损 ${p1(+c.stop)}` : ""}${c.target ? `，止盈 ${p1(+c.target)}` : ""}。确认没问题就点「${long ? "买入 / 开多" : "卖出 / 开空"}」。`;
   dirty = true;
 }
+
+// 账户切换：先存好、传到云端，再换账户重新载入
+(function acctInit() {
+  const el = $("acctSw");
+  el.innerHTML = ACCTS.map(([id, n]) => `<button type="button" data-acct="${id}" aria-pressed="${id === ACCT}">${n}</button>`).join("");
+  el.onclick = async e => {
+    const b = e.target.closest("[data-acct]"); if (!b || b.dataset.acct === ACCT) return;
+    el.querySelectorAll("button").forEach(x => x.disabled = true); b.textContent = "切换中…";
+    save(); try { if (CLOUD.token) { clearTimeout(CLOUD.timer); await cloudSync(); } } catch (err) { /* 本机已存好 */ }
+    lsSet("btc_account", b.dataset.acct); location.href = location.pathname;
+  };
+})();
 
 // ---------------- 启动 ----------------
 (async function boot() {
