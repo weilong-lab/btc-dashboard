@@ -243,17 +243,15 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 .ct td{vertical-align:top}
 .jt td small{display:block;font-size:10.5px;color:var(--muted);font-family:var(--f)}
 .ct td.acts{display:flex;gap:4px}
-/* 手机上喊单和持仓用卡片，不用横向滑的宽表格 */
-.mcards{display:none;gap:8px}
-@media(max-width:720px){.deskonly{display:none}.mcards{display:grid}}
-.mc{border:1px solid var(--line);border-radius:8px;padding:9px 11px;display:grid;gap:5px;font-size:13px}
-.mc.sell{border-color:var(--bad)}
-.mc-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}.mc-h small{color:var(--muted)}.mc-h .mc-st{margin-left:auto;text-align:right}
-.mc-r{display:flex;flex-wrap:wrap;gap:2px 12px;font-family:var(--m);font-size:12.5px;color:var(--fg2)}.mc-r small{display:inline;color:var(--muted);margin-left:4px}
-.mc-pl{display:flex;align-items:baseline;gap:8px}.mc-pl>span:first-child{color:var(--muted);font-size:12px}.mc-pl .plv{display:inline}.mc-pl .plv small{display:inline;margin-left:6px;font-size:11.5px}.mc-pl b{font-family:var(--m);font-size:15px}
-.mc-t{color:var(--fg2);font-size:12.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.mc .tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:999px;background:var(--chip);margin:1px 2px 0 0}
-.mc-b{display:flex;flex-wrap:wrap;gap:8px}.mc-b .btn{padding:8px 14px;font-size:13.5px}
-.mc-more{justify-self:start}
+/* 喊单和持仓表横向滑动时，方向和进场价固定在最左边 */
+#cTable th:nth-child(-n+2),#cTable td:nth-child(-n+2),#pOpen th:nth-child(-n+2),#pOpen td:nth-child(-n+2){position:sticky;z-index:1;background:var(--card)}
+#cTable th:first-child,#cTable td:first-child,#pOpen th:first-child,#pOpen td:first-child{left:0;width:36px;min-width:36px;max-width:36px;text-align:center}
+#cTable th:nth-child(2),#cTable td:nth-child(2),#pOpen th:nth-child(2),#pOpen td:nth-child(2){left:36px;box-shadow:1px 0 0 var(--line)}
+#pOpen tr.sell td:nth-child(-n+2){background:color-mix(in srgb,var(--bad) 10%,var(--card))}
+.ct td.res{white-space:normal;min-width:120px;max-width:220px}
+.ct .clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.ct abbr{text-decoration:none}
+@media(max-width:720px){table.ct td.txt{min-width:110px;max-width:170px}table.ct td.res{max-width:150px}.ct .clamp{-webkit-line-clamp:2}}
+
 .ct td.txt{font-family:var(--f);white-space:normal;min-width:200px;max-width:300px}
 .ct .tag{display:inline-block;font-family:var(--f);font-size:11px;padding:0 6px;border-radius:999px;background:var(--chip);margin:1px 2px 0 0}
 .ma{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
@@ -332,7 +330,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <h2>持仓与卖出 <small>喊单记录里每一单的进场、卖出计划和卖出记录 · 只做记录和提示，不会下单</small></h2>
     <div class="verdict" id="pAlert">读取中…</div>
     <div class="jbtns"><button type="button" class="btn" id="pNotify">开启桌面提醒</button><span class="note" id="pNotifyMsg"></span></div>
-    <div class="tablewrap deskonly"><table class="jt" id="pOpen"></table></div><div class="mcards" id="pCards"></div>
+    <div class="tablewrap"><table class="jt" id="pOpen"></table></div>
     <h3 class="sub-h">最近卖出</h3>
     <div class="tablewrap"><table class="jt" id="pDone"></table></div>
     <p class="note">每一单进场时就写好卖出计划：止损价、止盈价和最长持有时间（模型的单按「此刻结论」当时给出的；人工喊单按你填的，没填止损止盈就只按时间）。价格碰到止损或止盈、或者到了最长持有时间，这里马上标「该卖了」并发提醒，同时记下卖出时间、价格、原因和盈亏，喊单记录同步显示。你自己提前卖了，可以点「手动卖出」按当前价记一笔。持有期间面板一直盯着盘面：出现急动（5 或 15 分钟走 1 个 ATR 以上）、离止损不到 0.3 个 ATR、15 分钟内进入美股开盘或数据公布时段、出现红色新闻警报，都会在「状态 / 盘面提醒」里标出来并发提醒。回测（2021–2026，4613 笔）里，这些时候马上卖都没有比按原计划拿着更好（平均差 0.05%–0.27%），所以提醒告诉你发生了什么、该检查什么，卖不卖仍按止损、止盈和时间。盈亏是按价格算的百分比，没扣手续费和资金费，也没乘杠杆。后台监控程序运行时，模型的单在浏览器关着时也会记录卖出，并发 Mac 通知。</p>
@@ -530,7 +528,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <h3 class="sub-h">规则 A · 重复假设分组 <small>反弹 / 回落实验，不是独立的买入确认</small></h3>
     <p class="note">多单在检验反弹假设，空单在检验回落假设，并非已确认止跌或见顶。同方向相邻信号间隔不超过 6 小时且中间没有反向 A 信号，归为同组；这只是固定时间分组，不代表识别出真实行情阶段。原始记录、盈亏和策略均保留。组内信号相关，不能当作独立样本计算置信度。只有假设或执行条件改变才另立策略版本，不能覆盖旧成绩。</p>
     <div class="tablewrap"><table class="jt" id="aGroups"></table></div>
-    <div class="tablewrap deskonly"><table class="jt ct" id="cTable"></table></div><div class="mcards" id="cCards"></div>
+    <div class="tablewrap"><table class="jt ct" id="cTable"></table></div>
     <p class="note">进场有两种：「现价进」= 喊单那一刻就算买入；「到价再进」= 价格在规定分钟内碰到进场价才算买入（比如「30 分钟内回踩 82500 再多」），没碰到记「未成交」，也可以点「撤单」。止盈价就是「到这个价卖」。原话里说了投入多少 U、几倍杠杆就一起记下，盈亏会同时显示 U；没说就只看百分比。每条持有中的记录都有「卖出」按钮，按现价记一笔卖出，持仓与卖出、云端同步一起更新。时间精确到秒。核对方法：从喊单时间到验证时间，逐根取币安 BTCUSDT 永续 K 线（24 小时内用 1 分钟，3 天内用 5 分钟，更长用 1 小时）。到期价比参考价朝喊单方向走了 0.1% 以上算「对」，反方向 0.1% 以上算「错」，其余算「平」。目标价和止损价按 K 线最高 / 最低判断谁先到，同一根里两个都碰到按先打止损算。上方的对比表不管每条喊单自己的验证周期，统一看进场后 1 小时、4 小时、24 小时的方向，用来判断方向判断在多长时间内最准、止盈该放多远。「中途最大逆向」是到期前价格朝反方向走的最远距离，用来看「方向对了但拿不住」：止损如果比它小，就会在方向兑现之前被扫掉。喊的价位离当时市价超过 0.15% 时当作挂单：价格碰到这个价才算进场，进场前的波动不计，到期都没碰到记「未成交」，不算对错。「模型·此刻结论」是自动记录的：顶部「此刻结论」每出现一次参考信号（规则 A 或 B），就按当时给出的进场价、止损、止盈和持有时间记一条，同一规则同方向 60 分钟内只记一次。浏览器开着时面板自己记；后台监控程序运行时，浏览器关着也会记，打开面板后自动合并。在「统计范围」里选它，就能看到模型自己的成绩。同一个人在上一条还没到期时喊了反方向，上一条标「改口」，照常核对，单独计数。</p>
   </section>
 
@@ -2087,17 +2085,11 @@ function renderPositions() {
     : watching.length ? `盘面提醒：${watching.map(x => `${x.c.who} ${x.c.side === "long" ? "多" : "空"}单——${x.w[0].text}`).join("；")}`
     : open.length ? `持有中 ${open.length} 单，盘面正常，暂时都不用卖。` : "现在没有持有中的单。";
   if (!sell.length && watching.length) $("pAlert").className = "verdict " + (watching.some(x => x.w.some(a => a.lv === "bad")) ? "badv" : "");
-  setHTML($("pOpen"), open.length ? `<thead><tr><th>进场</th><th>谁</th><th>方向</th><th>进场价</th><th>投入 × 杠杆</th><th>止损</th><th>止盈</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长到</th><th>现在盈亏<br>未扣手续费</th><th>现在盈亏<br>扣手续费后</th><th>离止损</th><th>离止盈</th><th>状态 / 盘面提醒</th><th></th></tr></thead><tbody>` +
-    open.map(x => { const { c, s } = x; return `<tr class="${s && s.why ? "sell" : ""}"><td>${fmtDTs(c.res.filled)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)}</td>
+  setHTML($("pOpen"), open.length ? `<thead><tr><th>方向</th><th>进场价</th><th>进场</th><th>谁</th><th>投入 × 杠杆</th><th>止损</th><th>止盈</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长到</th><th>现在盈亏<br>未扣手续费</th><th>现在盈亏<br>扣手续费后</th><th>离止损</th><th>离止盈</th><th>状态 / 盘面提醒</th><th></th></tr></thead><tbody>` +
+    open.map(x => { const { c, s } = x; return `<tr class="${s && s.why ? "sell" : ""}"><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)}</td><td>${fmtDTs(c.res.filled)}</td><td class="txt">${esc(c.who)}</td>
       <td>${sizeTxt(c)}<small>名义 ${fmt(sizeOf(c).amt * sizeOf(c).lev)} U</small></td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${fmtT(s.exp)}（剩 ${dur(s.exp - now)}）</td><td>${moneyCell(c, s.pnl, false)}</td><td>${moneyCell(c, s.pnl, true)}</td>
       <td>${isFinite(s.toStop) ? fmt(s.toStop) : "—"}</td><td>${isFinite(s.toTgt) ? fmt(s.toTgt) : "—"}</td><td class="txt">${s.why ? `<b class="bad">该卖了：${s.why}</b>` : x.w && x.w.length ? x.w.map(a => `<span class="${a.lv}">⚠ ${esc(a.text.split("。")[0])}</span>`).join("<br>") : "持有中 · 盘面正常"}</td>
       <td class="txt"><button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}</td></tr>`; }).join("") + "</tbody>" : "");
-  setHTML($("pCards"), open.map(x => { const { c, s } = x, e = expectPL(c); return `<div class="mc${s.why ? " sell" : ""}">
-    <div class="mc-h"><b class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</b><span>${esc(c.who)}</span><small>${fmtDTs(c.res.filled)} 进场</small>
-      <span class="mc-st">${s.why ? `<b class="bad">该卖了：${s.why}</b>` : x.w && x.w.length ? `<span class="${x.w[0].lv}">⚠ ${esc(x.w[0].text.split("。")[0])}</span>` : "持有中 · 盘面正常"}</span></div>
-    <div class="mc-pl"><span>现在盈亏</span>${moneyCell(c, s.pnl, true)}</div>
-    <div class="mc-r"><span>进场 ${fmt(c.ref)}</span><span>${sizeTxt(c)}</span><span>止盈 ${c.target ? fmt(c.target) : "—"}${e.tp ? `<small class="${plCls(e.tp.u)}">${uTxt(e.tp.u)}</small>` : ""}</span><span>止损 ${c.stop ? fmt(c.stop) : "—"}${e.sl ? `<small class="${plCls(e.sl.u)}">${uTxt(e.sl.u)}</small>` : ""}</span><span>剩 ${dur(s.exp - now)}</span></div>
-    <div class="mc-b"><button type="button" class="btn" data-psell="${c.id}">手动卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn" data-cedit="${c.id}">改止盈止损</button>` : ""}</div></div>`; }).join("") || `<p class="note">现在没有持有中的单。</p>`);
   const done = C.calls.filter(c => c.exit).sort((a, b) => b.exit.t - a.exit.t).slice(0, 10);
   $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏 · 未扣手续费<br>金额 / 占投入 %</th><th>盈亏 · 扣手续费后<br>金额 / 占投入 %</th><th>拿了多久</th></tr></thead><tbody>` +
     done.map(c => `<tr><td>${fmtDTs(c.exit.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)} → ${fmt(c.exit.px)}</td><td>${sizeTxt(c)}</td>
@@ -2187,33 +2179,21 @@ function renderCalls() {
     const st = !r ? "核对中…" : c.exit && !r.done ? `<b class="${c.exit.pnl > 0 ? "good" : "bad"}">已卖出</b>` : r.done ? `<b class="${r.grade === "对" ? "good" : r.grade === "错" ? "bad" : "mut"}">${r.grade}</b>`
       : !r.filled ? `等成交 · 剩 ${dur(c.t + validMs(c) - now)}` : `持有中 · 剩 ${dur(callExp(c) - now)}`;
     const ag = grouped.byId.get(c.id);
-    const groupTag = ag ? `A 实验组 ${fmtDTs(ag.group.start)} · 第 ${ag.nth} 次；此前退出亏损 ${ag.losses} 条；触发时此前仍在计划持有期且无退出记录 ${ag.open} 条。重复触发不代表确认增强` : "";
+    const groupTag = ag ? `<abbr title="A 实验组 ${fmtDTs(ag.group.start)} · 第 ${ag.nth} 次；此前退出亏损 ${ag.losses} 条；触发时此前仍在计划持有期且无退出记录 ${ag.open} 条。重复触发不代表确认增强">A 实验组第 ${ag.nth} 次</abbr>` : "";
     const tags = [groupTag, r && r.first === "target" ? "止盈先到" : "", r && r.first === "stop" ? "止损先到" : "", c.flip ? `改口 ${fmtT(c.flip)}` : "", (c.mods || []).length ? `改过 ${c.mods.length} 次止盈止损` : "", r && r.amb ? "同一分钟先后不确定" : ""].filter(Boolean).map(x => `<span class="tag">${x}</span>`).join("");
     const entryTxt = c.entry === "limit" || (r && r.limit) ? `到 ${fmt(c.ref)} 再进${c.validMin ? `<small>${c.validMin} 分钟内 · ${r && r.filled ? fmtT(r.filled).slice(-5) + " 成交" : "未成交"}</small>` : `<small>${r && r.filled ? fmtT(r.filled).slice(-5) + " 成交" : "未成交"}</small>`}`
       : `现价 ${c.ref ? fmt(c.ref) : "—"}`;
     const open = r && r.filled && !c.exit, pend = r && !r.filled && !r.done;
     const act = open ? `<button type="button" class="btn sm" data-psell="${c.id}">卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}` : pend ? `<button type="button" class="btn sm" data-ccancel="${c.id}">撤单</button>` : "";
-    const e = expectPL(c);
-    const cardTags = [ag ? `A 实验组第 ${ag.nth} 次` : "", r && r.first === "target" ? "止盈先到" : "", r && r.first === "stop" ? "止损先到" : "", c.flip ? "改口" : "", (c.mods || []).length ? `改过 ${c.mods.length} 次止盈止损` : ""].filter(Boolean).map(x => `<span class="tag">${x}</span>`).join("");
-    cards.push(`<div class="mc">
-      <div class="mc-h"><b class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</b><span>${esc(c.who)}</span><small>${fmtDTs(c.t)}</small><span class="mc-st">${st}</span></div>
-      ${isFinite(cur) ? `<div class="mc-pl"><span>${c.exit ? "卖出盈亏" : "现在盈亏"}</span>${moneyCell(c, cur, true)}</div>` : ""}
-      <div class="mc-r"><span>${c.entry === "limit" || (r && r.limit) ? `到 ${fmt(c.ref)} 再进` : `进场 ${c.ref ? fmt(c.ref) : "—"}`}</span><span>${sizeTxt(c)}</span><span>止盈 ${c.target ? fmt(c.target) : "—"}${e.tp ? `<small class="${plCls(e.tp.u)}">${uTxt(e.tp.u)}</small>` : ""}</span><span>止损 ${c.stop ? fmt(c.stop) : "—"}${e.sl ? `<small class="${plCls(e.sl.u)}">${uTxt(e.sl.u)}</small>` : ""}</span><span>最长 ${HZTXT[c.hz] || c.hz + " 分钟"}</span></div>
-      ${c.exit ? `<div class="mc-r"><span>卖出 ${fmtDTs(c.exit.t)} · ${fmt(c.exit.px)} · ${c.exit.why}</span></div>` : ""}
-      ${c.text ? `<div class="mc-t">${esc(c.text)}</div>` : ""}${cardTags ? `<div>${cardTags}</div>` : ""}
-      <div class="mc-b">${act.replaceAll('class="btn sm"', 'class="btn"')}<button type="button" class="btn" data-cdel="${c.id}">删除</button></div></div>`);
-    return `<tr><td>${fmtDTs(c.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td>
-      <td class="txt">${esc(c.text || "—")}</td><td>${entryTxt}</td><td>${sizeTxt(c)}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${HZTXT[c.hz] || c.hz + " 分钟"}</td>
-      <td>${st}${tags ? "<br>" + tags : ""}</td>
+    return `<tr><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${entryTxt}</td><td>${fmtDTs(c.t)}</td><td class="txt">${esc(c.who)}</td>
+      <td class="txt"><div class="clamp" title="${esc(c.text || "")}">${esc(c.text || "—")}</div></td><td>${sizeTxt(c)}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${HZTXT[c.hz] || c.hz + " 分钟"}</td>
+      <td class="res">${st}${tags ? "<br>" + tags : ""}</td>
       <td>${c.exit ? `${fmtDTs(c.exit.t)}<small>${fmt(c.exit.px)} · ${c.exit.why}</small>` : open ? "持有中" : "—"}</td>
       <td>${moneyCell(c, cur, false)}</td><td>${moneyCell(c, cur, true)}</td>
       <td>${r && r.filled ? fmt(r.adv) : "—"}</td><td>${r && r.filled ? fmt(r.fav) : "—"}</td>
       <td class="acts">${act}<button type="button" class="btn sm" data-cdel="${c.id}">删除</button></td></tr>`;
   }).join("");
-  setHTML($("cTable"), list.length ? `<thead><tr><th>喊单时间</th><th>谁</th><th>方向</th><th>原话</th><th>进场</th><th>投入 × 杠杆</th><th>止盈</th><th>止损</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长持有</th><th>结果</th><th>卖出</th><th>盈亏 · 未扣手续费<br>金额 / 占投入 %</th><th>盈亏 · 扣手续费后<br>金额 / 占投入 %</th><th>最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "");
-  const MC = 15;
-  setHTML($("cCards"), (cards.length ? cards.slice(0, S.cAll ? cards.length : MC).join("") : `<p class="note">还没有记录。</p>`) +
-    (cards.length > MC ? `<button type="button" class="btn mc-more" data-cmore="1">${S.cAll ? "只看最近 " + MC + " 条" : `显示全部 ${cards.length} 条`}</button>` : ""));
+  setHTML($("cTable"), list.length ? `<thead><tr><th>方向</th><th>进场</th><th>喊单时间</th><th>谁</th><th>原话</th><th>投入 × 杠杆</th><th>止盈</th><th>止损</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长持有</th><th>结果</th><th>卖出</th><th>盈亏 · 未扣手续费<br>金额 / 占投入 %</th><th>盈亏 · 扣手续费后<br>金额 / 占投入 %</th><th>最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "");
 }
 // 同一个人：上一条还没到期就喊了反方向 → 上一条标改口（保存、导入、删除后整体重算）
 function markFlips() {
@@ -2319,21 +2299,20 @@ function callsInit() {
   }));
   ["cRef", "cTarget", "cStop", "cAmt", "cLev"].forEach(id => $(id).addEventListener("input", cPreview));
   ["c-long", "c-short", "cParse"].forEach(id => $(id).addEventListener("click", () => setTimeout(cPreview, 0)));
-  ["pOpen", "pCards"].forEach(k => $(k).addEventListener("click", ev => { const id = ev.target.dataset && ev.target.dataset.psell; if (id) { UI_HOLD = 0; sellCall(id); } }));
+  $("pOpen").addEventListener("click", ev => { const id = ev.target.dataset && ev.target.dataset.psell; if (id) { UI_HOLD = 0; sellCall(id); } });
   const np = () => { $("pNotifyMsg").textContent = !("Notification" in window) ? "这个浏览器不支持桌面提醒，只在页面上提示。" : Notification.permission === "granted" ? "桌面提醒已开启（页面开着时有效）。" : Notification.permission === "denied" ? "桌面提醒被浏览器拒绝了，要在浏览器设置里打开。" : ""; $("pNotify").hidden = !("Notification" in window) || Notification.permission !== "default"; };
   $("pNotify").onclick = async () => { try { await Notification.requestPermission(); } catch (e) { /* 忽略 */ } np(); };
   np();
   const onCallClick = ev => {
     const d = ev.target.dataset || {};
     if (d.psell || d.ccancel || d.cdel) UI_HOLD = 0;   // 点了按钮就马上显示结果
-    if (d.cmore) { S.cAll = !S.cAll; UI_HOLD = 0; renderCalls(); return; }
     if (d.psell) return sellCall(d.psell);
     if (d.ccancel) { const c = C.calls.find(x => x.id === d.ccancel); if (c && confirm("撤掉这条还没成交的到价单？")) { c.cancel = { t: Date.now() }; c.u = Date.now(); csave(); verifyCalls(); } return; }
     const id = d.cdel; if (!id) return;
     const c = C.calls.find(x => x.id === id);
     if (c && confirm(`删除这条喊单？\n${c.who} ${c.side === "long" ? "看多" : "看空"} ${c.text || ""}`)) { C.calls = C.calls.filter(x => x.id !== id); (C.deleted = C.deleted || []).push(id); markFlips(); csave(); cNames(); renderCalls(); }
   };
-  $("cTable").addEventListener("click", onCallClick); $("cCards").addEventListener("click", onCallClick);
+  $("cTable").addEventListener("click", onCallClick);
   $("cExport").onclick = () => {
     const blob = new Blob([JSON.stringify(C, null, 1)], { type: "application/json" }), a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = `btc-calls-${todayKey(Date.now())}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -2512,7 +2491,7 @@ function renderMA() {
 }
 // 喊单 / 持仓每秒重画：手指按着或正在滑动时先不重画（不然按钮被换掉，点了没反应、滚动会跳），内容没变也不重画
 let UI_HOLD = 0;
-const HOLD_IDS = ["cTable", "cCards", "pOpen", "pCards"];
+const HOLD_IDS = ["cTable", "pOpen"];
 const inHold = t => t && t.closest && HOLD_IDS.some(id => t.closest("#" + id) || (t.querySelector && t.querySelector(":scope > #" + id)));
 ["touchstart", "pointerdown", "touchmove"].forEach(ev => document.addEventListener(ev, e => { if (inHold(e.target)) UI_HOLD = Date.now() + 2500; }, { capture: true, passive: true }));
 document.addEventListener("scroll", e => { if (inHold(e.target)) UI_HOLD = Date.now() + 1500; }, { capture: true, passive: true });
