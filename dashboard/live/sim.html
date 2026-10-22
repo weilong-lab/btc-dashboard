@@ -56,6 +56,10 @@ a{color:var(--accent)}
 #lgd .lg{position:absolute;left:8px;right:70px;z-index:3;display:flex;flex-wrap:wrap;gap:0 10px;font-family:var(--m);font-size:11px;pointer-events:none;color:var(--fg2);line-height:1.5}
 #lgd .lgn{color:var(--muted)}
 .indbar{display:flex;gap:4px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap}
+#barBox{position:absolute;top:46px;z-index:4;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:11.5px;min-width:150px;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none}
+#barBox div{display:flex;justify-content:space-between;gap:14px;line-height:1.55}#barBox span{color:var(--muted)}#barBox b{font-family:var(--m);font-weight:500}
+#drawCv{position:absolute;left:0;top:0;pointer-events:none;z-index:2}
+.indbar button:disabled{opacity:.4;cursor:default}.indbar .dhint{color:var(--muted);font-size:11px;margin-left:8px}
 .indbar span{color:var(--muted);font-size:11px;margin:0 2px 0 6px}.indbar span:first-child{margin-left:0}
 .indbar button{background:none;border:1px solid transparent;border-radius:4px;padding:1px 7px;font-size:12px;color:var(--muted);cursor:pointer}
 .indbar button[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
@@ -176,7 +180,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
   <section class="chartbox" id="chartbox">
     <div class="tabs tf" id="tf" role="tablist" aria-label="K 线周期"></div>
     <div class="indbar tf" id="indbar" aria-label="技术指标"></div>
-    <div class="chartwrap"><div id="chart"></div><div id="lgd"></div></div>
+    <div class="indbar tf" id="drawbar" aria-label="画线工具"></div>
+    <div class="chartwrap"><div id="chart"></div><canvas id="drawCv"></canvas><div id="lgd"></div><div id="barBox" hidden></div></div>
   </section>
 
   <section class="bookbox">
@@ -564,6 +569,8 @@ function defsOf(k) {
     StochRSI: [["SRSI_K", "K", C1], ["SRSI_D", "D", C2]], WR: [["WR", "WR(14)", C1]], OBV: [["OBV", "OBV", C1], ["OBV_MA", "MA(30)", C2]], CCI: [["CCI", "CCI(20)", C1]],
     DMI: [["PDI", "+DI", up], ["MDI", "-DI", dn], ["ADX", "ADX", C1]], ATR: [["ATR", "ATR(14)", C1]], MTM: [["MTM", "MTM(12)", C1], ["MTM_MA", "MA(6)", C2]] }[k];
 }
+// 图表刚建好、还没画出来时取格子尺寸会报错，先当 0
+const paneSz = i => { try { return chart.paneSize(i); } catch (e) { return { width: 0, height: 0 }; } };
 const isMob = () => matchMedia("(max-width:820px)").matches;
 function buildChart() {
   if (!window.LightweightCharts) { $("chart").innerHTML = '<p class="empty">K 线组件加载失败（网络问题），不影响下单</p>'; return; }
@@ -589,7 +596,7 @@ function buildChart() {
   const fit = () => { if (!chart) return; chart.panes().forEach((p, i) => p.setStretchFactor(i ? 1 : mainH / subH)); legend(null); };
   fit(); requestAnimationFrame(() => requestAnimationFrame(fit)); setTimeout(fit, 300);
   chart.subscribeCrosshairMove(prm => legend(prm && prm.logical != null ? Math.round(prm.logical) : null));
-  setAll(); drawLines(true);
+  setAll(); drawLines(true); drawInit();
 }
 function pt(d, i) {
   const time = sh(BARS[i].t), v = RES[d.key] && RES[d.key][i];
@@ -604,13 +611,14 @@ function setAll() {
   RES = calc();
   cs.setData(BARS.map(candle));
   SER.forEach(d => d.s.setData(BARS.map((_, i) => pt(d, i))));
-  legend(null);
+  legend(null); drawCanvas();
 }
 function updLast() {
   if (!chart || !BARS.length) return;
   RES = calc(); const i = BARS.length - 1;
   try { cs.update(candle(BARS[i])); SER.forEach(d => d.s.update(pt(d, i))); } catch (e) { setAll(); }
   if (!legend.hover) legend(null);
+  drawCanvas();
 }
 // SAR / SuperTrend 分成上下两条线画，数值显示当前那条
 const lgVal = (k, i) => { const g = x => RES[x] && RES[x][i]; return k === "SAR_UP" ? g("SAR") : k === "SUPER_UP" ? (isFinite(g("SUPER_UP")) ? g("SUPER_UP") : g("SUPER_DN")) : g(k); };
@@ -620,7 +628,7 @@ function legend(idx) {
   const i = idx == null || idx >= BARS.length || idx < 0 ? BARS.length - 1 : idx;
   if (!chart || i < 0) return;
   const fv = (key, v) => !isFinite(v) ? "—" : key.startsWith("VOL") || key.startsWith("OBV") ? (Math.abs(v) >= 1e3 ? (v / 1e3).toFixed(2) + "K" : v.toFixed(2)) : Math.abs(v) >= 1000 ? v.toFixed(1) : v.toFixed(2);
-  const b = BARS[i], heights = chart.panes().map((_, p) => chart.paneSize(p).height);
+  const b = BARS[i], heights = chart.panes().map((_, p) => paneSz(p).height);
   const groups = [[`<span>开 ${p1(b.o)} 高 ${p1(b.h)} 低 ${p1(b.l)} 收 <b class="${b.c >= b.o ? "good" : "bad"}">${p1(b.c)}</b></span>`]];
   SER.forEach(d => { if (!d.name) return; (groups[d.pane] = groups[d.pane] || [`<span class="lgn">${esc(IND_NAME[d.ind] || d.ind)}</span>`]).push(`<span style="color:${d.color || "var(--fg2)"}">${d.name === (IND_NAME[d.ind] || d.ind) && d.pane ? "" : d.name + " "}${fv(d.key, lgVal(d.key, i))}</span>`); });
   let top = 0;
@@ -633,9 +641,148 @@ function renderIndBar() {
 async function loadKl() {
   const k = await jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=${TF}&limit=600`).catch(() => null);
   if (!k) return;
-  BARS = k.map(x => ({ t: +x[0], o: +x[1], h: +x[2], l: +x[3], c: +x[4], v: +x[5] }));
+  BARS = k.map(x => ({ t: +x[0], o: +x[1], h: +x[2], l: +x[3], c: +x[4], v: +x[5], q: +x[7] }));
   setAll();
 }
+// ---------------- 单根 K 线信息框：鼠标移到 / 手指点到哪根，就显示那根的开高低收、涨跌、振幅、成交量 ----------------
+let boxPin = false;
+function barBox(i, x) {
+  const el = $("barBox");
+  if (i == null || !BARS[i] || !chart) { el.hidden = true; return; }
+  const b = BARS[i], base = BARS[i - 1] ? BARS[i - 1].c : b.o, chg = b.c - base;
+  const big = n => n >= 1e9 ? (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(2) + "K" : n.toFixed(2);
+  const row = (k, v, c = "") => `<div><span>${k}</span><b class="${c}">${v}</b></div>`;
+  el.innerHTML = row("时间", fmtT(b.t, false)) + row("开", p1(b.o)) + row("高", p1(b.h)) + row("低", p1(b.l)) + row("收", p1(b.c), cls(b.c - b.o)) +
+    row("涨跌额", sgnTxt(chg, 1), cls(chg)) + row("涨跌幅", sgnTxt(chg / base * 100) + "%", cls(chg)) + row("振幅", ((b.h - b.l) / base * 100).toFixed(2) + "%") +
+    row("成交量", big(b.v) + " BTC") + row("成交额", big(b.q || 0) + " USDT");
+  const W = paneSz(0).width, right = x != null && x < W / 2;
+  el.style.left = right ? "" : "8px"; el.style.right = right ? "72px" : "";
+  el.hidden = false;
+}
+
+// ---------------- 画线工具：趋势线 / 射线 / 水平线 / 矩形 / 斐波那契回撤；锚点按「时间 + 价格」存，换周期也在原位置 ----------------
+const TFMS = { "1m": 6e4, "5m": 3e5, "15m": 9e5, "1h": 36e5, "4h": 144e5, "1d": 864e5 };
+const TOOLS = [["ptr", "↖ 指针"], ["trend", "╱ 趋势线"], ["ray", "→ 射线"], ["hline", "─ 水平线"], ["rect", "▭ 矩形"], ["fib", "斐波那契"]];
+const FIBS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+const DR = { tool: "ptr", pend: null, hover: null, sel: null, magnet: lsGet("btc_sim_magnet") !== "0" };
+A.draws = A.draws || [];
+const tToL = t => { const n = BARS.length, f = TFMS[TF]; if (!n) return NaN; if (t <= BARS[0].t) return (t - BARS[0].t) / f;
+  if (t >= BARS[n - 1].t) return n - 1 + (t - BARS[n - 1].t) / f;
+  let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (BARS[m].t <= t) lo = m; else hi = m; } return lo + (t - BARS[lo].t) / f; };
+const lToT = l => { const n = BARS.length, f = TFMS[TF], i = Math.max(0, Math.min(n - 1, Math.floor(l))); return BARS[i].t + (l - i) * f; };
+const xy = a => { if (!chart || !cs) return null; const x = chart.timeScale().logicalToCoordinate(tToL(a.t)), y = cs.priceToCoordinate(a.p); return x == null || y == null ? null : { x, y }; };
+// 点击位置 → 锚点；开了磁吸就吸到最近那根 K 线的开高低收
+function anchorAt(pt, logical) {
+  let l = logical != null ? logical : chart.timeScale().coordinateToLogical(pt.x), p = cs.coordinateToPrice(pt.y);
+  if (l == null || p == null) return null;
+  if (DR.magnet) { const i = Math.round(l); const b = BARS[i];
+    if (b) { const near = [b.o, b.h, b.l, b.c].map(v => [v, Math.abs(cs.priceToCoordinate(v) - pt.y)]).sort((a, c) => a[1] - c[1])[0]; l = i; if (near[1] < 24) p = near[0]; } }
+  return { t: lToT(l), p: Math.round(p * 10) / 10 };
+}
+function drawCanvas() {
+  const cv = $("drawCv"); if (!cv || !chart) return;
+  const sz = paneSz(0), dpr = devicePixelRatio || 1;
+  if (cv.width !== Math.round(sz.width * dpr) || cv.height !== Math.round(sz.height * dpr)) { cv.width = Math.round(sz.width * dpr); cv.height = Math.round(sz.height * dpr); cv.style.width = sz.width + "px"; cv.style.height = sz.height + "px"; }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, sz.width, sz.height);
+  const acc = cssv("--accent"), mut = cssv("--muted"), W = sz.width;
+  const list = DR.pend && DR.hover ? [...A.draws, { ...DR.pend, b: DR.hover, temp: true }] : A.draws;
+  for (const d of list) {
+    const P = xy(d.a), Q = d.b ? xy(d.b) : null; if (!P) continue;
+    const on = d.id && d.id === DR.sel;
+    g.strokeStyle = acc; g.fillStyle = acc; g.lineWidth = on ? 2.5 : 1.5; g.setLineDash(d.temp ? [5, 4] : []);
+    g.font = "11px IBM Plex Mono, monospace";
+    const line = (x1, y1, x2, y2) => { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
+    if (d.k === "hline") { line(0, P.y, W, P.y); g.fillText(p1(d.a.p), 4, P.y - 4); }
+    else if (Q && d.k === "trend") line(P.x, P.y, Q.x, Q.y);
+    else if (Q && d.k === "ray") { const dx = Q.x - P.x, dy = Q.y - P.y, k = dx ? (W - P.x) / dx : 0; line(P.x, P.y, dx > 0 ? W : dx < 0 ? 0 : P.x, dx ? P.y + dy * (dx > 0 ? k : -P.x / dx) : Q.y); }
+    else if (Q && d.k === "rect") { g.globalAlpha = 0.12; g.fillRect(P.x, P.y, Q.x - P.x, Q.y - P.y); g.globalAlpha = 1; g.strokeRect(P.x, P.y, Q.x - P.x, Q.y - P.y); }
+    else if (Q && d.k === "fib") {
+      const x1 = Math.min(P.x, Q.x), x2 = Math.max(W, Math.max(P.x, Q.x));
+      FIBS.forEach(f => { const pr = d.b.p + (d.a.p - d.b.p) * f, y = cs.priceToCoordinate(pr); if (y == null) return;
+        g.strokeStyle = f === 0 || f === 1 ? acc : mut; line(x1, y, x2, y); g.fillStyle = mut; g.fillText(`${f} (${p1(pr)})`, x1 + 4, y - 3); });
+      g.strokeStyle = mut; g.setLineDash([3, 3]); line(P.x, P.y, Q.x, Q.y);
+    }
+    if (on || d.temp) { g.setLineDash([]); [P, Q].forEach(z => { if (z) { g.beginPath(); g.arc(z.x, z.y, 4, 0, 7); g.fillStyle = cssv("--card"); g.fill(); g.strokeStyle = acc; g.stroke(); } }); }
+  }
+  g.setLineDash([]);
+}
+// 点到线段距离（射线 / 水平线按延长线算）
+function hitTest(pt) {
+  const thr = isMob() ? 14 : 7, W = paneSz(0).width;
+  const segD = (p, a, b) => { const dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy, u = L ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L)) : 0; return Math.hypot(p.x - a.x - u * dx, p.y - a.y - u * dy); };
+  for (const d of A.draws.slice().reverse()) {
+    const P = xy(d.a), Q = d.b ? xy(d.b) : null; if (!P) continue;
+    let dist = Infinity;
+    if (d.k === "hline") dist = Math.abs(pt.y - P.y);
+    else if (!Q) continue;
+    else if (d.k === "trend") dist = segD(pt, P, Q);
+    else if (d.k === "ray") { const dx = Q.x - P.x, k = dx ? ((dx > 0 ? W : 0) - P.x) / dx : 1; dist = segD(pt, P, { x: P.x + dx * k, y: P.y + (Q.y - P.y) * k }); }
+    else if (d.k === "rect") { const x1 = Math.min(P.x, Q.x), x2 = Math.max(P.x, Q.x), y1 = Math.min(P.y, Q.y), y2 = Math.max(P.y, Q.y);
+      dist = pt.x >= x1 - thr && pt.x <= x2 + thr && pt.y >= y1 - thr && pt.y <= y2 + thr ? 0 : Infinity; }
+    else if (d.k === "fib") { const x1 = Math.min(P.x, Q.x);
+      if (pt.x >= x1 - thr) dist = Math.min(...FIBS.map(f => Math.abs(pt.y - cs.priceToCoordinate(d.b.p + (d.a.p - d.b.p) * f)))); }
+    if (dist <= thr) return d.id;
+  }
+  return null;
+}
+function setTool(t) {
+  DR.tool = t; DR.pend = null; DR.hover = null;
+  if (chart) chart.applyOptions({ handleScroll: t === "ptr", handleScale: t === "ptr" });   // 画线时不拖动图表
+  renderDrawBar(); drawCanvas();
+}
+function renderDrawBar() {
+  $("drawbar").innerHTML = `<span>画线</span>${TOOLS.map(([k, n]) => `<button type="button" data-tool="${k}" aria-pressed="${DR.tool === k}">${n}</button>`).join("")}` +
+    `<button type="button" data-dact="magnet" aria-pressed="${DR.magnet}">磁吸</button><button type="button" data-dact="del" ${DR.sel ? "" : "disabled"}>删除选中</button><button type="button" data-dact="clear" ${A.draws.length ? "" : "disabled"}>清除全部</button>` +
+    `<span class="dhint">${DR.tool === "ptr" ? (DR.sel ? "已选中，点「删除选中」或按 Delete 删掉" : "点一下线可以选中") : DR.tool === "hline" ? "在图上点一下放水平线" : DR.pend ? "再点第二个点" : "在图上点第一个点"}</span>`;
+}
+function drawInit() {
+  const onClick = prm => {
+    if (!prm.point) return;
+    if (DR.tool === "ptr") {
+      DR.sel = hitTest(prm.point); renderDrawBar(); drawCanvas();
+      // 手机上点一下 K 线：信息框留着，再点别处换一根，点同一根收起
+      if (prm.logical != null) { const i = Math.round(prm.logical); if (boxPin && barBox.i === i) { boxPin = false; barBox(null); } else { boxPin = true; barBox.i = i; barBox(i, prm.point.x); } }
+      return;
+    }
+    return;
+  };
+  const drawAt = pt => {
+    const a = anchorAt(pt, null); if (!a) return;
+    if (DR.tool === "hline") { A.draws.push({ id: nid(), k: "hline", a }); touch(); DR.sel = null; setTool("ptr"); return; }
+    if (!DR.pend) { DR.pend = { k: DR.tool, a }; DR.hover = a; renderDrawBar(); drawCanvas(); return; }
+    A.draws.push({ id: nid(), k: DR.pend.k, a: DR.pend.a, b: a }); touch(); setTool("ptr");
+  };
+  chart.subscribeClick(onClick);
+  // 画线：直接听图表上的抬手事件（图表库会把快速的第二下当成双击吞掉）
+  if (!drawInit.pu) { drawInit.pu = true; $("chart").addEventListener("pointerup", e => {
+    if (DR.tool === "ptr" || !chart) return;
+    const r = $("chart").getBoundingClientRect(), pt = { x: e.clientX - r.left, y: e.clientY - r.top }, sz = paneSz(0);
+    if (pt.x < 0 || pt.y < 0 || pt.x > sz.width || pt.y > sz.height) return;
+    drawAt(pt);
+  }); }
+  chart.subscribeCrosshairMove(prm => {
+    if (DR.pend && prm.point) { DR.hover = anchorAt(prm.point, prm.logical) || DR.hover; }
+    if (DR.tool === "ptr") { if (prm.point && prm.logical != null) { boxPin = false; barBox(Math.round(prm.logical), prm.point.x); } else if (!boxPin) barBox(null); }
+    drawCanvas();
+  });
+  chart.timeScale().subscribeVisibleLogicalRangeChange(() => drawCanvas());
+  if (!drawInit.ro) { drawInit.ro = new ResizeObserver(() => drawCanvas()); drawInit.ro.observe($("chart")); }
+  setTool(DR.tool);
+}
+$("drawbar").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.tool) return setTool(b.dataset.tool);
+  const a = b.dataset.dact;
+  if (a === "magnet") { DR.magnet = !DR.magnet; lsSet("btc_sim_magnet", DR.magnet ? "1" : "0"); }
+  if (a === "del" && DR.sel) { A.draws = A.draws.filter(d => d.id !== DR.sel); DR.sel = null; touch(); }
+  if (a === "clear" && confirm(`清除图上全部 ${A.draws.length} 条画线？`)) { A.draws = []; DR.sel = null; touch(); }
+  renderDrawBar(); drawCanvas();
+};
+addEventListener("keydown", e => {
+  if (/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if ((e.key === "Delete" || e.key === "Backspace") && DR.sel) { A.draws = A.draws.filter(d => d.id !== DR.sel); DR.sel = null; touch(); renderDrawBar(); drawCanvas(); e.preventDefault(); }
+  if (e.key === "Escape" && DR.tool !== "ptr") setTool("ptr");
+});
 function initChart() {
   $("tf").innerHTML = TFS.map(([k, n]) => `<button type="button" data-tf="${k}" aria-selected="${k === TF}">${n}</button>`).join("");
   $("tf").onclick = e => { const b = e.target.closest("[data-tf]"); if (!b) return; TF = b.dataset.tf; lsSet("btc_sim_tf", TF); [...$("tf").children].forEach(x => x.setAttribute("aria-selected", x === b)); BARS = []; loadKl(); };
@@ -649,7 +796,7 @@ function initChart() {
 }
 function onKline(k) {
   if (k.i !== TF || !BARS.length) return;
-  const b = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.v }, last = BARS.at(-1);
+  const b = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.v, q: +k.q }, last = BARS.at(-1);
   if (b.t === last.t) BARS[BARS.length - 1] = b; else if (b.t > last.t) { BARS.push(b); if (BARS.length > 1000) BARS.shift(); } else return;
   updLast();
 }
@@ -892,7 +1039,7 @@ document.querySelector(".bottom").addEventListener("click", e => {
     $("dTp").value = p.tp || ""; $("dSl").value = p.sl || ""; tpEst(); $("tpDlg").hidden = false; }
 });
 $("resetBtn").onclick = () => { const v = prompt("重置模拟账户：清空仓位、委托和全部记录。初始资金（USDT）：", "10000"); if (v === null) return;
-  const bal = Math.max(10, +v || 10000); A = blank(bal); touch(); dirty = true; tblKey = ""; toast(`已重置，初始资金 ${p2(bal)} USDT`); };
+  const bal = Math.max(10, +v || 10000), keepDraws = A.draws; A = blank(bal); A.draws = keepDraws || []; touch(); dirty = true; tblKey = ""; toast(`已重置，初始资金 ${p2(bal)} USDT`); };
 $("chartTog").onclick = () => { const f = $("chartbox").classList.toggle("fold"); lsSet("btc_sim_fold", f ? "1" : "0"); if (!f) buildChart(); };
 // 手机默认收起 K 线（先看下单和订单簿），点「K 线」展开；记住上次的选择
 { const f = lsGet("btc_sim_fold"); if (f === "1" || (f === null && matchMedia("(max-width:820px)").matches)) $("chartbox").classList.add("fold"); }
@@ -914,7 +1061,7 @@ async function cloudSync() {
   CLOUD.busy = true;
   try {
     const remote = await cloudGet();
-    if (remote && remote.v === 1 && (remote.u || 0) > (A.u || 0)) { const lt = Math.max(A.lastT || 0, remote.lastT || 0); A = remote; A.lastT = lt; save(); dirty = true; tblKey = ""; CLOUD.pushedU = A.u; }
+    if (remote && remote.v === 1 && (remote.u || 0) > (A.u || 0)) { const lt = Math.max(A.lastT || 0, remote.lastT || 0); A = remote; A.lastT = lt; A.draws = A.draws || []; A.trades = A.trades || []; save(); dirty = true; tblKey = ""; drawCanvas(); CLOUD.pushedU = A.u; }
     else if (!CLOUD.ro && (!remote || (A.u || 0) > (remote.u || 0))) {
       const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/sim.json`, { method: "PUT", headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" },
         body: JSON.stringify({ message: "模拟盘同步", content: b64e(JSON.stringify(A)), ...(CLOUD.sha ? { sha: CLOUD.sha } : {}) }) });
