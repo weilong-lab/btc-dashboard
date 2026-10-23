@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>BTC 复盘</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* 复盘：只看模拟盘的单。陈总 / 张主任 / 汇总三个视图，颜色和另外两个页面一致 */
+:root{
+  --bg:#f3f5f7; --card:#ffffff; --fg:#14181d; --fg2:#4f5862; --muted:#808a95; --line:#e1e5ea; --grid:#edf0f3;
+  --accent:#2a78d6; --rise-green:#0c8f0c; --fall-red:#d03b3b; --good:var(--rise-green); --bad:var(--fall-red); --warn:#c98500; --chip:#eef2f6;
+  --s1:#2a78d6; --s2:#c25ad1; --s3:#8a8f98;
+  --f:"Noto Sans SC","PingFang SC",system-ui,sans-serif; --m:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1214; --card:#181c20; --fg:#eceef0; --fg2:#b6bdc5; --muted:#87909a; --line:#2a3036; --grid:#22272c;
+  --accent:#4b93e8; --rise-green:#36c236; --fall-red:#e66767; --good:var(--rise-green); --bad:var(--fall-red); --warn:#f0b33a; --chip:#232930;
+  --s1:#4b93e8; --s2:#d07ade; --s3:#9aa1aa; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1214; --card:#181c20; --fg:#eceef0; --fg2:#b6bdc5; --muted:#87909a; --line:#2a3036; --grid:#22272c;
+  --accent:#4b93e8; --rise-green:#36c236; --fall-red:#e66767; --good:var(--rise-green); --bad:var(--fall-red); --warn:#f0b33a; --chip:#232930;
+  --s1:#4b93e8; --s2:#d07ade; --s3:#9aa1aa; color-scheme:dark}
+:root[data-market-colors="red-up"]{--good:var(--fall-red);--bad:var(--rise-green)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f);font-size:13.5px;line-height:1.55;padding-bottom:env(safe-area-inset-bottom,0px)}
+button,input,select{font:inherit;color:inherit}
+.num,.t td{font-family:var(--m);font-variant-numeric:tabular-nums}
+.good{color:var(--good)} .bad{color:var(--bad)} .mut{color:var(--muted)} .warn{color:var(--warn)}
+a{color:var(--accent)}
+.hd{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px 14px;padding:8px 16px;flex-wrap:wrap}
+.hd h1{font-size:16px;margin:0}.hd .sp{flex:1}
+.sw{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}.sw button{background:none;border:0;padding:4px 11px;font-size:13px;cursor:pointer;color:var(--muted)}
+.sw button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.lnk{font-size:13px;text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:4px 10px;color:var(--fg);white-space:nowrap;background:none;cursor:pointer}
+.lnk[aria-current="page"]{border-color:var(--accent);color:var(--accent)}
+main{max-width:1180px;margin:0 auto;padding:14px 16px 40px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.card h2{font-size:14.5px;margin:0 0 10px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.card h2 small{font-weight:400;color:var(--muted);font-size:12px}
+.note{color:var(--muted);font-size:12px;margin:8px 0 0}
+.status{font-size:12.5px;color:var(--fg2)}
+.kpis{display:grid;gap:10px}
+.kgrp{display:grid;gap:6px}.kgrp h3{margin:0;font-size:13px;display:flex;align-items:center;gap:6px}.kgrp h3 i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+.kv div{background:var(--chip);border-radius:8px;padding:8px 10px}.kv span{display:block;color:var(--muted);font-size:11.5px}.kv b{font-family:var(--m);font-size:15px;font-weight:600}
+.warnbox{background:var(--chip);border-left:3px solid var(--warn);padding:6px 10px;border-radius:4px;font-size:12.5px;color:var(--fg2)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:860px){.two{grid-template-columns:1fr}}
+.tw{overflow-x:auto}
+table.t{border-collapse:collapse;width:100%;font-size:12.5px}
+.t th{color:var(--muted);font-weight:400;text-align:right;padding:5px 8px;white-space:nowrap;border-bottom:1px solid var(--line)}
+.t td{padding:6px 8px;white-space:nowrap;border-bottom:1px solid var(--grid);text-align:right}
+.t th:first-child,.t td:first-child{text-align:left;font-family:var(--f)}
+.t tr.dim td{color:var(--muted)}
+.mx{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;font-size:12.5px}
+.mx>div{background:var(--chip);border-radius:8px;padding:8px 10px}.mx .h{background:none;color:var(--muted);padding:4px;display:flex;align-items:center}
+.mx b{font-family:var(--m);font-size:15px}.mx small{display:block;color:var(--muted)}
+#curve svg{width:100%;height:220px;display:block}
+.lg{display:flex;gap:14px;font-size:12px;color:var(--fg2);flex-wrap:wrap;margin-top:6px}.lg i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+/* 交易列表 */
+.trs{display:grid;gap:8px}
+.tr{border:1px solid var(--line);border-radius:8px;padding:9px 12px;cursor:pointer;display:grid;gap:4px;background:none;text-align:left;width:100%}
+.tr:hover{border-color:var(--accent)}
+.tr .r1{display:flex;gap:6px 12px;align-items:baseline;flex-wrap:wrap}.tr .r1 b{font-size:13.5px}.tr .pl{margin-left:auto;font-family:var(--m);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font-size:11.5px;padding:0 7px;border-radius:10px;background:var(--chip);color:var(--fg2);white-space:nowrap}
+.chip.w{color:var(--warn)}.chip.ok{color:var(--good)}.chip.no{color:var(--bad)}
+.who{font-size:11px;padding:0 6px;border-radius:3px;color:#fff}
+.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+/* 单笔详情 */
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:16px}
+.dlg>div{background:var(--bg);border:1px solid var(--line);border-radius:12px;width:min(1100px,100%);padding:14px;display:grid;gap:12px}
+.dlg .top{display:flex;gap:8px 14px;align-items:baseline;flex-wrap:wrap}.dlg .top h2{margin:0;font-size:16px}.dlg .top .sp{flex:1}
+.sum{white-space:pre-wrap;font-size:13.5px;line-height:1.7}
+.sum h3{margin:0 0 4px;font-size:13px;color:var(--fg2)}
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:10px}.shots figure{margin:0}.shots img{width:100%;border:1px solid var(--line);border-radius:6px;display:block}.shots figcaption{font-size:12px;color:var(--muted);margin-bottom:4px}
+@media(max-width:700px){.shots{grid-template-columns:1fr}}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:6px;overflow-x:auto}
+.tabs button{background:none;border:0;padding:6px 10px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent);font-weight:500}
+#dChart{height:560px;position:relative}
+@media(max-width:700px){#dChart{height:470px}}
+@media(pointer:coarse){#dChart{touch-action:pan-y}}
+.chk{display:grid;gap:4px;font-size:13px}.chk div{display:flex;gap:6px}.chk b{white-space:nowrap}
+.empty{color:var(--muted);text-align:center;padding:22px}
+</style>
+</head>
+<body>
+<header class="hd">
+  <h1>BTC 复盘</h1>
+  <span class="sw" id="viewSw" role="group" aria-label="看谁的"></span>
+  <span class="sw" id="rangeSw" role="group" aria-label="时间范围"></span>
+  <span class="sp"></span>
+  <span class="status" id="st">读取中…</span>
+  <button type="button" class="lnk" id="reload">刷新</button>
+  <a class="lnk" href="./">作战面板</a>
+  <a class="lnk" href="sim.html">模拟盘</a>
+  <a class="lnk" href="review.html" aria-current="page">复盘</a>
+</header>
+
+<main>
+  <section class="card"><h2>总览 <small id="kpiNote"></small></h2><div class="kpis" id="kpis"></div><div id="sample"></div></section>
+  <section class="card"><h2>资金曲线 <small>每平一单累计一次，已扣手续费和资金费</small></h2><div id="curve"></div></section>
+  <div class="two">
+    <section class="card"><h2>判断 vs 执行 <small>方向看开仓后 1 小时；盈亏看最终扣费结果</small></h2><div id="mx"></div>
+      <p class="note">方向对却亏了 = 执行问题（止损太近、拿不住、进场追高）；方向错却赚了 = 运气。方向变化在 ±0.1% 以内算「平」，不进格子。平仓后要等一段时间才能判断，还没到时间的单先不算。</p></section>
+    <section class="card"><h2>平仓理由</h2><div class="tw"><table class="t" id="whyT"></table></div>
+      <p class="note">止盈、止损、强平是自动触发的；其余是手动平仓时选的理由。</p></section>
+  </div>
+  <section class="card"><h2>开仓理由 <small>一单选了几个理由，就在每个理由下各算一次</small></h2><div class="tw"><table class="t" id="tagT"></table></div>
+    <p class="note">「系统核对」：下单那一刻拿真实读数核对你选的理由（比如选了 RSI 超卖，看当时各周期 RSI6 有没有 ≤30）。✓ 率低说明常常是"感觉到了"但其实没到。点位类理由要图上画了线才能核对。</p></section>
+  <section class="card"><h2>执行问题 <small>系统自动判断，不用手动标</small></h2><div class="tw"><table class="t" id="flagT"></table></div>
+    <p class="note">「少赚 / 多亏」= 有这个问题的单平均每笔，减去没有这个问题的单平均每笔。追单 = 开仓前 5 分钟已朝开仓方向走了 1 个 ATR 以上；拿不住 = 最高浮盈 ≥0.3% 但最后拿到的不到一半；扛单 = 浮亏超过了开仓时的止损距离；报复单 = 亏损后 15 分钟内又开、仓位更大。</p></section>
+  <section class="card"><h2>盘面条件</h2><div class="tw"><table class="t" id="condT"></table></div></section>
+  <section class="card"><h2>每一单</h2>
+    <div class="flt"><span class="sw" id="lstSw"></span></div>
+    <div class="trs" id="list"></div></section>
+  <p class="note">只统计模拟盘的单（喊单不算）。开仓理由、盘面快照和自动标签从这次更新以后的单才有；之前的单只有成交记录和事后从币安拉的 K 线。平仓后走势要等平仓后够久才算（看的时长 = 持仓时长，最少 1 小时、最多 24 小时），打开这个页面时自动补算，结果存在这台设备上。</p>
+</main>
+
+<div class="dlg" id="dlg" hidden><div id="dBox"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
+<script src="review-core.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* 存不了就只在本次有效 */ } };
+const ACCTS = [["main", "陈总"], ["zhang", "张主任"]], NAME = Object.fromEntries(ACCTS);
+const AKey = (a, k) => a === "main" ? k : `${k}@${a}`, AFile = (a, f) => a === "main" ? f : `${a}/${f}`;
+const TZ = ["Asia/Tokyo", "Asia/Shanghai"].includes(lsGet("btc_tz")) ? lsGet("btc_tz") : "Asia/Tokyo", TZOFF = { "Asia/Tokyo": 540, "Asia/Shanghai": 480 }[TZ];
+document.documentElement.dataset.marketColors = lsGet("btc_market_colors") === "red-up" ? "red-up" : "green-up";
+const TOKEN = lsGet("btc_gh_token") || "";
+const fmtT = ms => new Date(ms).toLocaleString("zh-CN", { timeZone: TZ, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+const p1 = RV.p1, pc = RV.pc, dur = RV.dur;
+const u2 = x => !Number.isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "-" : "") + Math.abs(x).toFixed(2);
+const cls = x => x > 0 ? "good" : x < 0 ? "bad" : "";
+const cssv = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const ACOL = { main: "var(--s1)", zhang: "var(--s2)" };
+
+// ---------------- 视图 ----------------
+let VIEW = ["main", "zhang", "all"].includes(lsGet("btc_rev_view")) ? lsGet("btc_rev_view") : (lsGet("btc_account") === "zhang" ? "zhang" : "main");
+let RANGE = ["all", "7", "30"].includes(lsGet("btc_rev_range")) ? lsGet("btc_rev_range") : "all", LST = "all";
+function sw(el, items, cur, on) {
+  el.innerHTML = items.map(([k, n]) => `<button type="button" data-k="${k}" aria-pressed="${k === cur}">${n}</button>`).join("");
+  el.onclick = e => { const b = e.target.closest("[data-k]"); if (b) on(b.dataset.k); };
+}
+function renderSw() {
+  sw($("viewSw"), [["main", "陈总"], ["zhang", "张主任"], ["all", "汇总"]], VIEW, k => { VIEW = k; lsSet("btc_rev_view", k); renderSw(); render(); });
+  sw($("rangeSw"), [["all", "全部"], ["30", "近 30 天"], ["7", "近 7 天"]], RANGE, k => { RANGE = k; lsSet("btc_rev_range", k); renderSw(); render(); });
+  sw($("lstSw"), [["all", "全部"], ["win", "赚的"], ["loss", "亏的"], ["flag", "有执行问题"], ["open", "持仓中"]], LST, k => { LST = k; renderSw(); renderList(); });
+}
+
+// ---------------- 读数据：本机的模拟盘 + 云端 sim.json，取较新的那份 ----------------
+const SIM = {}, SRC = {};
+async function ghJson(path) {
+  const r = await fetch(`https://api.github.com/repos/${RV.REC_REPO}/contents/${path}`, { headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github.raw+json" }, cache: "no-store" });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(r.status === 401 ? "令牌无效或过期" : r.status === 403 ? "令牌没有权限" : "读取失败 " + r.status);
+  return r.json();
+}
+async function load() {
+  $("st").textContent = "读取中…";
+  const errs = [];
+  await Promise.all(ACCTS.map(async ([a]) => {
+    let loc = null; try { loc = JSON.parse(lsGet(AKey(a, "btc_sim_v1"))); } catch (e) { /* 没有 */ }
+    let cl = null; if (TOKEN) { try { cl = await ghJson(AFile(a, "sim.json")); } catch (e) { errs.push(`${NAME[a]}：${e.message}`); } }
+    const pick = [loc, cl].filter(x => x && x.v === 1).sort((x, y) => (y.u || 0) - (x.u || 0))[0] || null;
+    SIM[a] = pick; SRC[a] = !pick ? "无" : pick === cl ? "云端" : "本机";
+  }));
+  $("st").textContent = (TOKEN ? "" : "没连云端，只看这台设备上的模拟盘 · ") + ACCTS.map(([a, n]) => `${n}：${SRC[a] === "无" ? "没有数据" : SRC[a]}`).join(" · ") + (errs.length ? " · " + errs.join("；") : "");
+  render();
+  fillAfter();
+}
+
+// ---------------- 平仓后走势（存在这台设备上） ----------------
+const AKEY = "btc_rev_after_v1";
+let AFT = (() => { try { return JSON.parse(lsGet(AKEY)) || {}; } catch (e) { return {}; } })();
+let aftBusy = false;
+async function fillAfter() {
+  if (aftBusy) return; aftBusy = true;
+  try {
+    const todo = allTrades().filter(x => x.tr.exit && !AFT[x.key] && Date.now() > x.tr.exit.t + RV.afterWin(x.tr) + 6e4);
+    let n = 0;
+    for (const x of todo) {
+      $("st").dataset.extra = ` · 正在补算平仓后走势 ${++n}/${todo.length}`; $("st").title = "";
+      const a = await RV.after(x.tr).catch(() => null);
+      if (a && !a.pending) { AFT[x.key] = a; lsSet(AKEY, JSON.stringify(AFT)); }
+      if (n % 5 === 0) render();
+    }
+  } finally { aftBusy = false; render(); }
+}
+
+// ---------------- 汇总计算 ----------------
+function allTrades() {
+  const out = [];
+  for (const [a] of ACCTS) { const S = SIM[a]; if (!S) continue;
+    for (const tr of S.trades || []) {
+      const fund = tr.exit ? (S.ledger || []).filter(l => l.type === "资金费用" && l.t >= tr.t && l.t <= tr.exit.t).reduce((s, l) => s + l.amt, 0) : 0;
+      const net = (tr.real || 0) - (tr.fee || 0) + fund;
+      out.push({ a, tr, key: `${a}:${tr.id}`, fund, net, closed: !!tr.exit });
+    } }
+  return out.sort((x, y) => y.tr.t - x.tr.t);
+}
+function scope() {
+  const from = RANGE === "all" ? 0 : Date.now() - +RANGE * 864e5;
+  return allTrades().filter(x => (VIEW === "all" || x.a === VIEW) && x.tr.t >= from);
+}
+function stats(xs) {
+  const c = xs.filter(x => x.closed).sort((p, q) => p.tr.exit.t - q.tr.exit.t), n = c.length;
+  const wins = c.filter(x => x.net > 0), loss = c.filter(x => x.net <= 0);
+  const sum = f => c.reduce((s, x) => s + f(x), 0), net = sum(x => x.net);
+  let cum = 0, peak = 0, dd = 0, streak = 0, worst = 0;
+  for (const x of c) { cum += x.net; peak = Math.max(peak, cum); dd = Math.min(dd, cum - peak); streak = x.net <= 0 ? streak + 1 : 0; worst = Math.max(worst, streak); }
+  const aw = wins.length ? wins.reduce((s, x) => s + x.net, 0) / wins.length : NaN, al = loss.length ? loss.reduce((s, x) => s + x.net, 0) / loss.length : NaN;
+  const gross = sum(x => x.tr.real || 0);
+  return { n, win: n ? wins.length / n : NaN, net, avg: n ? net / n : NaN, aw, al, pf: al ? aw / Math.abs(al) : NaN, dd, worst, fee: sum(x => x.tr.fee || 0), fund: sum(x => x.fund), gross,
+    hold: n ? sum(x => x.tr.exit.t - x.tr.t) / n : NaN, open: xs.filter(x => !x.closed).length };
+}
+// 胜率的大约误差范围（95%）：样本少时很宽
+const ci = (p, n) => { if (!n) return NaN; const q = (p * n + 1) / (n + 2); return 1.96 * Math.sqrt(q * (1 - q) / n); };   // 全赢 / 全亏时也给出范围
+
+function render() {
+  const xs = scope(), accts = VIEW === "all" ? ["main", "zhang", "all"] : [VIEW];
+  // 总览
+  $("kpis").innerHTML = accts.map(a => {
+    const s = stats(a === "all" ? xs : xs.filter(x => x.a === a)), w = Number.isFinite(s.win) ? `${Math.round(s.win * 100)}%` : "—";
+    const cell = (k, v, c = "") => `<div><span>${k}</span><b class="${c}">${v}</b></div>`;
+    return `<div class="kgrp">${VIEW === "all" ? `<h3><i style="background:${a === "all" ? "var(--s3)" : ACOL[a]}"></i>${a === "all" ? "两人合计" : NAME[a]}</h3>` : ""}<div class="kv">
+      ${cell("已平仓", `${s.n} 单${s.open ? `<small class="mut" style="font-size:11px"> +${s.open} 持仓中</small>` : ""}`)}${cell("净盈亏 USDT", u2(s.net), cls(s.net))}${cell("胜率", w + (s.n ? `<small class="mut" style="font-size:11px"> ±${Math.round(ci(s.win, s.n) * 100)}%</small>` : ""))}
+      ${cell("平均每单", u2(s.avg), cls(s.avg))}${cell("平均赚 / 平均亏", `${u2(s.aw)} / ${u2(s.al)}`)}${cell("盈亏比", Number.isFinite(s.pf) ? s.pf.toFixed(2) : "—")}
+      ${cell("最大回撤", u2(s.dd), s.dd < 0 ? "bad" : "")}${cell("最长连亏", `${s.worst} 单`)}${cell("平均持仓", dur(s.hold))}
+      ${cell("手续费合计", u2(-s.fee), s.fee ? "bad" : "")}${cell("资金费合计", u2(s.fund), cls(s.fund))}${cell("不扣费的盈亏", u2(s.gross), cls(s.gross))}</div></div>`;
+  }).join("");
+  const S = stats(xs);
+  $("kpiNote").textContent = `${RANGE === "all" ? "全部时间" : `近 ${RANGE} 天`}（按开仓时间）`;
+  $("sample").innerHTML = S.n && S.n < 20 ? `<p class="warnbox">才 ${S.n} 单，胜率误差约 ±${Math.round(ci(S.win, S.n) * 100)}%，下面的分组统计更是每组只有几单，只能当线索看，不能下结论。</p>`
+    : !S.n ? `<p class="warnbox">这个范围里还没有平仓的单。</p>` : S.fee > Math.abs(S.gross) * 0.5 && S.gross > 0 ? `<p class="warnbox">手续费吃掉了不扣费盈利的 ${Math.round(S.fee / S.gross * 100)}%。</p>` : "";
+  renderCurve(xs); renderMx(xs); renderWhy(xs); renderTags(xs); renderFlags(xs); renderCond(xs); renderList();
+  $("st").textContent = $("st").textContent.replace(/ · 正在补算.*$/, "") + (aftBusy && $("st").dataset.extra ? $("st").dataset.extra : "");
+}
+
+function renderCurve(xs) {
+  const series = (VIEW === "all" ? ["main", "zhang", "all"] : [VIEW]).map(a => {
+    const c = xs.filter(x => x.closed && (a === "all" || x.a === a)).sort((p, q) => p.tr.exit.t - q.tr.exit.t);
+    let cum = 0; return { a, pts: [[c.length ? c[0].tr.t : 0, 0], ...c.map(x => [x.tr.exit.t, (cum += x.net)])] };
+  }).filter(s => s.pts.length > 1);
+  if (!series.length) { $("curve").innerHTML = `<p class="empty">还没有平仓的单</p>`; return; }
+  const all = series.flatMap(s => s.pts), t0 = Math.min(...all.map(p => p[0])), t1 = Math.max(...all.map(p => p[0])) || t0 + 1;
+  let lo = Math.min(0, ...all.map(p => p[1])), hi = Math.max(0, ...all.map(p => p[1])); if (hi === lo) { hi += 1; lo -= 1; }
+  const W = Math.max(300, $("curve").clientWidth || 1000), H = 220, L = 54, R = 10, T = 10, B = 24, X = t => L + (t - t0) / Math.max(1, t1 - t0) * (W - L - R), Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  const ticks = [lo, (lo + hi) / 2, hi, 0].filter((v, i, a) => a.indexOf(v) === i);
+  const col = a => a === "all" ? "var(--s3)" : ACOL[a];
+  $("curve").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="累计净盈亏">
+    ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)" ${v === 0 ? 'stroke="var(--line)"' : ""}/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono">${u2(v)}</text>`).join("")}
+    <text x="${L}" y="${H - 6}" font-size="11" fill="var(--muted)">${fmtT(t0)}</text><text x="${W - R}" y="${H - 6}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtT(t1)}</text>
+    ${series.map(s => `<polyline fill="none" stroke="${col(s.a)}" stroke-width="2" vector-effect="non-scaling-stroke" points="${s.pts.map(p => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(" ")}"/>`).join("")}
+  </svg>${series.length > 1 ? `<div class="lg">${series.map(s => `<span><i style="background:${col(s.a)}"></i>${s.a === "all" ? "合计" : NAME[s.a]}</span>`).join("")}</div>` : ""}`;
+}
+function renderMx(xs) {
+  const c = xs.filter(x => x.closed && AFT[x.key] && AFT[x.key].dir1h && AFT[x.key].dir1h !== "平");
+  const g = (d, w) => c.filter(x => AFT[x.key].dir1h === d && (w ? x.net > 0 : x.net <= 0));
+  const cell = (arr, lab) => `<div><small>${lab}</small><b>${arr.length}</b> 单 <span class="${cls(arr.reduce((s, x) => s + x.net, 0))}">${u2(arr.reduce((s, x) => s + x.net, 0))}</span></div>`;
+  const waiting = xs.filter(x => x.closed && !AFT[x.key]).length;
+  $("mx").innerHTML = `<div class="mx"><div class="h"></div><div class="h">赚了</div><div class="h">亏了</div>
+    <div class="h">方向对</div>${cell(g("对", 1), "正常")}${cell(g("对", 0), "执行问题")}
+    <div class="h">方向错</div>${cell(g("错", 1), "运气")}${cell(g("错", 0), "正常")}</div>${waiting ? `<p class="note">还有 ${waiting} 单在等平仓后走势（时间没到或正在补算）。</p>` : ""}`;
+}
+// 分组表：rows = [[名字, 单子数组, 额外列...]]
+function groupRows(rows, extraHead = []) {
+  const tot = rows.flatMap(r => r[1]);
+  const body = rows.filter(r => r[1].length).map(([n, arr, ...ex]) => {
+    const net = arr.reduce((s, x) => s + x.net, 0), w = arr.filter(x => x.net > 0).length;
+    return `<tr${arr.length < 3 ? ' class="dim"' : ""}><td>${n}</td><td>${arr.length}</td><td>${Math.round(w / arr.length * 100)}%</td><td class="${cls(net / arr.length)}">${u2(net / arr.length)}</td><td class="${cls(net)}">${u2(net)}</td>${ex.map(e => `<td>${e}</td>`).join("")}</tr>`;
+  }).join("");
+  return body ? `<thead><tr><th></th><th>单数</th><th>胜率</th><th>平均每单</th><th>合计</th>${extraHead.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${body}</tbody>` : `<tbody><tr><td class="empty">${tot.length ? "" : "还没有数据"}</td></tr></tbody>`;
+}
+function renderWhy(xs) {
+  const c = xs.filter(x => x.closed), key = x => ["止盈", "止损", "强平"].includes(x.tr.exit.why) ? x.tr.exit.why + "（自动）" : x.tr.rv && x.tr.rv.c && x.tr.rv.c.why ? RV.CLOSE_NAME[x.tr.rv.c.why] : "手动（没记理由）";
+  const names = [...new Set(c.map(key))];
+  $("whyT").innerHTML = groupRows(names.map(n => [esc(n), c.filter(x => key(x) === n)]).sort((a, b) => b[1].length - a[1].length));
+}
+function renderTags(xs) {
+  const c = xs.filter(x => x.closed && x.tr.rsn && x.tr.rsn.tags);
+  const rows = Object.keys(RV.TAG_NAME).map(k => { const arr = c.filter(x => x.tr.rsn.tags.includes(k));
+    const chk = arr.map(x => ((x.tr.rv && x.tr.rv.o && x.tr.rv.o.chk) || []).find(z => z[0] === k)).filter(z => z && z[1] != null);
+    return [esc(RV.TAG_NAME[k]), arr, chk.length ? `${Math.round(chk.filter(z => z[1]).length / chk.length * 100)}%（${chk.length}）` : "—"]; }).sort((a, b) => b[1].length - a[1].length);
+  const conf = RV.CONF.map(([k, n]) => [`信心：${n}`, c.filter(x => x.tr.rsn.conf === k), ""]);
+  $("tagT").innerHTML = c.length ? groupRows([...rows, ...conf], ["系统核对 ✓"]) : `<tbody><tr><td class="empty">还没有带理由的平仓单（这次更新之后下的单才会有）</td></tr></tbody>`;
+}
+const FLAG_NAME = { chase: "追单", counter: "逆 1 小时趋势", revenge: "报复单", many: "当天第 4 单及以后", heavy: "重仓（保证金 >30% 余额）", event: "临近事件开仓", rednews: "红色新闻后 30 分钟内开仓",
+  giveback: "拿不住", nosl: "没设止损", hold: "扛单", slaway: "止损往远挪 / 撤掉", sltight: "收紧止损", early: "没到止盈就手动平", liq: "被强平" };
+const flagsOf = x => [...((x.tr.rv && x.tr.rv.o && x.tr.rv.o.flags) || []), ...((x.tr.rv && x.tr.rv.c && x.tr.rv.c.flags) || [])];
+function renderFlags(xs) {
+  const c = xs.filter(x => x.closed && x.tr.rv && (x.tr.rv.o || x.tr.rv.c));
+  const avg = a => a.length ? a.reduce((s, x) => s + x.net, 0) / a.length : NaN;
+  const rows = Object.keys(FLAG_NAME).map(k => { const has = c.filter(x => flagsOf(x).some(f => f[0] === k)), no = c.filter(x => !has.includes(x)), d = avg(has) - avg(no);
+    return [FLAG_NAME[k], has, no.length ? `<span class="${cls(d)}">${u2(d)}</span>` : "—"]; }).sort((a, b) => b[1].length - a[1].length);
+  const clean = c.filter(x => !flagsOf(x).some(f => f[0] !== "sltight"));
+  $("flagT").innerHTML = c.length ? groupRows([...rows, ["没有任何问题的单", clean, ""]], ["比没问题的单 少赚 / 多亏"]) : `<tbody><tr><td class="empty">还没有带自动标签的平仓单</td></tr></tbody>`;
+}
+function renderCond(xs) {
+  const c = xs.filter(x => x.closed && x.tr.rv && x.tr.rv.o);
+  const dirOK = x => { const t = x.tr.rv.o.trend && x.tr.rv.o.trend["1h"]; return t === "震荡" || !t ? "1 小时震荡" : (t === "上涨") === (x.tr.side === "long") ? "顺 1 小时趋势" : "逆 1 小时趋势"; };
+  const rows = [...["亚盘", "欧盘", "美盘", "周末"].map(s => [`时段：${s}`, c.filter(x => x.tr.rv.o.sess === s)]),
+    ...["顺 1 小时趋势", "1 小时震荡", "逆 1 小时趋势"].map(s => [s, c.filter(x => dirOK(x) === s)]),
+    ["做多", c.filter(x => x.tr.side === "long")], ["做空", c.filter(x => x.tr.side === "short")],
+    ...[["持仓 <30 分", 0, 18e5], ["30 分–2 小时", 18e5, 72e5], ["2 小时以上", 72e5, Infinity]].map(([n, a, b]) => [n, c.filter(x => { const h = x.tr.exit.t - x.tr.t; return h >= a && h < b; })])];
+  $("condT").innerHTML = c.length ? groupRows(rows) : `<tbody><tr><td class="empty">还没有带盘面快照的平仓单</td></tr></tbody>`;
+}
+function renderList() {
+  const xs = scope().filter(x => LST === "all" || (LST === "open" ? !x.closed : x.closed && (LST === "win" ? x.net > 0 : LST === "loss" ? x.net <= 0 : flagsOf(x).some(f => f[0] !== "sltight"))));
+  $("list").innerHTML = xs.length ? xs.slice(0, 200).map(x => {
+    const tr = x.tr, L = tr.side === "long", rv = tr.rv || {};
+    const tags = (tr.rsn && tr.rsn.tags || []).map(k => { const z = (rv.o && rv.o.chk || []).find(c => c[0] === k); return `<span class="chip ${z && z[1] === true ? "ok" : z && z[1] === false ? "no" : ""}">${esc(RV.TAG_NAME[k] || k)}${z && z[1] === true ? " ✓" : z && z[1] === false ? " ✗" : ""}</span>`; }).join("");
+    const fl = flagsOf(x).filter(f => f[0] !== "sltight").map(f => `<span class="chip w">${esc(FLAG_NAME[f[0]] || f[0])}</span>`).join("");
+    const why = tr.exit ? (["止盈", "止损", "强平"].includes(tr.exit.why) ? tr.exit.why : rv.c && rv.c.why ? RV.CLOSE_NAME[rv.c.why] : tr.exit.why) : "持仓中";
+    return `<button type="button" class="tr" data-key="${x.key}"><div class="r1">${VIEW === "all" ? `<span class="who" style="background:${ACOL[x.a]}">${NAME[x.a]}</span>` : ""}<b class="${L ? "good" : "bad"}">${L ? "多" : "空"}</b>
+      <span class="num">${fmtT(tr.t)}</span><span class="num mut">${p1(tr.entry)} → ${tr.exit ? p1(tr.exit.px) : "—"}</span><span class="mut">${tr.exit ? dur(tr.exit.t - tr.t) : ""} · ${esc(why)}</span>
+      <span class="pl ${x.closed ? cls(x.net) : ""}">${x.closed ? u2(x.net) + " U" : "—"}</span></div>
+      ${tags || fl ? `<div class="chips">${tags}${fl}</div>` : ""}</button>`;
+  }).join("") : `<p class="empty">没有符合条件的单</p>`;
+}
+$("list").onclick = e => { const b = e.target.closest("[data-key]"); if (b) openDetail(b.dataset.key); };
+
+// ---------------- 单笔详情 ----------------
+let DCH = null, DX = null;
+async function openDetail(key) {
+  const x = allTrades().find(z => z.key === key); if (!x) return;
+  DX = { x, tf: "5m", snaps: {} };
+  const tr = x.tr, rv = tr.rv || {}, L = tr.side === "long", plan = RV.planOf(tr), a = AFT[key];
+  const sec = (t, body) => body ? `<section class="card sum"><h3>${t}</h3>${body}</section>` : "";
+  const aft = !tr.exit ? "" : a ? RV.afterSummary(tr, a) : Date.now() < tr.exit.t + RV.afterWin(tr) ? `要等到 ${fmtT(tr.exit.t + RV.afterWin(tr))} 才能算（平仓后看 ${dur(RV.afterWin(tr))}）。` : "正在补算…";
+  const rsn = tr.rsn ? `<div class="chk">${(rv.o && rv.o.chk || tr.rsn.tags.map(k => [k, null, "快照还没拍好"])).map(([k, ok, t]) => `<div><b class="${ok === true ? "good" : ok === false ? "bad" : "mut"}">${ok === true ? "✓" : ok === false ? "✗" : "·"} ${esc(RV.TAG_NAME[k] || k)}</b><span>${esc(t)}</span></div>`).join("")}
+    ${tr.rsn.conf ? `<div><b>信心</b><span>${RV.CONF_NAME[tr.rsn.conf]}</span></div>` : ""}${tr.rsn.note ? `<div><b>备注</b><span>${esc(tr.rsn.note)}</span></div>` : ""}</div>` : `<p class="mut">这一单没有记开仓理由（更新之前下的单）。</p>`;
+  const moves = [...(tr.adds || []).map(z => `${fmtT(z.t)} 加仓 ${z.qty.toFixed(3)} BTC @ ${p1(z.px)}：${z.tags.map(k => RV.TAG_NAME[k]).join("、")}${z.note ? "，" + esc(z.note) : ""}`),
+    ...(tr.cr || []).map(z => `${fmtT(z.t)} 平 ${z.qty.toFixed(3)} BTC @ ${p1(z.px)}：${RV.CLOSE_NAME[z.why] || z.why}${z.note ? "，" + esc(z.note) : ""}`),
+    ...(tr.mods || []).map(m => `${fmtT(m.at)} 改止盈止损：${m.from.tp ? p1(m.from.tp) : "—"} / ${m.from.sl ? p1(m.from.sl) : "—"} → ${m.tp ? p1(m.tp) : "—"} / ${m.sl ? p1(m.sl) : "—"}`)].sort();
+  $("dBox").innerHTML = `<div class="top">${VIEW === "all" ? `<span class="who" style="background:${ACOL[x.a]}">${NAME[x.a]}</span>` : ""}<h2 class="${L ? "good" : "bad"}">${L ? "做多" : "做空"} ${tr.qty.toFixed(3)} BTC</h2>
+      <span class="num">${fmtT(tr.t)} @ ${p1(tr.entry)}</span><span class="num">${tr.exit ? `→ ${fmtT(tr.exit.t)} @ ${p1(tr.exit.px)}` : "持仓中"}</span>
+      ${x.closed ? `<b class="num ${cls(x.net)}">${u2(x.net)} USDT</b><span class="mut num">手续费 ${u2(-(tr.fee || 0))} · 资金费 ${u2(x.fund)}</span>` : ""}<span class="sp"></span><button type="button" class="lnk" id="dClose">关闭</button></div>
+    <div class="two">${sec("开仓总结", esc(rv.o ? rv.o.sum : tr.rsn ? "盘面快照还没拍好（拍完会出现在这里）" : "这一单没有开仓快照（更新之前下的单）"))}
+      ${sec("平仓总结", tr.exit ? esc(rv.c ? rv.c.sum : "平仓快照还没拍好") : "还在持仓")}</div>
+    ${tr.exit ? sec("平仓后走势", esc(aft)) : ""}
+    <div class="two"><section class="card"><h2>开仓理由 <small>✓ 当时读数对得上 · ✗ 对不上 · 没法自动核对的显示读数</small></h2>${rsn}</section>
+      <section class="card"><h2>过程记录</h2>${moves.length ? `<div class="chk">${moves.map(m => `<div>${m}</div>`).join("")}</div>` : `<p class="mut">没有加仓、部分平仓或改止盈止损。</p>`}
+      <p class="note">原计划：止损 ${plan.sl ? p1(plan.sl) : "没设"} · 止盈 ${plan.tp ? p1(plan.tp) : "没设"} · ${tr.lev}x ${tr.mode === "isolated" ? "逐仓" : "全仓"}</p></section></div>
+    <section class="card"><h2>K 线 <small id="dChartNote"></small></h2><div class="tabs" id="dTf"></div><div id="dChart"></div></section>
+    <div id="dShots"></div>
+    <div class="two"><section class="card"><h2>指标读数 <small>开仓 → 平仓</small></h2><div class="tw"><table class="t" id="dRd"></table></div></section>
+      <section class="card"><h2>盘面数据 <small>开仓 → 平仓</small></h2><div class="tw"><table class="t" id="dMk"></table></div></section></div>`;
+  $("dlg").hidden = false; document.body.style.overflow = "hidden";
+  $("dClose").onclick = closeDetail;
+  $("dTf").innerHTML = ["1m", "5m", "15m", "1h", "4h"].map(tf => `<button type="button" data-tf="${tf}" aria-selected="${tf === DX.tf}">${RV.TFN[tf]}</button>`).join("");
+  $("dTf").onclick = e => { const b = e.target.closest("[data-tf]"); if (!b) return; DX.tf = b.dataset.tf; [...$("dTf").children].forEach(c => c.setAttribute("aria-selected", c === b)); drawDetail(); };
+  const [so, sc] = await Promise.all([RV.loadSnap(TOKEN, x.a, tr.id, "open"), tr.exit ? RV.loadSnap(TOKEN, x.a, tr.id, "close") : null]);
+  if (!DX || DX.x !== x) return;
+  DX.snaps = { open: so, close: sc };
+  if (so && so.view && ["1m", "5m", "15m", "1h", "4h"].includes(so.view.tf)) { DX.tf = so.view.tf; [...$("dTf").children].forEach(c => c.setAttribute("aria-selected", c.dataset.tf === DX.tf)); }
+  $("dShots").innerHTML = so && so.shot || sc && sc.shot ? `<section class="card"><h2>当时屏幕上的图 <small>下单 / 平仓那一刻截的（含指标和画线）</small></h2><div class="shots">
+    ${so && so.shot ? `<figure><figcaption>开仓 ${fmtT(tr.t)}</figcaption><img src="${so.shot}" alt="开仓时的 K 线图"></figure>` : ""}${sc && sc.shot ? `<figure><figcaption>平仓 ${fmtT(tr.exit.t)}</figcaption><img src="${sc.shot}" alt="平仓时的 K 线图"></figure>` : ""}</div></section>` : "";
+  renderSnapTables(so, sc);
+  drawDetail();
+}
+function closeDetail() { $("dlg").hidden = true; document.body.style.overflow = ""; if (DCH) { DCH.remove(); DCH = null; } DX = null; }
+$("dlg").addEventListener("click", e => { if (e.target === $("dlg")) closeDetail(); });
+addEventListener("keydown", e => { if (e.key === "Escape" && DX) closeDetail(); });
+
+function renderSnapTables(so, sc) {
+  const rd = (s, tf) => s && s.rd && s.rd[tf];
+  const v = (r, f) => r ? f(r) : "—";
+  const rows = ["5m", "15m", "1h", "4h", "1m"].flatMap(tf => [
+    [`${RV.TFN[tf]} 趋势`, r => `${r.trend}（${r.order}）`], [`${RV.TFN[tf]} RSI6`, r => r.rsi6], [`${RV.TFN[tf]} KDJ`, r => `${r.k}/${r.d}/${r.j}${r.kdjX ? " " + r.kdjX : ""}`],
+    [`${RV.TFN[tf]} MACD 柱`, r => `${r.hist}${r.macdX ? " " + r.macdX : ""}`], [`${RV.TFN[tf]} 布林位置`, r => Number.isFinite(r.pb) ? Math.round(r.pb * 100) + "%" : "—"],
+    [`${RV.TFN[tf]} 量比 / ATR%`, r => `${r.volR ?? "—"} / ${r.atrPct}%`]].map(([n, f]) => [n, v(rd(so, tf), f), v(rd(sc, tf), f), tf]));
+  $("dRd").innerHTML = so || sc ? `<thead><tr><th></th><th>开仓</th><th>平仓</th></tr></thead><tbody>${rows.map(r => `<tr${r[3] === "1m" ? ' class="dim"' : ""}><td>${r[0]}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}</tbody>` : `<tbody><tr><td class="empty">没有快照</td></tr></tbody>`;
+  const m = (s, f) => { try { const x = f(s); return x == null || x === "" ? "—" : x; } catch (e) { return "—"; } };
+  const n2 = x => Number.isFinite(x) ? x.toFixed(2) : "—";
+  const mk = [["时段", s => s.sess.name + (s.sess.name === "美盘" ? "" : s.sess.usIn != null ? `（距美股开盘 ${dur(s.sess.usIn * 6e4)}）` : "")], ["过去 1 小时 / 4 小时", s => `${pc(s.chg.h1)} / ${pc(s.chg.h4)}`],
+    ["资金费率", s => Number.isFinite(s.mkt.fund) ? pc(s.mkt.fund, 4) : "—"], ["OI 1 小时 / 4 小时", s => `${pc(s.mkt.oi1h)} / ${pc(s.mkt.oi4h)}`],
+    ["大户多空比", s => n2(s.mkt.topLS)], ["散户多空比", s => n2(s.mkt.retailLS)], ["1 小时主动买卖比", s => n2(s.mkt.taker1h)],
+    ["盘口买一 / 卖一", s => s.book ? `${p1(s.book.bid)} / ${p1(s.book.ask)}` : "—"], ["前 20 档买单占比", s => s.book && s.book.imb != null ? Math.round(s.book.imb * 100) + "%" : "—"],
+    ["前 2 小时红 / 黄新闻", s => s.news ? (s.news.alerts.length ? s.news.alerts.map(a => (a.level === "red" ? "🔴 " : "🟡 ") + a.title.slice(0, 50)).join("\n") : "没有") : "—"],
+    ["接下来的事件", s => s.news && s.news.upcoming.length ? s.news.upcoming.slice(0, 2).map(u => `${u.title}（${u.in} 分钟后）`).join("\n") : "—"],
+    ["模型规则状态", s => s.model ? Object.entries(s.model).map(([k, r]) => `${k}：${r.mode}${r.side ? (r.side === "long" ? " 多" : " 空") : ""}`).join("，") : "—"],
+    ["你看的周期 / 指标", s => s.view ? `${RV.TFN[s.view.tf] || s.view.tf} · ${[...s.view.ind.main, ...s.view.ind.sub].join(" ")}` : "—"], ["快照", s => s.live ? "当场拍的" : "页面关着时成交，事后按 K 线补拍"]];
+  $("dMk").innerHTML = so || sc ? `<thead><tr><th></th><th>开仓</th><th>平仓</th></tr></thead><tbody>${mk.map(([n, f]) => `<tr><td>${n}</td><td style="white-space:pre-line;text-align:right">${esc(so ? m(so, f) : "—")}</td><td style="white-space:pre-line;text-align:right">${esc(sc ? m(sc, f) : "—")}</td></tr>`).join("")}</tbody>` : `<tbody><tr><td class="empty">没有快照</td></tr></tbody>`;
+}
+
+// K 线：优先用快照里当场存的，缺的那段（持仓中间、平仓之后）再向币安拉
+async function barsFor(tf) {
+  const { x, snaps } = DX, tr = x.tr, f = RV.TFMS[tf];
+  const m = new Map();
+  for (const s of [snaps.open, snaps.close]) if (s && s.kl && s.kl[tf]) RV.unpack(s.kl[tf]).forEach(b => m.set(b.t, b));
+  const end = Math.min(Date.now(), (tr.exit ? tr.exit.t + RV.afterWin(tr) : Date.now()) + f);
+  const start = tr.t - RV.SNAP_TF[tf] * f;
+  let have = [...m.values()].sort((a, b) => a.t - b.t);
+  const gaps = [];
+  if (!have.length) gaps.push([start, end]);
+  else { if (have[0].t > start + f) gaps.push([start, have[0].t - f]);
+    for (let i = 1; i < have.length; i++) if (have[i].t - have[i - 1].t > f) gaps.push([have[i - 1].t + f, have[i].t - f]);
+    if (have.at(-1).t < end - f) gaps.push([have.at(-1).t + f, end]); }
+  for (const [a, b] of gaps) (await RV.klRange(tf, a, b, 4).catch(() => [])).forEach(bar => { if (!m.has(bar.t)) m.set(bar.t, bar); });
+  return [...m.values()].sort((a, b) => a.t - b.t);
+}
+async function drawDetail() {
+  if (!DX || !window.LightweightCharts) { if (DX) $("dChart").innerHTML = `<p class="empty">K 线组件加载失败（网络问题）</p>`; return; }
+  const my = DX, tf = DX.tf, tr = DX.x.tr;
+  $("dChartNote").textContent = "读取中…";
+  const bars = await barsFor(tf);
+  if (DX !== my || DX.tf !== tf) return;
+  $("dChartNote").textContent = `${my.snaps.open ? "开仓前那段来自当场快照" : "全部来自币安历史 K 线"} · 箭头 = 开仓 / 加仓 / 平仓 · 虚线 = 原计划止盈止损 · 主图 MA7/25/99，副图从上到下：成交量、MACD、KDJ、RSI6`;
+  if (DCH) { DCH.remove(); DCH = null; }
+  const LC = LightweightCharts, sh = ms => Math.floor(ms / 1000) + TZOFF * 60, up = cssv("--good"), dn = cssv("--bad");
+  const mob = matchMedia("(max-width:700px)").matches;
+  DCH = LC.createChart($("dChart"), { autoSize: true, layout: { background: { color: cssv("--card") }, textColor: cssv("--muted"), fontFamily: "IBM Plex Mono, monospace", attributionLogo: false, panes: { separatorColor: cssv("--line") } },
+    grid: { vertLines: { color: cssv("--grid") }, horzLines: { color: cssv("--grid") } }, rightPriceScale: { borderColor: cssv("--line") }, timeScale: { borderColor: cssv("--line"), timeVisible: true, secondsVisible: false },
+    crosshair: { mode: 0 }, handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false }, handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: !mob } } });
+  const cs = DCH.addSeries(LC.CandlestickSeries, { upColor: up, downColor: dn, wickUpColor: up, wickDownColor: dn, borderVisible: false, priceFormat: { type: "price", precision: 1, minMove: 0.1 } }, 0);
+  cs.setData(bars.map(b => ({ time: sh(b.t), open: b.o, high: b.h, low: b.l, close: b.c })));
+  const c = bars.map(b => b.c), I = RV.ind, line = (arr, color, pane, w = 1) => { const s = DCH.addSeries(LC.LineSeries, { color, lineWidth: w, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false }, pane); s.setData(bars.map((b, i) => Number.isFinite(arr[i]) ? { time: sh(b.t), value: arr[i] } : { time: sh(b.t) })); return s; };
+  const C1 = "#e0a526", C2 = "#c25ad1", C3 = "#3a9ad9";
+  line(I.sma(c, 7), C1, 0); line(I.sma(c, 25), C2, 0); line(I.sma(c, 99), C3, 0);
+  const vol = DCH.addSeries(LC.HistogramSeries, { priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false }, 1);
+  vol.setData(bars.map(b => ({ time: sh(b.t), value: b.v, color: (b.c >= b.o ? up : dn) + "88" })));
+  const md = I.macd(c), mh = DCH.addSeries(LC.HistogramSeries, { lastValueVisible: false, priceLineVisible: false }, 2);
+  mh.setData(bars.map((b, i) => Number.isFinite(md.H[i]) ? { time: sh(b.t), value: md.H[i], color: (md.H[i] >= 0 ? up : dn) + "aa" } : { time: sh(b.t) }));
+  line(md.DIF, C1, 2); line(md.DEA, C2, 2);
+  const kd = I.kdj(bars.map(b => b.h), bars.map(b => b.l), c); line(kd.K, C1, 3); line(kd.D, C2, 3); line(kd.J, C3, 3);
+  line(I.rsi(c, 6), C1, 4);
+  const ph = mob ? 230 : 300, sub = mob ? 55 : 62;
+  const fit = () => { if (DCH) DCH.panes().forEach((p, i) => p.setStretchFactor(i ? 1 : ph / sub)); };
+  fit(); requestAnimationFrame(fit);
+  // 开平仓箭头和计划线
+  const at = t => sh(Math.floor(t / RV.TFMS[tf]) * RV.TFMS[tf]), L = tr.side === "long", acc = cssv("--accent"), plan = RV.planOf(tr);
+  const mk = [{ time: at(tr.t), position: L ? "belowBar" : "aboveBar", color: acc, shape: L ? "arrowUp" : "arrowDown", text: `开${L ? "多" : "空"} ${p1(tr.entry)}` },
+    ...(tr.adds || []).map(z => ({ time: at(z.t), position: L ? "belowBar" : "aboveBar", color: acc, shape: L ? "arrowUp" : "arrowDown", text: "加仓" })),
+    ...(tr.cr || []).filter(z => !tr.exit || Math.abs(z.t - tr.exit.t) > 1000).map(z => ({ time: at(z.t), position: L ? "aboveBar" : "belowBar", color: cssv("--warn"), shape: L ? "arrowDown" : "arrowUp", text: "减仓" })),
+    ...(tr.exit ? [{ time: at(tr.exit.t), position: L ? "aboveBar" : "belowBar", color: cssv("--warn"), shape: L ? "arrowDown" : "arrowUp", text: `平 ${p1(tr.exit.px)}` }] : [])].sort((a, b) => a.time - b.time);
+  try { LC.createSeriesMarkers(cs, mk); } catch (e) { /* 标记失败不影响 K 线 */ }
+  cs.createPriceLine({ price: tr.entry, color: acc, lineWidth: 1, lineStyle: 0, title: "开仓", axisLabelVisible: true });
+  if (plan.tp) cs.createPriceLine({ price: plan.tp, color: up, lineWidth: 1, lineStyle: 2, title: "计划止盈", axisLabelVisible: true });
+  if (plan.sl) cs.createPriceLine({ price: plan.sl, color: dn, lineWidth: 1, lineStyle: 2, title: "计划止损", axisLabelVisible: true });
+  const so = my.snaps.open;
+  ((so && so.view && so.view.draws) || []).filter(d => d.k === "hline").forEach(d => cs.createPriceLine({ price: d.a.p, color: cssv("--muted"), lineWidth: 1, lineStyle: 1, title: "你画的线", axisLabelVisible: false }));
+  // 默认显示：开仓前一段到平仓后
+  const i0 = bars.findIndex(b => b.t + RV.TFMS[tf] > tr.t), i1 = tr.exit ? bars.findIndex(b => b.t + RV.TFMS[tf] > tr.exit.t) : bars.length - 1;
+  if (i0 >= 0) { const span = Math.max(20, (i1 >= 0 ? i1 : bars.length - 1) - i0); DCH.timeScale().setVisibleLogicalRange({ from: i0 - Math.max(30, span * 0.6), to: (i1 >= 0 ? i1 : i0) + Math.max(15, span * 0.5) }); }
+}
+
+// ---------------- 启动 ----------------
+renderSw();
+$("reload").onclick = load;
+let rzT = 0; addEventListener("resize", () => { clearTimeout(rzT); rzT = setTimeout(() => renderCurve(scope()), 200); });
+load();
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !DX) load(); });
+</script>
+</body>
+</html>

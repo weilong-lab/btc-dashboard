@@ -283,7 +283,8 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
   </div>
   <div class="seg tzseg acctseg" role="group" aria-label="账户" id="acctSw"></div>
   <button class="refresh" id="refresh" type="button">手动刷新</button>
-  <a class="refresh simlnk" href="sim.html">模拟盘 →</a>
+  <a class="refresh simlnk" href="sim.html">模拟盘</a>
+  <a class="refresh simlnk" href="review.html">复盘</a>
   <nav class="toc" id="toc" aria-label="目录"></nav>
 </div>
 <div class="lay edlg" id="edlg" role="dialog" aria-label="修改止盈止损" hidden>
@@ -1776,7 +1777,7 @@ async function ghGet(path) {
   if (r.status === 304 && c) return { obj: JSON.parse(c.text), sha: c.sha };
   if (r.status === 404) return { obj: null, sha: null };
   if (!r.ok) throw new Error(r.status === 401 ? "令牌无效或过期" : r.status === 403 ? "令牌没有这个仓库的权限" : "读取失败 " + r.status);
-  const j = await r.json(), text = b64d(j.content);
+  const j = await r.json(), text = j.content ? b64d(j.content) : await fetch(j.download_url, { cache: "no-store" }).then(x => x.text());   // 超过 1 MB 时 GitHub 不直接给内容
   if (r.headers.get("ETag")) GH_CACHE[path] = { etag: r.headers.get("ETag"), text, sha: j.sha };
   return { obj: JSON.parse(text), sha: j.sha };
 }
