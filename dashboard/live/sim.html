@@ -124,6 +124,9 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
 .kv{display:flex;justify-content:space-between;padding:3px 0;font-size:12.5px}.kv span{color:var(--muted)}.kv b{font-family:var(--m);font-weight:500}
 .acct .note{color:var(--muted);font-size:11.5px;margin:8px 0 0}
 .acct .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.syncbtn{background:none;cursor:pointer}.syncbtn.good{color:var(--good)}.syncbtn.bad{color:var(--bad)}
+.slogbox{margin-top:8px;font-size:12px}.slogbox summary{cursor:pointer;color:var(--fg2)}
+.slog{border-collapse:collapse;width:100%;margin-top:6px}.slog td{padding:3px 6px 3px 0;border-bottom:1px solid var(--grid);vertical-align:top;font-size:11.5px}.slog td:first-child{font-family:var(--m);white-space:nowrap;color:var(--muted)}.slog td:nth-child(2),.slog td:nth-child(3){white-space:nowrap}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--card);padding:8px 14px;border-radius:8px;font-size:13px;z-index:50;max-width:92vw;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:.95}
 
@@ -177,6 +180,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
   </dl>
   <span class="sp"></span>
   <span class="conn" id="conn"><i></i><span>连接中</span></span>
+  <button type="button" class="lnk syncbtn" id="syncBtn">☁ 同步</button>
   <span class="acctsw" id="mcSw" role="group" aria-label="涨跌配色"><button type="button" data-mc="green-up">绿涨红跌</button><button type="button" data-mc="red-up">红涨绿跌</button></span>
   <span class="acctsw" id="acctSw" role="group" aria-label="账户"></span>
   <button type="button" class="lnk mobonly" id="chartTog">K 线</button>
@@ -252,8 +256,9 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
     <div class="kv"><span>钱包余额</span><b id="aW">—</b></div>
     <div class="kv"><span>未实现盈亏</span><b id="aU">—</b></div>
     <div class="kv"><span>累计盈亏（相对初始资金）</span><b id="aTot">—</b></div>
-    <div class="btns"><button type="button" class="sbtn" id="resetBtn">重置模拟账户</button><button type="button" class="sbtn cloud-on" id="cloudBtn">连接云端</button></div>
+    <div class="btns"><button type="button" class="sbtn" id="resetBtn">重置模拟账户</button><button type="button" class="sbtn cloud-on" id="cloudBtn">连接云端</button><button type="button" class="sbtn" id="syncNow">立即同步</button></div>
     <p class="note" id="cloudSt"></p>
+    <details class="slogbox"><summary>同步记录</summary><div class="sync-log"></div></details>
     <p class="note">规则：单向持仓，BTCUSDT 永续。行情、订单簿、标记价格和资金费率都是币安实时公开数据。市价单按订单簿逐档吃单成交（吃单手续费 0.05%），限价单挂着等最新成交价碰到才成交（挂单手续费 0.02%），限价单价格已经穿过盘口会马上按吃单成交。止盈止损按最新成交价触发、市价平仓。强平按标记价格：保证金余额跌到维持保证金（仓位价值的 0.4%）以下就按强平价全部平掉。资金费每 8 小时按当时费率收付。页面关着时不会实时盯盘，下次打开会用 1 分钟 K 线把这段时间补算一遍（同一分钟里先按开盘 → 低/高 → 收盘的顺序走）。只是模拟，不会下真实订单。</p>
   </section>
 </main>
@@ -1149,33 +1154,54 @@ async function cloudGet() {
   if (!r.ok) throw new Error(r.status === 401 ? "令牌无效或过期" : r.status === 403 ? "令牌没有这个仓库的权限" : "读取失败 " + r.status);
   const j = await r.json(); CLOUD.sha = j.sha; return JSON.parse(b64d(j.content));
 }
-async function cloudSync() {
+// 同步记录：两个页面写同一份（每台设备、每个账户各一份），手动点同步时「已是最新」也记，自动同步只记有变化或出错的
+const SLOG = AK("btc_sync_log");
+function syncLog(page, what, detail, kind = "") {
+  let a = []; try { a = JSON.parse(localStorage.getItem(SLOG)) || []; } catch (e) { /* 读不到就从头记 */ }
+  const last = a[0];
+  if (last && last.what === what && last.detail === detail && Date.now() - last.t < 10 * 60e3) return renderSyncLog();   // 同样的错误 10 分钟内不重复记
+  a.unshift({ t: Date.now(), page, what, detail, kind });
+  try { localStorage.setItem(SLOG, JSON.stringify(a.slice(0, 60))); } catch (e) { /* 存不了就算了 */ }
+  renderSyncLog();
+}
+function renderSyncLog() {
+  let a = []; try { a = JSON.parse(localStorage.getItem(SLOG)) || []; } catch (e) { /* 空 */ }
+  const html = a.length ? `<table class="slog"><tbody>${a.slice(0, 30).map(x => `<tr><td>${new Date(x.t).toLocaleString("zh-CN", { timeZone: TZ, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}</td><td>${esc(x.page)}</td><td class="${x.kind}">${esc(x.what)}</td><td>${esc(x.detail || "")}</td></tr>`).join("")}</tbody></table>` : `<p class="note">还没有同步记录。</p>`;
+  document.querySelectorAll(".sync-log").forEach(el => el.innerHTML = html);
+}
+const simSum = () => `余额 ${p2(A.wallet)} · ${A.pos ? `${A.pos.side === "long" ? "多" : "空"} ${q3(A.pos.qty)} BTC` : "无仓位"} · 委托 ${A.orders.length} · 画线 ${(A.draws || []).length}`;
+async function cloudSync(manual = false) {
   if (!CLOUD.token || CLOUD.busy) return;
-  CLOUD.busy = true;
+  CLOUD.busy = true; renderCloud();
   try {
     const remote = await cloudGet();
-    if (remote && remote.v === 1 && (remote.u || 0) > (A.u || 0)) { const lt = Math.max(A.lastT || 0, remote.lastT || 0); A = remote; A.lastT = lt; A.draws = A.draws || []; A.trades = A.trades || []; save(); dirty = true; tblKey = ""; drawCanvas(); CLOUD.pushedU = A.u; }
+    if (remote && remote.v === 1 && (remote.u || 0) > (A.u || 0)) { const lt = Math.max(A.lastT || 0, remote.lastT || 0); A = remote; A.lastT = lt; A.draws = A.draws || []; A.trades = A.trades || []; save(); dirty = true; tblKey = ""; drawCanvas(); CLOUD.pushedU = A.u;
+      syncLog("模拟盘", "从云端更新", `别的设备 ${fmtT(remote.u)} 的改动 · ${simSum()}`, "good"); }
     else if (!CLOUD.ro && (!remote || (A.u || 0) > (remote.u || 0))) {
       const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${AF("sim.json")}`, { method: "PUT", headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" },
         body: JSON.stringify({ message: "模拟盘同步", content: b64e(JSON.stringify(A)), ...(CLOUD.sha ? { sha: CLOUD.sha } : {}) }) });
-      if (r.status === 403 || r.status === 404) CLOUD.ro = true;
+      if (r.status === 403 || r.status === 404) { CLOUD.ro = true; syncLog("模拟盘", "没有上传", "令牌是只读的", "warn"); }
       else if (r.status === 409 || r.status === 422) { CLOUD.busy = false; return cloudSoon(); }
       else if (!r.ok) throw new Error("写入失败 " + r.status);
-      else { CLOUD.sha = (await r.json()).content.sha; CLOUD.pushedU = A.u; }
-    }
+      else { CLOUD.sha = (await r.json()).content.sha; CLOUD.pushedU = A.u; syncLog("模拟盘", "已上传到云端", simSum(), "good"); }
+    } else if (manual) syncLog("模拟盘", "已是最新", simSum());
     CLOUD.err = ""; CLOUD.last = Date.now();
-  } catch (e) { CLOUD.err = e.message || String(e); }
+  } catch (e) { CLOUD.err = e.message || String(e); syncLog("模拟盘", "同步出错", CLOUD.err, "bad"); }
   finally { CLOUD.busy = false; renderCloud(); }
 }
 function cloudSoon() { if (!CLOUD.token) return; clearTimeout(CLOUD.timer); CLOUD.timer = setTimeout(cloudSync, 3000); }
 function renderCloud() {
-  $("cloudBtn").hidden = !!CLOUD.token;
+  $("cloudBtn").hidden = !!CLOUD.token; $("syncNow").hidden = !CLOUD.token;
+  const sb = $("syncBtn");
+  sb.textContent = !CLOUD.token ? "☁ 未连接云端" : CLOUD.busy ? "☁ 同步中…" : CLOUD.err ? "☁ 同步出错" : CLOUD.last ? `☁ 已同步 ${fmtHMS(CLOUD.last)}` : "☁ 同步";
+  sb.className = "lnk syncbtn" + (CLOUD.err ? " bad" : CLOUD.token && CLOUD.last && !CLOUD.busy ? " good" : "");
   $("cloudSt").className = "note " + (CLOUD.err ? "bad" : "");
   $("cloudSt").textContent = !CLOUD.token ? "云端未连接：模拟账户只存在这台设备的浏览器里。在作战面板连过云端的设备会自动连上。"
     : CLOUD.err ? `云端同步出错：${CLOUD.err}（先存在本机，恢复后自动补传）`
     : CLOUD.ro ? "云端只读：能看到云端的模拟账户，这台设备上的操作不会传上去"
     : `云端已连接 · 最近同步 ${CLOUD.last ? fmtHMS(CLOUD.last) : "—"} · 换设备打开也是同一个模拟账户`;
 }
+$("syncBtn").onclick = $("syncNow").onclick = () => { if (!CLOUD.token) return $("cloudBtn").click(); clearTimeout(CLOUD.timer); cloudSync(true); };
 $("cloudBtn").onclick = () => { const v = prompt(`粘贴 GitHub 细粒度令牌（只勾 ${REC_REPO}，权限 Contents：Read and write）。令牌只存在这台设备的浏览器里。`);
   if (!v) return; CLOUD.token = v.trim(); lsSet(TKEY, CLOUD.token); renderCloud(); cloudSync(); };
 
@@ -1227,7 +1253,8 @@ async function fromCall() {
 
 // ---------------- 启动 ----------------
 (async function boot() {
-  renderCloud();
+  renderCloud(); renderSyncLog();
+  addEventListener("storage", e => { if (e.key === SLOG) renderSyncLog(); });
   initChart();
   const [pi, dp] = await Promise.all([jfetch(`${FAPI}/fapi/v1/premiumIndex?symbol=BTCUSDT`).catch(() => null), jfetch(`${FAPI}/fapi/v1/depth?symbol=BTCUSDT&limit=20`).catch(() => null)]);
   if (pi) { M.mark = +pi.markPrice; M.fund = +pi.lastFundingRate; M.fundT = +pi.nextFundingTime; }

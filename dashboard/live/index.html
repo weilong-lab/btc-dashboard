@@ -49,6 +49,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .refresh{font:inherit;font-size:13px;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
 .refresh:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .refresh[disabled]{opacity:.6}
+.slogbox{font-size:12.5px}.slogbox summary{cursor:pointer;color:var(--fg2)}
+.slog{border-collapse:collapse;width:100%;margin-top:6px}.slog td{padding:3px 8px 3px 0;border-bottom:1px solid var(--grid);vertical-align:top;font-size:12px}.slog td:first-child{font-family:var(--m);white-space:nowrap;color:var(--muted)}.slog td:nth-child(2),.slog td:nth-child(3){white-space:nowrap}
 .simlnk{text-decoration:none;display:inline-block;line-height:1.6}
 .wrap{max-width:1100px;margin:12px auto 0;display:grid;grid-template-columns:1fr;gap:12px}
 /* 目录：窄屏在顶栏下面横向滚动，宽屏固定在左侧 */
@@ -450,6 +452,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
   <section class="card span" id="journalCard">
     <h2>交易日志与风控 <small>连接云端后存在私有 GitHub 仓库，可导出备份</small></h2>
     <div class="jbtns"><button type="button" class="btn cloud-on">连接云端</button><button type="button" class="btn cloud-now cloud-off">立即同步</button><button type="button" class="btn cloud-off">断开云端</button><span class="cloud-st note"></span></div>
+    <details class="slogbox"><summary>同步记录（作战面板和模拟盘）</summary><div class="sync-log"></div></details>
     <div class="status" id="risk"></div>
     <div class="verdict" id="riskMsg"></div>
     <form id="jform" onsubmit="return false">
@@ -489,6 +492,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
   <section class="card span" id="callsCard">
     <h2>喊单记录与验证 <small>到期自动按币安行情核对 · 连接云端后存在私有 GitHub 仓库</small></h2>
     <div class="jbtns"><button type="button" class="btn cloud-on">连接云端</button><button type="button" class="btn cloud-now cloud-off">立即同步</button><button type="button" class="btn cloud-off">断开云端</button><span class="cloud-st note"></span></div>
+    <details class="slogbox"><summary>同步记录（作战面板和模拟盘）</summary><div class="sync-log"></div></details>
     <form class="sum-in" onsubmit="return false">
       <label for="cDefAmt">没写金额时每单按投入（U）<input id="cDefAmt" inputmode="decimal" value="100"></label>
       <label for="cDefLev">没写杠杆时按（倍）<input id="cDefLev" inputmode="numeric" value="10"></label>
@@ -1789,9 +1793,26 @@ function mergeById(local, remote, deleted) {
   for (const x of [...remote, ...local]) { const o = m.get(x.id); if (!o || (x.u || 0) > (o.u || 0)) m.set(x.id, o ? { ...o, ...x } : x); }
   return [...m.values()].filter(x => !deleted.has(x.id));
 }
-async function cloudSync() {
+// 同步记录：两个页面写同一份（每台设备、每个账户各一份），手动点同步时「已是最新」也记，自动同步只记有变化或出错的
+const SLOG = AK("btc_sync_log");
+function syncLog(page, what, detail, kind = "") {
+  let a = []; try { a = JSON.parse(localStorage.getItem(SLOG)) || []; } catch (e) { /* 读不到就从头记 */ }
+  const last = a[0];
+  if (last && last.what === what && last.detail === detail && Date.now() - last.t < 10 * 60e3) return renderSyncLog();   // 同样的错误 10 分钟内不重复记
+  a.unshift({ t: Date.now(), page, what, detail, kind });
+  try { localStorage.setItem(SLOG, JSON.stringify(a.slice(0, 60))); } catch (e) { /* 存不了就算了 */ }
+  renderSyncLog();
+}
+function renderSyncLog() {
+  let a = []; try { a = JSON.parse(localStorage.getItem(SLOG)) || []; } catch (e) { /* 空 */ }
+  const html = a.length ? `<table class="slog"><tbody>${a.slice(0, 30).map(x => `<tr><td>${new Date(x.t).toLocaleString("zh-CN", { timeZone: TZ, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}</td><td>${esc(x.page)}</td><td class="${x.kind}">${esc(x.what)}</td><td>${esc(x.detail || "")}</td></tr>`).join("")}</tbody></table>` : `<p class="note">还没有同步记录。</p>`;
+  document.querySelectorAll(".sync-log").forEach(el => el.innerHTML = html);
+}
+async function cloudSync(manual = false) {
   if (!CLOUD.token || CLOUD.busy) return;
   CLOUD.busy = true;
+  const before = new Set(C.calls.map(c => c.id)), beforeT = new Set(J.trades.map(t => t.id));
+  let upC = false, upJ = false, newC = 0, newT = 0;
   try {
     for (let attempt = 0; attempt < 3; attempt++) {
       const [rc, rj, rs] = await Promise.all([ghGet(AF("calls.json")), ghGet(AF("journal.json")), ghGet(AF("sim.json")).catch(() => ({ obj: null }))]);
@@ -1809,13 +1830,18 @@ async function cloudSync() {
       markFlips();
       const cd = callsDoc(), jd = journalDoc();
       const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-      const sc = CLOUD.ro || same(cd, rc.obj) ? rc.sha : await ghPut(AF("calls.json"), cd, rc.sha);
-      const sj = CLOUD.ro || same(jd, rj.obj) ? rj.sha : await ghPut(AF("journal.json"), jd, rj.sha);
+      newC = C.calls.filter(c => !before.has(c.id) && !c.sim).length; newT = J.trades.filter(t => !beforeT.has(t.id)).length;
+      upC = !CLOUD.ro && !same(cd, rc.obj); upJ = !CLOUD.ro && !same(jd, rj.obj);
+      const sc = !upC ? rc.sha : await ghPut(AF("calls.json"), cd, rc.sha);
+      const sj = !upJ ? rj.sha : await ghPut(AF("journal.json"), jd, rj.sha);
       if (sc !== null && sj !== null) break;
     }
     CLOUD.last = Date.now(); CLOUD.err = "";
+    const parts = [newC ? `下载新喊单 ${newC} 条` : "", newT ? `下载新交易 ${newT} 笔` : "", upC ? "上传喊单记录" : "", upJ ? "上传交易日志" : ""].filter(Boolean);
+    const sum = `喊单 ${C.calls.filter(c => !c.sim).length} 条 · 交易 ${J.trades.length} 笔`;
+    if (parts.length) syncLog("作战面板", parts.join("、"), sum, "good"); else if (manual) syncLog("作战面板", "已是最新", sum);
     cNames(); renderCalls(); renderJournal(); verifyCalls();
-  } catch (e) { CLOUD.err = e.message || String(e); }
+  } catch (e) { CLOUD.err = e.message || String(e); syncLog("作战面板", "同步出错", CLOUD.err, "bad"); }
   finally { CLOUD.busy = false; renderCloud(); }
 }
 function cloudSoon() { if (!CLOUD.token) return; clearTimeout(CLOUD.timer); CLOUD.timer = setTimeout(cloudSync, 3000); }
@@ -1839,7 +1865,8 @@ function cloudInit() {
     if (!confirm("断开云端？这台设备上的令牌会删除，云端的记录不受影响。")) return;
     CLOUD.token = ""; try { localStorage.removeItem(TKEY); } catch (e) { /* 忽略 */ } renderCloud();
   });
-  document.querySelectorAll(".cloud-now").forEach(b => b.onclick = () => cloudSync());
+  document.querySelectorAll(".cloud-now").forEach(b => b.onclick = () => { clearTimeout(CLOUD.timer); cloudSync(true); });
+  renderSyncLog(); addEventListener("storage", e => { if (e.key === SLOG) renderSyncLog(); });
   renderCloud();
 }
 
