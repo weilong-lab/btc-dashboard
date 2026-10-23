@@ -873,11 +873,11 @@ function drawLines(force) {
   lines = want.map(([price, color, title, style]) => cs.createPriceLine({ price, color, title, lineStyle: style, lineWidth: 1, axisLabelVisible: true }));
 }
 function connMkt() {
-  const ws = new WebSocket(WS_MKT);
-  ws.onopen = () => { M.ok = true; renderConn(); };
+  const ws = new WebSocket(WS_MKT); M.ws = ws;
+  ws.onopen = () => { M.ok = true; M.msgAt = Date.now(); renderConn(); };
   ws.onclose = () => { M.ok = false; renderConn(); setTimeout(connMkt, 3000); };
   ws.onmessage = m => {
-    const { stream, data: d } = JSON.parse(m.data);
+    const { stream, data: d } = JSON.parse(m.data); M.msgAt = Date.now();
     if (stream.endsWith("@aggTrade")) {
       M.last = +d.p; M.ready = M.ready || isFinite(M.mark);
       M.trades.unshift([+d.p, +d.q, d.T, d.m]); M.trades.length = Math.min(M.trades.length, 40);
@@ -889,7 +889,7 @@ function connMkt() {
       if (M.ready) onMark(M.mark, d.E);
       M.ready = M.ready || isFinite(M.last); dirty = true;
     } else if (stream.endsWith("@ticker")) {
-      M.tk = { chg: +d.P, hi: +d.h, lo: +d.l, qv: +d.q };
+      M.tk = { chg: +d.P, hi: +d.h, lo: +d.l, qv: +d.q }; M.tkAt = Date.now();
     } else if (stream.includes("@kline_")) {
       onKline(d.k);
     }
@@ -1148,11 +1148,16 @@ const REC_REPO = "weilong-lab/btc-records", TKEY = "btc_gh_token";
 const CLOUD = { token: lsGet(TKEY) || "", sha: null, pushedU: 0, timer: 0, err: "", ro: false, busy: false };
 const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), c => c.charCodeAt(0)));
+// 带 ETag 读：文件没变时 GitHub 回 304，不占接口额度
+let GH_C = null;
 async function cloudGet() {
-  const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${AF("sim.json")}?t=${Date.now()}`, { headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" }, cache: "no-store" });
+  const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${AF("sim.json")}`, { headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json", ...(GH_C ? { "If-None-Match": GH_C.etag } : {}) }, cache: "no-store" });
+  if (r.status === 304 && GH_C) { CLOUD.sha = GH_C.sha; return JSON.parse(GH_C.text); }
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(r.status === 401 ? "令牌无效或过期" : r.status === 403 ? "令牌没有这个仓库的权限" : "读取失败 " + r.status);
-  const j = await r.json(); CLOUD.sha = j.sha; return JSON.parse(b64d(j.content));
+  const j = await r.json(), text = b64d(j.content); CLOUD.sha = j.sha;
+  if (r.headers.get("ETag")) GH_C = { etag: r.headers.get("ETag"), text, sha: j.sha };
+  return JSON.parse(text);
 }
 // 同步记录：两个页面写同一份（每台设备、每个账户各一份），手动点同步时「已是最新」也记，自动同步只记有变化或出错的
 const SLOG = AK("btc_sync_log");
@@ -1267,7 +1272,16 @@ async function fromCall() {
   dirty = true;
   setInterval(() => { dirty = true; }, 1000);
   setInterval(() => lsSet(SKEY, JSON.stringify(A)), 10000);
-  setInterval(cloudSync, 60000);
+  // 24 小时涨跌 / 最高 / 最低 / 成交额：推送超过 10 秒没来就直接向币安查；行情连接 20 秒没有任何消息就重连
+  const pollTk = () => jfetch(`${FAPI}/fapi/v1/ticker/24hr?symbol=BTCUSDT`).then(d => { M.tk = { chg: +d.priceChangePercent, hi: +d.highPrice, lo: +d.lowPrice, qv: +d.quoteVolume }; M.tkAt = Date.now(); dirty = true; }).catch(() => {});
+  pollTk();
+  setInterval(() => {
+    if (!M.tkAt || Date.now() - M.tkAt > 10000) pollTk();
+    if (M.ws && M.ok && Date.now() - (M.msgAt || 0) > 20000) { try { M.ws.close(); } catch (e) { /* onclose 会重连 */ } }
+  }, 5000);
+  // 云端：页面在前台时每 15 秒同步一次，切回这个页面时马上同步
+  setInterval(() => { if (document.visibilityState === "visible") cloudSync(); }, 15000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { cloudSync(); pollTk(); } });
   (function loop() { render(); requestAnimationFrame(loop); })();
 })();
 addEventListener("pagehide", save);

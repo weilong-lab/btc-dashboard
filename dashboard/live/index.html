@@ -1768,12 +1768,17 @@ const REC_REPO = params.get("records") || "weilong-lab/btc-records", TKEY = "btc
 const CLOUD = { token: (() => { try { return localStorage.getItem(TKEY) || ""; } catch (e) { return ""; } })(), sha: {}, busy: false, timer: 0, last: 0, err: "" };
 const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), ch => ch.charCodeAt(0)));
+// 带 ETag 读：文件没变时 GitHub 回 304，不占接口额度（每 15 秒同步也不会把额度用完）
+const GH_CACHE = {};
 async function ghGet(path) {
-  const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${path}?t=${Date.now()}`, { headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" }, cache: "no-store" });
+  const c = GH_CACHE[path];
+  const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${path}`, { headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json", ...(c ? { "If-None-Match": c.etag } : {}) }, cache: "no-store" });
+  if (r.status === 304 && c) return { obj: JSON.parse(c.text), sha: c.sha };
   if (r.status === 404) return { obj: null, sha: null };
   if (!r.ok) throw new Error(r.status === 401 ? "令牌无效或过期" : r.status === 403 ? "令牌没有这个仓库的权限" : "读取失败 " + r.status);
-  const j = await r.json();
-  return { obj: JSON.parse(b64d(j.content)), sha: j.sha };
+  const j = await r.json(), text = b64d(j.content);
+  if (r.headers.get("ETag")) GH_CACHE[path] = { etag: r.headers.get("ETag"), text, sha: j.sha };
+  return { obj: JSON.parse(text), sha: j.sha };
 }
 async function ghPut(path, obj, sha) {
   const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${path}`, { method: "PUT", headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" },
@@ -2893,7 +2898,9 @@ setInterval(() => pollFunding().catch(() => {}), 60000);
 setInterval(() => pollStocks(false).catch(() => {}), 60000);
 setInterval(() => pollMood().catch(() => {}), 300000);
 setInterval(verifyCalls, 60000);
-setInterval(cloudSync, 60000);
+// 云端：页面在前台时每 15 秒同步一次，切回这个页面时马上同步（换设备 / 另一个人改的内容很快就能看到）
+setInterval(() => { if (document.visibilityState === "visible") cloudSync(); }, 15000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") cloudSync(); });
 setInterval(() => pollStocks(true).catch(() => {}), 600000);
 setInterval(async () => { await resolveData(); pollNews(); pollPaper(); pollModelCalls(); }, 60000);
 </script>
