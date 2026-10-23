@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 复盘</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css?v=20261023d">
+<link rel="stylesheet" href="ui.css?v=20261023e">
 <style>
 /* 复盘：只看模拟盘的单。陈总 / 张主任 / 汇总三个视图，颜色和另外两个页面一致 */
 :root{
@@ -128,8 +128,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 <div class="dlg" id="dlg" hidden><div id="dBox"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
-<script src="review-core.js?v=20261023d"></script>
-<script src="ui.js?v=20261023d"></script>
+<script src="review-core.js?v=20261023e"></script>
+<script src="ui.js?v=20261023e"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -293,12 +293,13 @@ function renderWhy(xs) {
   $("whyT").innerHTML = groupRows(names.map(n => [esc(n), c.filter(x => key(x) === n)]).sort((a, b) => b[1].length - a[1].length));
 }
 function renderTags(xs) {
-  const c = xs.filter(x => x.closed && x.tr.rsn && x.tr.rsn.tags);
-  const rows = Object.keys(RV.TAG_NAME).map(k => { const arr = c.filter(x => x.tr.rsn.tags.includes(k));
+  const c = xs.filter(x => x.closed && x.tr.rsn && ((x.tr.rsn.tags || []).length || x.tr.rsn.note));
+  const rows = Object.keys(RV.TAG_NAME).map(k => { const arr = c.filter(x => (x.tr.rsn.tags || []).includes(k));
     const chk = arr.map(x => ((x.tr.rv && x.tr.rv.o && x.tr.rv.o.chk) || []).find(z => z[0] === k)).filter(z => z && z[1] != null);
     return [esc(RV.TAG_NAME[k]), arr, chk.length ? `${Math.round(chk.filter(z => z[1]).length / chk.length * 100)}%（${chk.length}）` : "—"]; }).sort((a, b) => b[1].length - a[1].length);
   const conf = RV.CONF.map(([k, n]) => [`信心：${n}`, c.filter(x => x.tr.rsn.conf === k), ""]);
-  $("tagT").innerHTML = c.length ? groupRows([...rows, ...conf], ["系统核对 ✓"]) : `<tbody><tr><td class="empty">还没有带理由的平仓单（这次更新之后下的单才会有）</td></tr></tbody>`;
+  const typed = ["手写理由（没选选项）", c.filter(x => !(x.tr.rsn.tags || []).length), "—"];
+  $("tagT").innerHTML = c.length ? groupRows([...rows, typed, ...conf], ["系统核对 ✓"]) : `<tbody><tr><td class="empty">还没有带理由的平仓单（这次更新之后下的单才会有）</td></tr></tbody>`;
 }
 const FLAG_NAME = { chase: "追单", counter: "逆 1 小时趋势", revenge: "报复单", many: "当天第 4 单及以后", heavy: "重仓（保证金 >30% 余额）", event: "临近事件开仓", rednews: "红色新闻后 30 分钟内开仓",
   giveback: "拿不住", nosl: "没设止损", hold: "扛单", slaway: "止损往远挪 / 撤掉", sltight: "收紧止损", early: "没到止盈就手动平", liq: "被强平" };
@@ -325,12 +326,13 @@ function renderList() {
   $("list").innerHTML = xs.length ? xs.slice(0, 200).map(x => {
     const tr = x.tr, L = tr.side === "long", rv = tr.rv || {};
     const tags = (tr.rsn && tr.rsn.tags || []).map(k => { const z = (rv.o && rv.o.chk || []).find(c => c[0] === k); return `<span class="chip ${z && z[1] === true ? "ok" : z && z[1] === false ? "no" : ""}">${esc(RV.TAG_NAME[k] || k)}${z && z[1] === true ? " ✓" : z && z[1] === false ? " ✗" : ""}</span>`; }).join("");
+    const typed = tr.rsn && !(tr.rsn.tags || []).length && tr.rsn.note ? `<span class="chip">手写：${esc(tr.rsn.note.slice(0, 24))}${tr.rsn.note.length > 24 ? "…" : ""}</span>` : "";
     const fl = flagsOf(x).filter(f => f[0] !== "sltight").map(f => `<span class="chip w">${esc(FLAG_NAME[f[0]] || f[0])}</span>`).join("");
     const why = tr.exit ? (["止盈", "止损", "强平"].includes(tr.exit.why) ? tr.exit.why : rv.c && rv.c.why ? RV.CLOSE_NAME[rv.c.why] : tr.exit.why) : "持仓中";
     return `<button type="button" class="tr" data-key="${x.key}"><div class="r1">${VIEW === "all" ? `<span class="who" style="background:${ACOL[x.a]}">${NAME[x.a]}</span>` : ""}<b class="${L ? "good" : "bad"}">${L ? "多" : "空"}</b>
       <span class="num">${fmtT(tr.t)}</span><span class="num mut">${p1(tr.entry)} → ${tr.exit ? p1(tr.exit.px) : "—"}</span><span class="mut">${tr.exit ? dur(tr.exit.t - tr.t) : ""} · ${esc(why)}</span>
       <span class="pl ${x.closed ? cls(x.net) : ""}">${x.closed ? u2(x.net) + " U" : "—"}</span></div>
-      ${tags || fl ? `<div class="chips">${tags}${fl}</div>` : ""}</button>`;
+      ${tags || typed || fl ? `<div class="chips">${tags}${typed}${fl}</div>` : ""}</button>`;
   }).join("") : `<p class="empty">没有符合条件的单</p>`;
 }
 $("list").onclick = e => { const b = e.target.closest("[data-key]"); if (b) openDetail(b.dataset.key); };
@@ -344,9 +346,9 @@ async function openDetail(key) {
   const sec = (t, body) => body ? `<section class="card sum"><h3>${t}</h3>${body}</section>` : "";
   const aft = !tr.exit ? "" : a ? RV.afterSummary(tr, a) : Date.now() < tr.exit.t + RV.afterWin(tr) ? `要等到 ${fmtT(tr.exit.t + RV.afterWin(tr))} 才能算（平仓后看 ${dur(RV.afterWin(tr))}）。` : "正在补算…";
   const rsn = tr.rsn ? `<div class="chk">${(rv.o && rv.o.chk || tr.rsn.tags.map(k => [k, null, "快照还没拍好"])).map(([k, ok, t]) => `<div><b class="${ok === true ? "good" : ok === false ? "bad" : "mut"}">${ok === true ? "✓" : ok === false ? "✗" : "·"} ${esc(RV.TAG_NAME[k] || k)}</b><span>${esc(t)}</span></div>`).join("")}
-    ${tr.rsn.conf ? `<div><b>信心</b><span>${RV.CONF_NAME[tr.rsn.conf]}</span></div>` : ""}${tr.rsn.note ? `<div><b>备注</b><span>${esc(tr.rsn.note)}</span></div>` : ""}</div>` : `<p class="mut">这一单没有记开仓理由（更新之前下的单）。</p>`;
-  const moves = [...(tr.adds || []).map(z => `${fmtT(z.t)} 加仓 ${z.qty.toFixed(3)} BTC @ ${p1(z.px)}：${z.tags.map(k => RV.TAG_NAME[k]).join("、")}${z.note ? "，" + esc(z.note) : ""}`),
-    ...(tr.cr || []).map(z => `${fmtT(z.t)} 平 ${z.qty.toFixed(3)} BTC @ ${p1(z.px)}：${RV.CLOSE_NAME[z.why] || z.why}${z.note ? "，" + esc(z.note) : ""}`),
+    ${tr.rsn.conf ? `<div><b>信心</b><span>${RV.CONF_NAME[tr.rsn.conf]}</span></div>` : ""}${tr.rsn.note ? `<div><b>${(tr.rsn.tags || []).length ? "备注" : "手写理由"}</b><span>${esc(tr.rsn.note)}</span></div>` : ""}</div>` : `<p class="mut">这一单没有记开仓理由（更新之前下的单）。</p>`;
+  const moves = [...(tr.adds || []).map(z => `${fmtT(z.t)} 加仓 ${z.qty.toFixed(3)} BTC @ ${p1(z.px)}：${[(z.tags || []).map(k => RV.TAG_NAME[k]).join("、"), esc(z.note || "")].filter(Boolean).join("，") || "没记理由"}`),
+    ...(tr.cr || []).map(z => `${fmtT(z.t)} 平 ${z.qty.toFixed(3)} BTC @ ${p1(z.px)}：${z.why === "other" && z.note ? esc(z.note) : `${RV.CLOSE_NAME[z.why] || z.why}${z.note ? "，" + esc(z.note) : ""}`}`),
     ...(tr.mods || []).map(m => `${fmtT(m.at)} 改止盈止损：${m.from.tp ? p1(m.from.tp) : "—"} / ${m.from.sl ? p1(m.from.sl) : "—"} → ${m.tp ? p1(m.tp) : "—"} / ${m.sl ? p1(m.sl) : "—"}`)].sort();
   $("dBox").innerHTML = `<div class="top">${VIEW === "all" ? `<span class="who" style="background:${ACOL[x.a]}">${NAME[x.a]}</span>` : ""}<h2 class="${L ? "good" : "bad"}">${L ? "做多" : "做空"} ${tr.qty.toFixed(3)} BTC</h2>
       <span class="num">${fmtT(tr.t)} @ ${p1(tr.entry)}</span><span class="num">${tr.exit ? `→ ${fmtT(tr.exit.t)} @ ${p1(tr.exit.px)}` : "持仓中"}</span>

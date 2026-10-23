@@ -218,7 +218,7 @@ const RV = (() => {
     out.push(`${L ? "做多" : "做空"} ${tr.qty.toFixed(3)} BTC @ ${p1(e)}（${tr.lev}x ${tr.mode === "isolated" ? "逐仓" : "全仓"}）。`);
     if (rsn && rsn.tags && rsn.tags.length) out.push(`理由：\n${chk.map(([k, ok, txt]) => `  ${ok === true ? "✓" : ok === false ? "✗" : "·"} ${TAG_NAME[k] || k}：${txt}`).join("\n")}`);
     if (rsn && rsn.conf) out.push(`信心：${CONF_NAME[rsn.conf]}。`);
-    if (rsn && rsn.note) out.push(`备注：${rsn.note}`);
+    if (rsn && rsn.note) out.push(`${rsn.tags && rsn.tags.length ? "备注" : "理由（手写）"}：${rsn.note}`);
     out.push(`盘面：${trendLine(snap)}。过去 5 分钟 ${pc(snap.chg.m5)}、1 小时 ${pc(snap.chg.h1)}、4 小时 ${pc(snap.chg.h4)}、24 小时 ${pc(snap.chg.h24)}。`);
     const v = snap.view && snap.view.tf; out.push(`指标：${indLine(snap, v && snap.rd[v] ? v : "5m")}。`);
     const ml = mktLine(snap); if (ml) out.push(ml + "。");
@@ -237,9 +237,9 @@ const RV = (() => {
     const base = tr.qty - tr.adds.reduce((t, a) => t + a.qty, 0), after = base + tr.adds.slice(0, i + 1).reduce((t, a) => t + a.qty, 0);
     out.push(`第 ${i + 1} 次加仓：${L ? "多" : "空"} +${ad.qty.toFixed(3)} BTC @ ${p1(ad.px)}，开仓后 ${dur(ad.t - tr.t)}，加完共 ${after.toFixed(3)} BTC。`);
     if (ad.tags && ad.tags.length) out.push(`理由：\n${chk.map(([k, ok, txt]) => `  ${ok === true ? "✓" : ok === false ? "✗" : "·"} ${TAG_NAME[k] || k}：${txt}`).join("\n")}`);
-    else out.push("这一笔加仓没有记理由（更新之前下的单）。");
+    else if (!ad.note) out.push("这一笔加仓没有记理由（更新之前下的单）。");
     if (ad.conf) out.push(`信心：${CONF_NAME[ad.conf]}。`);
-    if (ad.note) out.push(`备注：${ad.note}`);
+    if (ad.note) out.push(`${ad.tags && ad.tags.length ? "备注" : "理由（手写）"}：${ad.note}`);
     out.push(`盘面：${trendLine(snap)}。过去 5 分钟 ${pc(snap.chg.m5)}、1 小时 ${pc(snap.chg.h1)}、4 小时 ${pc(snap.chg.h4)}。`);
     const v = snap.view && snap.view.tf; out.push(`指标：${indLine(snap, v && snap.rd[v] ? v : "5m")}。`);
     const ml = mktLine(snap); if (ml) out.push(ml + "。");
@@ -250,7 +250,8 @@ const RV = (() => {
   }
   function closeSummary(tr, snap, cf, why) {
     const x = tr.exit, out = [], net = (tr.real || 0) - (tr.fee || 0), im = tr.qty * tr.entry / tr.lev;
-    out.push(`拿了 ${dur(x.t - tr.t)}，平在 ${p1(x.px)}（${x.why}${why ? ` · 理由：${CLOSE_NAME[why.why] || why.why}${why.note ? "，" + why.note : ""}` : ""}）。`);
+    const wTxt = why ? (why.why === "other" && why.note ? why.note : `${CLOSE_NAME[why.why] || why.why}${why.note ? "，" + why.note : ""}`) : "";
+    out.push(`拿了 ${dur(x.t - tr.t)}，平在 ${p1(x.px)}（${x.why}${wTxt ? ` · 理由：${wTxt}` : ""}）。`);
     out.push(`盈亏 ${sg(tr.real || 0)} USDT，扣手续费后 ${sg(net)} USDT（按价格 ${pc(cf.got)}，保证金回报 ${im ? sg(net / im * 100) + "%" : "—"}）。`);
     if (Number.isFinite(cf.mfe)) out.push(`持仓中最高浮盈 ${pc(cf.mfe)}${tr.hiT || tr.loT ? `（开仓后 ${dur((tr.side === "long" ? tr.hiT : tr.loT) - tr.t)}）` : ""}，最大浮亏 ${pc(cf.mae)}${tr.hiT || tr.loT ? `（开仓后 ${dur((tr.side === "long" ? tr.loT : tr.hiT) - tr.t)}）` : ""}。`);
     if (snap) { out.push(`平仓时盘面：${trendLine(snap)}。`); out.push(`指标：${indLine(snap, "5m")}。`); const ml = mktLine(snap); if (ml) out.push(ml + "。"); }

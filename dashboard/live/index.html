@@ -7,7 +7,7 @@
 <title>BTC 作战面板</title>
 <meta name="dashboard-release" content="2026-10-22-market-colors-v6">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css?v=20261023d">
+<link rel="stylesheet" href="ui.css?v=20261023e">
 <style>
 .fee-cols{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:16px}.fee-cols>.plv+ .plv{border-left:1px solid var(--line);padding-left:16px}
 /* 布局：手机优先的单列卡片流，宽屏两列；顶部价格条吸顶 */
@@ -572,8 +572,8 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 
 </div>
 
-<script src="ui.js?v=20261023d"></script>
-<script src="review-core.js?v=20261023d"></script>
+<script src="ui.js?v=20261023e"></script>
+<script src="review-core.js?v=20261023e"></script>
 <script src="weights.js"></script>
 <script src="context.js"></script>
 <script src="model.js"></script>
@@ -2153,7 +2153,7 @@ function renderPositions() {
   // 模拟盘还没成交的挂单（限价 / 条件单）：成交了就变成上面的持仓，撤了就消失
   const pend = ((SIM_DOC && SIM_DOC.orders) || []).filter(o => !o.ro && !o.close), TY = { limit: "限价", stop: "条件市价" }, TN = typeof RV !== "undefined" ? RV.TAG_NAME : {};
   setHTML($("pSimOrd"), pend.length ? `<h3 class="sub-h">模拟盘挂单 · 等成交</h3><div class="tablewrap"><table class="jt"><thead><tr><th>方向</th><th>类型</th><th>价格 / 触发价</th><th>数量</th><th>止盈 / 止损</th><th>下单时间</th><th>理由</th><th></th></tr></thead><tbody>` +
-    pend.map(o => { const L = o.ps ? o.ps === "long" : o.side === "buy"; return `<tr><td class="${L ? "good" : "bad"}">${L ? "开多" : "开空"}</td><td class="txt">${TY[o.type] || o.type}</td><td>${fmt(o.price || o.stop)}</td><td>${(+o.qty).toFixed(3)} BTC</td><td>${o.tp ? fmt(o.tp) : "—"} / ${o.sl ? fmt(o.sl) : "—"}</td><td>${fmtDTs(o.t)}</td><td class="txt">${o.rsn && o.rsn.tags ? esc(o.rsn.tags.map(k => TN[k] || k).join("、")) : "—"}</td><td class="txt"><a class="btn sm" href="sim.html">去模拟盘</a></td></tr>`; }).join("") + "</tbody></table></div>" : "");
+    pend.map(o => { const L = o.ps ? o.ps === "long" : o.side === "buy"; return `<tr><td class="${L ? "good" : "bad"}">${L ? "开多" : "开空"}</td><td class="txt">${TY[o.type] || o.type}</td><td>${fmt(o.price || o.stop)}</td><td>${(+o.qty).toFixed(3)} BTC</td><td>${o.tp ? fmt(o.tp) : "—"} / ${o.sl ? fmt(o.sl) : "—"}</td><td>${fmtDTs(o.t)}</td><td class="txt">${o.rsn ? esc([(o.rsn.tags || []).map(k => TN[k] || k).join("、"), o.rsn.note || ""].filter(Boolean).join("，")) || "—" : "—"}</td><td class="txt"><a class="btn sm" href="sim.html">去模拟盘</a></td></tr>`; }).join("") + "</tbody></table></div>" : "");
   const done = C.calls.filter(c => c.exit).sort((a, b) => b.exit.t - a.exit.t).slice(0, 10);
   $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏 · 未扣手续费<br>金额 / 占投入 %</th><th>盈亏 · 扣手续费后<br>金额 / 占投入 %</th><th>拿了多久</th></tr></thead><tbody>` +
     done.map(c => `<tr><td>${fmtDTs(c.exit.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)} → ${fmt(c.exit.px)}</td><td>${sizeTxt(c)}</td>
@@ -2332,14 +2332,15 @@ const SIM_WHO = "模拟盘", SIM_HZ = 43200;
 function simToCall(tr) {
   const r1 = x => Math.round(x * 10) / 10, lev = tr.lev || 1, TN = typeof RV !== "undefined" ? RV.TAG_NAME : {}, CN = typeof RV !== "undefined" ? RV.CLOSE_NAME : {};
   // 开单理由、部分平仓、平仓理由一起带过来（复盘用的详细数据还在模拟盘自己那里）
-  const why = tr.rsn && tr.rsn.tags && tr.rsn.tags.length ? ` · 理由：${tr.rsn.tags.map(k => TN[k] || k).join("、")}${tr.rsn.note ? "（" + tr.rsn.note + "）" : ""}` : "";
+  const tg = tr.rsn && tr.rsn.tags && tr.rsn.tags.length ? tr.rsn.tags.map(k => TN[k] || k).join("、") : "";
+  const why = tg ? ` · 理由：${tg}${tr.rsn.note ? "（" + tr.rsn.note + "）" : ""}` : tr.rsn && tr.rsn.note ? ` · 理由：${tr.rsn.note}` : "";
   const part = !tr.exit && tr.cq > 0 ? ` · 已减仓 ${(+tr.cq).toFixed(3)} BTC，剩 ${(tr.qty - tr.cq).toFixed(3)}` : "";
   const cr = (tr.cr || []).at(-1), auto = tr.exit && ["止盈", "止损", "强平"].includes(tr.exit.why);
   const c = { id: "sim-" + tr.id, sim: true, t: tr.t, who: SIM_WHO, side: tr.side, entry: "market", ref: r1(tr.entry), refGiven: true,
     text: `模拟盘 ${(+tr.qty).toFixed(3)} BTC · ${lev}x ${tr.mode === "isolated" ? "逐仓" : "全仓"}${tr.from ? ` · 来自 ${tr.from.who} ${fmtDTs(tr.from.t)} 的喊单` : ""}${why}${part}`,
     target: tr.tp || 0, stop: tr.sl || 0, hz: tr.exit ? Math.max(1, Math.ceil((tr.exit.t - tr.t) / 6e4)) : SIM_HZ,
     amt: Math.round(tr.qty * tr.entry / lev * 100) / 100, lev, u: tr.u };
-  if (tr.exit) c.manualExit = { t: tr.exit.t, px: r1(tr.exit.px), why: "模拟盘·" + tr.exit.why + (!auto && cr ? ` · ${CN[cr.why] || cr.why}` : "") };
+  if (tr.exit) c.manualExit = { t: tr.exit.t, px: r1(tr.exit.px), why: "模拟盘·" + tr.exit.why + (!auto && cr ? ` · ${cr.why === "other" && cr.note ? cr.note : CN[cr.why] || cr.why}` : "") };
   if (tr.mods && tr.mods.length) {
     c.orig = { stop: (tr.orig || {}).sl || 0, target: (tr.orig || {}).tp || 0, hz: SIM_HZ };
     c.mods = tr.mods.map(m => ({ at: m.at, from: { stop: m.from.sl || 0, target: m.from.tp || 0, hz: SIM_HZ }, stop: m.sl || 0, target: m.tp || 0, hz: SIM_HZ }));

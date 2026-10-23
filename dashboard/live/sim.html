@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 模拟盘</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css?v=20261023d">
+<link rel="stylesheet" href="ui.css?v=20261023e">
 <style>
 /* 模拟合约交易：布局参照常见的 U 本位合约下单界面（K 线 · 订单簿 · 下单 · 仓位），颜色和面板一致 */
 :root{
@@ -333,12 +333,12 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
   <div id="rsnOpen" class="sec" style="border:0;padding:0">
     <div id="rsnTags"></div>
     <div class="rg" id="rsnConf"><span>信心（可不选）</span></div>
-    <textarea id="rsnNote" rows="2" placeholder="想补充就写（可不填），比如看到了什么、等什么价"></textarea>
+    <textarea id="rsnNote" rows="2" placeholder="上面没有合适的，就直接写理由（写了就能下单）；选了上面的，这里可以不填"></textarea>
   </div>
   <div id="rsnClose" class="sec">
     <h3 id="rsnCT">为什么平？</h3>
     <div class="rg" id="rsnWhy"></div>
-    <input class="note" id="rsnCNote" placeholder="补充（可不填）">
+    <input class="note" id="rsnCNote" placeholder="上面没有合适的就直接写；选了的话可不填">
   </div>
   <p class="hint bad" id="rsnMsg"></p>
   <div class="row"><button type="button" id="rsnNo">取消</button><button type="button" class="pri" id="rsnOk">确认下单</button></div>
@@ -347,8 +347,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
-<script src="review-core.js?v=20261023d"></script>
-<script src="ui.js?v=20261023d"></script>
+<script src="review-core.js?v=20261023e"></script>
+<script src="ui.js?v=20261023e"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -672,10 +672,11 @@ const rsnEnd = v => { const r = RSN; RSN = null; $("rsnDlg").hidden = true; if (
 $("rsnNo").onclick = () => rsnEnd(null);
 $("rsnOk").onclick = () => {
   const c = RSN && RSN.cfg; if (!c) return;
-  if (c.open && !RSN.tags.size) { $("rsnMsg").textContent = "至少选一个理由才能下单"; return; }
-  if (c.close && !RSN.why) { $("rsnMsg").textContent = "选一个平仓理由"; return; }
+  // 上面的选项没有合适的，直接手写理由也可以下单；两样都没有才拦下
   const note = $("rsnNote").value.trim().slice(0, 500), cnote = $("rsnCNote").value.trim().slice(0, 300);
-  rsnEnd({ o: c.open ? { kind: c.open, tags: [...RSN.tags], conf: RSN.conf, note } : null, c: c.close ? { why: RSN.why, note: cnote } : null });
+  if (c.open && !RSN.tags.size && !note) { $("rsnMsg").textContent = "选一个理由，或者在下面写一句理由，才能下单"; $("rsnNote").focus(); return; }
+  if (c.close && !RSN.why && !cnote) { $("rsnMsg").textContent = "选一个平仓理由，或者写一句为什么平"; $("rsnCNote").focus(); return; }
+  rsnEnd({ o: c.open ? { kind: c.open, tags: [...RSN.tags], conf: RSN.conf, note } : null, c: c.close ? { why: RSN.why || "other", note: cnote } : null });
 };
 addEventListener("keydown", e => { if (e.key === "Escape" && RSN) rsnEnd(null); });
 
