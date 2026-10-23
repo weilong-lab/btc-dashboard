@@ -161,6 +161,8 @@ class PaperTrader:
         """人工喊单碰到止损 / 止盈或到最长持有时间时发 Mac 通知（和面板同口径）。"""
         now_ms, sent = time.time() * 1000, self.st.setdefault("watch_sent", [])
         for c in calls:
+            if c.get("sim"):   # 模拟盘的单由模拟盘自己按止盈止损平仓，这里不再喊「该卖了」（和面板一致）
+                continue
             filled = self.fill_time(d, c)
             if filled is None:
                 continue

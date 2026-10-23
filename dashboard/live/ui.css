@@ -22,3 +22,14 @@
   .prefs>summary{padding:4px 8px;font-size:12.5px}
   .prefs .gear{display:none}
 }
+/* 选账户 / 切换后同步提醒 */
+.uimodal{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}
+.uimodal>div{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:18px;width:min(400px,100%);display:grid;gap:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.uimodal h3{margin:0;font-size:16px}.uimodal p{margin:0;font-size:13.5px;color:var(--fg2);line-height:1.6}
+.uibig{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.uibig button{padding:14px 0;font-size:16px;font-weight:600;border-radius:10px;border:1px solid var(--line);background:var(--chip, var(--bg));color:var(--fg);cursor:pointer}
+.uibig button:hover{border-color:var(--accent)}
+.uirow{display:flex;gap:8px;justify-content:flex-end}
+.uirow button{padding:7px 16px;border-radius:7px;border:1px solid var(--line);background:none;color:var(--fg);cursor:pointer;font:inherit}
+.uirow .pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.uist:empty{display:none}.uist.ok{color:var(--good)}.uist.no{color:var(--bad)}

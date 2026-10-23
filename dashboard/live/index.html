@@ -349,6 +349,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <div class="verdict" id="pAlert">读取中…</div>
     <div class="jbtns"><button type="button" class="btn" id="pNotify">开启桌面提醒</button><span class="note" id="pNotifyMsg"></span></div>
     <div class="tablewrap"><table class="jt" id="pOpen"></table></div>
+    <div id="pSimOrd"></div>
     <h3 class="sub-h">最近卖出</h3>
     <div class="tablewrap"><table class="jt" id="pDone"></table></div>
     <p class="note">每一单进场时就写好卖出计划：止损价、止盈价和最长持有时间（模型的单按「此刻结论」当时给出的；人工喊单按你填的，没填止损止盈就只按时间）。价格碰到止损或止盈、或者到了最长持有时间，这里马上标「该卖了」并发提醒，同时记下卖出时间、价格、原因和盈亏，喊单记录同步显示。你自己提前卖了，可以点「手动卖出」按当前价记一笔。持有期间面板一直盯着盘面：出现急动（5 或 15 分钟走 1 个 ATR 以上）、离止损不到 0.3 个 ATR、15 分钟内进入美股开盘或数据公布时段、出现红色新闻警报，都会在「状态 / 盘面提醒」里标出来并发提醒。回测（2021–2026，4613 笔）里，这些时候马上卖都没有比按原计划拿着更好（平均差 0.05%–0.27%），所以提醒告诉你发生了什么、该检查什么，卖不卖仍按止损、止盈和时间。盈亏是按价格算的百分比，没扣手续费和资金费，也没乘杠杆。后台监控程序运行时，模型的单在浏览器关着时也会记录卖出，并发 Mac 通知。</p>
@@ -537,7 +538,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
       <label for="cAmt">投入（保证金 U，没说就空着）<input id="cAmt" inputmode="decimal"></label>
       <label for="cLev">杠杆（倍，没说就空着）<input id="cLev" inputmode="numeric"></label>
       <label for="cHz">最长持有<select id="cHz"><option value="15">15 分钟</option><option value="60">1 小时</option><option value="120">2 小时</option><option value="240" selected>4 小时</option><option value="720">12 小时</option><option value="1440">24 小时</option><option value="4320">3 天</option><option value="10080">7 天</option></select></label>
-      <label for="cFilter">统计范围<select id="cFilter"><option value="">全部人</option></select></label>
+      <label for="cFilter">统计范围<select id="cFilter"><option value="">全部人（统计不含模拟盘）</option></select></label>
     </form>
     <div class="verdict" id="cPreview" hidden></div>
     <div class="jbtns">
@@ -572,6 +573,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 </div>
 
 <script src="ui.js"></script>
+<script src="review-core.js"></script>
 <script src="weights.js"></script>
 <script src="context.js"></script>
 <script src="model.js"></script>
@@ -1833,6 +1835,7 @@ async function cloudSync(manual = false) {
   const before = new Set(C.calls.map(c => c.id)), beforeT = new Set(J.trades.map(t => t.id));
   let upC = false, upJ = false, newC = 0, newT = 0;
   try {
+    await UI.checkToken(CLOUD.token);
     for (let attempt = 0; attempt < 3; attempt++) {
       const [rc, rj, rs] = await Promise.all([ghGet(AF("calls.json")), ghGet(AF("journal.json")), ghGet(AF("sim.json")).catch(() => ({ obj: null }))]);
       // 喊单
@@ -2095,7 +2098,7 @@ function posState(c, now, P) {
   if (c.stop && (sgn > 0 ? P <= c.stop : P >= c.stop)) why = "触及止损";
   else if (c.target && (sgn > 0 ? P >= c.target : P <= c.target)) why = "触及止盈";
   else if (now >= exp && now - exp < 10 * 60e3) why = "到了最长持有时间";
-  else if (now >= exp) return { stale: true, exp };      // 早就到期、只是还没核对（比如面板刚打开），不提醒，等核对写入
+  else if (now >= exp && !c.sim) return { stale: true, exp };      // 早就到期、只是还没核对（比如面板刚打开），不提醒，等核对写入；模拟盘的单拿多久都以模拟盘为准
   if (c.sim) why = null;                                  // 模拟盘自己会按止盈止损平仓，这里不再喊「该卖了」
   return { why, exp, pnl: sgn * (P / c.ref - 1) * 100, toStop: c.stop ? Math.abs(P - c.stop) : NaN, toTgt: c.target ? Math.abs(c.target - P) : NaN };
 }
@@ -2147,6 +2150,10 @@ function renderPositions() {
       <td>${sizeTxt(c)}<small>名义 ${fmt(sizeOf(c).amt * sizeOf(c).lev)} U</small></td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${c.sim ? "按模拟盘平仓" : `${fmtT(s.exp)}（剩 ${dur(s.exp - now)}）`}</td><td>${moneyCell(c, s.pnl, false)}</td><td>${moneyCell(c, s.pnl, true)}</td>
       <td>${isFinite(s.toStop) ? fmt(s.toStop) : "—"}</td><td>${isFinite(s.toTgt) ? fmt(s.toTgt) : "—"}</td><td class="txt">${s.why ? `<b class="bad">该卖了：${s.why}</b>` : x.w && x.w.length ? x.w.map(a => `<span class="${a.lv}">⚠ ${esc(a.text.split("。")[0])}</span>`).join("<br>") : "持有中 · 盘面正常"}</td>
       <td class="txt">${c.sim ? `<a class="btn sm" href="sim.html">去模拟盘操作</a>` : `<button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}`}</td></tr>`; }).join("") + "</tbody>" : "");
+  // 模拟盘还没成交的挂单（限价 / 条件单）：成交了就变成上面的持仓，撤了就消失
+  const pend = ((SIM_DOC && SIM_DOC.orders) || []).filter(o => !o.ro), TY = { limit: "限价", stop: "条件市价" }, TN = typeof RV !== "undefined" ? RV.TAG_NAME : {};
+  setHTML($("pSimOrd"), pend.length ? `<h3 class="sub-h">模拟盘挂单 · 等成交</h3><div class="tablewrap"><table class="jt"><thead><tr><th>方向</th><th>类型</th><th>价格 / 触发价</th><th>数量</th><th>止盈 / 止损</th><th>下单时间</th><th>理由</th><th></th></tr></thead><tbody>` +
+    pend.map(o => `<tr><td class="${o.side === "buy" ? "good" : "bad"}">${o.side === "buy" ? "多" : "空"}</td><td class="txt">${TY[o.type] || o.type}</td><td>${fmt(o.price || o.stop)}</td><td>${(+o.qty).toFixed(3)} BTC</td><td>${o.tp ? fmt(o.tp) : "—"} / ${o.sl ? fmt(o.sl) : "—"}</td><td>${fmtDTs(o.t)}</td><td class="txt">${o.rsn && o.rsn.tags ? esc(o.rsn.tags.map(k => TN[k] || k).join("、")) : "—"}</td><td class="txt"><a class="btn sm" href="sim.html">去模拟盘</a></td></tr>`).join("") + "</tbody></table></div>" : "");
   const done = C.calls.filter(c => c.exit).sort((a, b) => b.exit.t - a.exit.t).slice(0, 10);
   $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏 · 未扣手续费<br>金额 / 占投入 %</th><th>盈亏 · 扣手续费后<br>金额 / 占投入 %</th><th>拿了多久</th></tr></thead><tbody>` +
     done.map(c => `<tr><td>${fmtDTs(c.exit.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)} → ${fmt(c.exit.px)}</td><td>${sizeTxt(c)}</td>
@@ -2181,7 +2188,8 @@ function renderCalls() {
   if (!$("cTable")) return;
   const grouped = groupAExperiments(C.calls);
   renderAGroups(grouped, $("cFilter").value);
-  const who = $("cFilter").value, all = C.calls.slice().sort((a, b) => b.t - a.t), list = all.filter(c => !who || c.who === who);
+  // 「全部人」的统计只算人喊的和模型的，模拟盘真下的单在下拉里单独选「模拟盘」看；表格照样全列出来
+  const who = $("cFilter").value, all = C.calls.slice().sort((a, b) => b.t - a.t), shown = all.filter(c => !who || c.who === who), list = who ? shown : shown.filter(c => !c.sim);
   const done = list.filter(c => c.res && c.res.done), good = done.filter(c => c.res.grade === "对"), bad = done.filter(c => c.res.grade === "错");
   const correlated = list.some(c => grouped.byId.has(c.id));
   const dec = good.length + bad.length, acc = dec ? good.length / dec * 100 : NaN, err = dec && !correlated ? 98 / Math.sqrt(dec) : NaN;
@@ -2230,7 +2238,7 @@ function renderCalls() {
   const fmtT = fmtDT;
   const dur = ms => ms > 36e5 ? (ms / 36e5).toFixed(1) + " 小时" : Math.max(0, Math.round(ms / 6e4)) + " 分钟";
   const cards = [];
-  const rows = list.map(c => {
+  const rows = shown.map(c => {
     const r = c.res, sgn = c.side === "long" ? 1 : -1, now = Date.now();
     const cur = c.exit ? c.exit.pnl : r && r.filled && !r.done && isFinite(S.price) ? sgn * (S.price / c.ref - 1) * 100 : r && r.filled ? r.chg : NaN;
     const st = !r ? "核对中…" : c.exit && !r.done ? `<b class="${c.exit.pnl > 0 ? "good" : "bad"}">已卖出</b>` : r.done ? `<b class="${r.grade === "对" ? "good" : r.grade === "错" ? "bad" : "mut"}">${r.grade}</b>`
@@ -2252,7 +2260,7 @@ function renderCalls() {
       <td>${r && r.filled ? fmt(r.adv) : "—"}</td><td>${r && r.filled ? fmt(r.fav) : "—"}</td>
       <td class="acts">${act}<button type="button" class="btn sm" data-cdel="${c.id}">删除</button></td></tr>`;
   }).join("");
-  setHTML($("cTable"), list.length ? `<thead><tr><th>方向</th><th>进场</th><th>喊单时间</th><th>谁</th><th>原话</th><th>投入 × 杠杆</th><th>止盈</th><th>止损</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长持有</th><th>结果</th><th>卖出</th><th>盈亏 · 未扣手续费<br>金额 / 占投入 %</th><th>盈亏 · 扣手续费后<br>金额 / 占投入 %</th><th>最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "");
+  setHTML($("cTable"), shown.length ? `<thead><tr><th>方向</th><th>进场</th><th>喊单时间</th><th>谁</th><th>原话</th><th>投入 × 杠杆</th><th>止盈</th><th>止损</th><th>到止盈预计赚</th><th>到止损预计亏</th><th>最长持有</th><th>结果</th><th>卖出</th><th>盈亏 · 未扣手续费<br>金额 / 占投入 %</th><th>盈亏 · 扣手续费后<br>金额 / 占投入 %</th><th>最大逆向</th><th>最大顺向</th><th></th></tr></thead><tbody>${rows}</tbody>` : "");
 }
 // 同一个人：上一条还没到期就喊了反方向 → 上一条标改口（保存、导入、删除后整体重算）
 function markFlips() {
@@ -2308,7 +2316,7 @@ async function pollModelCalls() {
 function cNames() {
   const names = [...new Set(C.calls.map(c => c.who))], keep = $("cFilter").value;
   $("cWhoList").innerHTML = names.map(n => `<option value="${esc(n)}">`).join("");
-  $("cFilter").innerHTML = `<option value="">全部人</option>` + names.map(n => `<option${n === keep ? " selected" : ""}>${esc(n)}</option>`).join("");
+  $("cFilter").innerHTML = `<option value="">全部人（统计不含模拟盘）</option>` + names.map(n => `<option${n === keep ? " selected" : ""}>${esc(n)}</option>`).join("");
 }
 // 卖出：按现价记一笔，喊单记录、持仓与卖出、云端同步一起更新
 function sellCall(id) {
@@ -2322,20 +2330,26 @@ function sellCall(id) {
 // ---------------- 模拟盘联动：模拟盘每开一仓就是一条「模拟盘」喊单（同一浏览器直接读，别的设备通过私有仓库的 sim.json） ----------------
 const SIM_WHO = "模拟盘", SIM_HZ = 43200;
 function simToCall(tr) {
-  const r1 = x => Math.round(x * 10) / 10, lev = tr.lev || 1;
+  const r1 = x => Math.round(x * 10) / 10, lev = tr.lev || 1, TN = typeof RV !== "undefined" ? RV.TAG_NAME : {}, CN = typeof RV !== "undefined" ? RV.CLOSE_NAME : {};
+  // 开单理由、部分平仓、平仓理由一起带过来（复盘用的详细数据还在模拟盘自己那里）
+  const why = tr.rsn && tr.rsn.tags && tr.rsn.tags.length ? ` · 理由：${tr.rsn.tags.map(k => TN[k] || k).join("、")}${tr.rsn.note ? "（" + tr.rsn.note + "）" : ""}` : "";
+  const part = !tr.exit && tr.cq > 0 ? ` · 已减仓 ${(+tr.cq).toFixed(3)} BTC，剩 ${(tr.qty - tr.cq).toFixed(3)}` : "";
+  const cr = (tr.cr || []).at(-1), auto = tr.exit && ["止盈", "止损", "强平"].includes(tr.exit.why);
   const c = { id: "sim-" + tr.id, sim: true, t: tr.t, who: SIM_WHO, side: tr.side, entry: "market", ref: r1(tr.entry), refGiven: true,
-    text: `模拟盘 ${(+tr.qty).toFixed(3)} BTC · ${lev}x ${tr.mode === "isolated" ? "逐仓" : "全仓"}${tr.from ? ` · 来自 ${tr.from.who} ${fmtDTs(tr.from.t)} 的喊单` : ""}`,
+    text: `模拟盘 ${(+tr.qty).toFixed(3)} BTC · ${lev}x ${tr.mode === "isolated" ? "逐仓" : "全仓"}${tr.from ? ` · 来自 ${tr.from.who} ${fmtDTs(tr.from.t)} 的喊单` : ""}${why}${part}`,
     target: tr.tp || 0, stop: tr.sl || 0, hz: tr.exit ? Math.max(1, Math.ceil((tr.exit.t - tr.t) / 6e4)) : SIM_HZ,
     amt: Math.round(tr.qty * tr.entry / lev * 100) / 100, lev, u: tr.u };
-  if (tr.exit) c.manualExit = { t: tr.exit.t, px: r1(tr.exit.px), why: "模拟盘·" + tr.exit.why };
+  if (tr.exit) c.manualExit = { t: tr.exit.t, px: r1(tr.exit.px), why: "模拟盘·" + tr.exit.why + (!auto && cr ? ` · ${CN[cr.why] || cr.why}` : "") };
   if (tr.mods && tr.mods.length) {
     c.orig = { stop: (tr.orig || {}).sl || 0, target: (tr.orig || {}).tp || 0, hz: SIM_HZ };
     c.mods = tr.mods.map(m => ({ at: m.at, from: { stop: m.from.sl || 0, target: m.from.tp || 0, hz: SIM_HZ }, stop: m.sl || 0, target: m.tp || 0, hz: SIM_HZ }));
   }
   return c;
 }
+let SIM_DOC = null;   // 最新的模拟盘（显示还没成交的挂单）
 function syncSim(sim, render = true) {
   if (!sim || !Array.isArray(sim.trades)) return false;
+  if (!SIM_DOC || (sim.u || 0) >= (SIM_DOC.u || 0)) { const pend = JSON.stringify((SIM_DOC || {}).orders || []); SIM_DOC = sim; if (render && pend !== JSON.stringify(sim.orders || [])) renderPositions(); }
   const del = new Set(C.deleted || []); let ch = false;
   for (const tr of sim.trades) {
     const nc = simToCall(tr); if (del.has(nc.id)) continue;
@@ -2800,11 +2814,13 @@ syncSim(simLocal());
     el.querySelectorAll("button").forEach(x => x.disabled = true); b.textContent = "切换中…";
     try { csave(); jsave(); if (CLOUD.token) { clearTimeout(CLOUD.timer); await cloudSync(); } } catch (err) { /* 本机已存好，云端下次再传 */ }
     try { localStorage.setItem("btc_account", b.dataset.acct); } catch (err) { /* 存不了就切不了 */ }
-    location.reload();
+    UI.markSwitched(b.dataset.acct); location.reload();
   };
   document.title = `BTC 作战面板 · ${ACCTS.find(a => a[0] === ACCT)[1]}`;
 })();
 cloudInit();
+UI.onSync(async () => { if (!CLOUD.token) return { ok: false, msg: "这台设备没连云端：在「喊单记录」里点「连接云端」填令牌" }; clearTimeout(CLOUD.timer); await cloudSync(true);
+  return CLOUD.err ? { ok: false, msg: CLOUD.err } : { ok: true, msg: `喊单 ${C.calls.filter(c => !c.sim).length} 条 · 模拟盘 ${C.calls.filter(c => c.sim).length} 单 · 交易 ${J.trades.length} 笔` }; });
 tzInit();
 (() => {
   const apply = mode => {

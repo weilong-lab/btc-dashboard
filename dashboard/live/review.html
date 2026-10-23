@@ -172,9 +172,11 @@ async function ghJson(path) {
 async function load() {
   $("st").textContent = "读取中…";
   const errs = [];
+  let tokOK = !!TOKEN;
+  if (TOKEN) { try { await UI.checkToken(TOKEN); } catch (e) { tokOK = false; errs.push(e.message); } }
   await Promise.all(ACCTS.map(async ([a]) => {
     let loc = null; try { loc = JSON.parse(lsGet(AKey(a, "btc_sim_v1"))); } catch (e) { /* 没有 */ }
-    let cl = null; if (TOKEN) { try { cl = await ghJson(AFile(a, "sim.json")); } catch (e) { errs.push(`${NAME[a]}：${e.message}`); } }
+    let cl = null; if (tokOK) { try { cl = await ghJson(AFile(a, "sim.json")); } catch (e) { errs.push(`${NAME[a]}：${e.message}`); } }
     const pick = [loc, cl].filter(x => x && x.v === 1).sort((x, y) => (y.u || 0) - (x.u || 0))[0] || null;
     SIM[a] = pick; SRC[a] = !pick ? "无" : pick === cl ? "云端" : "本机";
   }));
