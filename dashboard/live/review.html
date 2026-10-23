@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 复盘</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="ui.css?v=20261023c">
 <style>
 /* 复盘：只看模拟盘的单。陈总 / 张主任 / 汇总三个视图，颜色和另外两个页面一致 */
 :root{
@@ -128,8 +128,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 <div class="dlg" id="dlg" hidden><div id="dBox"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
-<script src="review-core.js"></script>
-<script src="ui.js"></script>
+<script src="review-core.js?v=20261023c"></script>
+<script src="ui.js?v=20261023c"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -173,7 +173,7 @@ async function load() {
   $("st").textContent = "读取中…";
   const errs = [];
   let tokOK = !!TOKEN;
-  if (TOKEN) { try { await UI.checkToken(TOKEN); } catch (e) { tokOK = false; errs.push(e.message); } }
+  if (TOKEN) { try { await (typeof UI !== "undefined" ? UI.checkToken : async () => {})(TOKEN); } catch (e) { tokOK = false; errs.push(e.message); } }
   await Promise.all(ACCTS.map(async ([a]) => {
     let loc = null; try { loc = JSON.parse(lsGet(AKey(a, "btc_sim_v1"))); } catch (e) { /* 没有 */ }
     let cl = null; if (tokOK) { try { cl = await ghJson(AFile(a, "sim.json")); } catch (e) { errs.push(`${NAME[a]}：${e.message}`); } }

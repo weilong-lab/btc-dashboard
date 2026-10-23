@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 模拟盘</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="ui.css?v=20261023c">
 <style>
 /* 模拟合约交易：布局参照常见的 U 本位合约下单界面（K 线 · 订单簿 · 下单 · 仓位），颜色和面板一致 */
 :root{
@@ -341,8 +341,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
-<script src="review-core.js"></script>
-<script src="ui.js"></script>
+<script src="review-core.js?v=20261023c"></script>
+<script src="ui.js?v=20261023c"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -374,7 +374,7 @@ const cls = x => x > 0 ? "good" : x < 0 ? "bad" : "";
 
 // ---------------- 账户状态（本机保存 + 可选同步到私有仓库） ----------------
 // u = 0：这台设备上从没用过的账户，先以云端为准，绝不拿空账户覆盖云端（重置时 touch() 会把 u 改成当前时间）
-const blank = bal => ({ v: 1, start: bal, wallet: bal, lev: 20, mode: "cross", pos: null, orders: [], hist: [], fills: [], trades: [], ledger: [{ t: Date.now(), type: "初始资金", amt: bal }], lastT: Date.now(), nextFund: 0, seq: 0, u: 0 });
+const blank = bal => ({ v: 1, start: bal, wallet: bal, lev: 20, mode: "cross", pos: null, orders: [], hist: [], fills: [], trades: [], ledger: [{ t: Date.now(), type: "初始资金", amt: bal }], lastT: Date.now(), nextFund: 0, seq: 0, u: 0, draws: [] });
 let A = (() => { try { const x = JSON.parse(lsGet(SKEY)); return x && x.v === 1 ? x : null; } catch (e) { return null; } })() || blank(10000);
 A.trades = A.trades || [];
 const M = { last: NaN, mark: NaN, fund: NaN, fundT: 0, bid: NaN, ask: NaN, book: { b: [], a: [] }, trades: [], tk: {}, ok: false, ready: false };
@@ -1355,7 +1355,7 @@ async function cloudSync(manual = false) {
   if (!CLOUD.token || CLOUD.busy) return;
   CLOUD.busy = true; renderCloud();
   try {
-    await UI.checkToken(CLOUD.token);
+    await (typeof UI !== "undefined" ? UI.checkToken : async () => {})(CLOUD.token);
     const remote = await cloudGet();
     if (remote && remote.v === 1 && (remote.u || 0) > (A.u || 0)) { const lt = Math.max(A.lastT || 0, remote.lastT || 0); A = remote; A.lastT = lt; A.draws = A.draws || []; A.trades = A.trades || []; save(); dirty = true; tblKey = ""; drawCanvas(); CLOUD.pushedU = A.u;
       syncLog("模拟盘", "从云端更新", `别的设备 ${fmtT(remote.u)} 的改动 · ${simSum()}`, "good"); }
@@ -1429,13 +1429,13 @@ async function fromCall() {
     const b = e.target.closest("[data-acct]"); if (!b || b.dataset.acct === ACCT) return;
     el.querySelectorAll("button").forEach(x => x.disabled = true); b.textContent = "切换中…";
     save(); try { if (CLOUD.token) { clearTimeout(CLOUD.timer); await cloudSync(); } } catch (err) { /* 本机已存好 */ }
-    lsSet("btc_account", b.dataset.acct); UI.markSwitched(b.dataset.acct); location.href = location.pathname;
+    lsSet("btc_account", b.dataset.acct); typeof UI !== "undefined" && UI.markSwitched(b.dataset.acct); location.href = location.pathname;
   };
 })();
 
 // ---------------- 启动 ----------------
 (async function boot() {
-  UI.onSync(async () => { if (!CLOUD.token) return { ok: false, msg: "这台设备没连云端：点「连接云端」填令牌" }; clearTimeout(CLOUD.timer); await cloudSync(true); return CLOUD.err ? { ok: false, msg: CLOUD.err } : { ok: true, msg: simSum() }; });
+  typeof UI !== "undefined" && UI.onSync(async () => { if (!CLOUD.token) return { ok: false, msg: "这台设备没连云端：点「连接云端」填令牌" }; clearTimeout(CLOUD.timer); await cloudSync(true); return CLOUD.err ? { ok: false, msg: CLOUD.err } : { ok: true, msg: simSum() }; });
   renderCloud(); renderSyncLog();
   addEventListener("storage", e => { if (e.key === SLOG) renderSyncLog(); });
   initChart();

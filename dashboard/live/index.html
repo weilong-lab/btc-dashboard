@@ -7,7 +7,7 @@
 <title>BTC 作战面板</title>
 <meta name="dashboard-release" content="2026-10-22-market-colors-v6">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="ui.css?v=20261023c">
 <style>
 .fee-cols{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:16px}.fee-cols>.plv+ .plv{border-left:1px solid var(--line);padding-left:16px}
 /* 布局：手机优先的单列卡片流，宽屏两列；顶部价格条吸顶 */
@@ -572,8 +572,8 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 
 </div>
 
-<script src="ui.js"></script>
-<script src="review-core.js"></script>
+<script src="ui.js?v=20261023c"></script>
+<script src="review-core.js?v=20261023c"></script>
 <script src="weights.js"></script>
 <script src="context.js"></script>
 <script src="model.js"></script>
@@ -1835,7 +1835,7 @@ async function cloudSync(manual = false) {
   const before = new Set(C.calls.map(c => c.id)), beforeT = new Set(J.trades.map(t => t.id));
   let upC = false, upJ = false, newC = 0, newT = 0;
   try {
-    await UI.checkToken(CLOUD.token);
+    await (typeof UI !== "undefined" ? UI.checkToken : async () => {})(CLOUD.token);
     for (let attempt = 0; attempt < 3; attempt++) {
       const [rc, rj, rs] = await Promise.all([ghGet(AF("calls.json")), ghGet(AF("journal.json")), ghGet(AF("sim.json")).catch(() => ({ obj: null }))]);
       // 喊单
@@ -2814,12 +2814,12 @@ syncSim(simLocal());
     el.querySelectorAll("button").forEach(x => x.disabled = true); b.textContent = "切换中…";
     try { csave(); jsave(); if (CLOUD.token) { clearTimeout(CLOUD.timer); await cloudSync(); } } catch (err) { /* 本机已存好，云端下次再传 */ }
     try { localStorage.setItem("btc_account", b.dataset.acct); } catch (err) { /* 存不了就切不了 */ }
-    UI.markSwitched(b.dataset.acct); location.reload();
+    typeof UI !== "undefined" && UI.markSwitched(b.dataset.acct); location.reload();
   };
   document.title = `BTC 作战面板 · ${ACCTS.find(a => a[0] === ACCT)[1]}`;
 })();
 cloudInit();
-UI.onSync(async () => { if (!CLOUD.token) return { ok: false, msg: "这台设备没连云端：在「喊单记录」里点「连接云端」填令牌" }; clearTimeout(CLOUD.timer); await cloudSync(true);
+typeof UI !== "undefined" && UI.onSync(async () => { if (!CLOUD.token) return { ok: false, msg: "这台设备没连云端：在「喊单记录」里点「连接云端」填令牌" }; clearTimeout(CLOUD.timer); await cloudSync(true);
   return CLOUD.err ? { ok: false, msg: CLOUD.err } : { ok: true, msg: `喊单 ${C.calls.filter(c => !c.sim).length} 条 · 模拟盘 ${C.calls.filter(c => c.sim).length} 单 · 交易 ${J.trades.length} 笔` }; });
 tzInit();
 (() => {
