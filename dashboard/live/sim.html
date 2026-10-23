@@ -324,11 +324,11 @@ const TZ = ["Asia/Tokyo", "Asia/Shanghai"].includes(lsGet("btc_tz")) ? lsGet("bt
 document.documentElement.dataset.marketColors = lsGet("btc_market_colors") === "red-up" ? "red-up" : "green-up";
 const fmtT = (ms, sec = true) => new Date(ms).toLocaleString("zh-CN", { timeZone: TZ, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", ...(sec ? { second: "2-digit" } : {}), hour12: false });
 const fmtHMS = ms => new Date(ms).toLocaleTimeString("zh-CN", { timeZone: TZ, hour12: false });
-const p1 = x => isFinite(x) ? x.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "—";
-const p2 = x => isFinite(x) ? x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
-const q3 = x => isFinite(x) ? x.toFixed(3) : "—";
+const p1 = x => Number.isFinite(x) ? x.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "—";
+const p2 = x => Number.isFinite(x) ? x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+const q3 = x => Number.isFinite(x) ? x.toFixed(3) : "—";
 const r3 = x => +(Math.floor(x / STEP + 1e-9) * STEP).toFixed(3);
-const sgnTxt = (x, d = 2) => !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "-" : "") + Math.abs(x).toFixed(d);
+const sgnTxt = (x, d = 2) => !Number.isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "-" : "") + Math.abs(x).toFixed(d);
 const cls = x => x > 0 ? "good" : x < 0 ? "bad" : "";
 
 // ---------------- 账户状态（本机保存 + 可选同步到私有仓库） ----------------
@@ -346,10 +346,10 @@ function toast(s) { const el = $("toast"); el.textContent = s; el.classList.add(
 
 // ---------------- 计算 ----------------
 const sg = p => p.side === "long" ? 1 : -1;
-const upnl = (px = M.mark) => A.pos && isFinite(px) ? sg(A.pos) * A.pos.qty * (px - A.pos.entry) : 0;
+const upnl = (px = M.mark) => A.pos && Number.isFinite(px) ? sg(A.pos) * A.pos.qty * (px - A.pos.entry) : 0;
 const posIM = () => A.pos ? A.pos.qty * A.pos.entry / A.pos.lev : 0;
 const ordIM = () => A.orders.filter(o => !o.ro).reduce((t, o) => t + o.qty * (o.price || o.stop || M.last) / A.lev, 0);
-const maint = (px = M.mark) => A.pos && isFinite(px) ? A.pos.qty * px * MMR : 0;
+const maint = (px = M.mark) => A.pos && Number.isFinite(px) ? A.pos.qty * px * MMR : 0;
 function avail() {
   if (!A.pos) return A.wallet - ordIM();
   return A.pos.mode === "cross" ? A.wallet + Math.min(0, upnl()) - posIM() - ordIM() : A.wallet - A.pos.margin - ordIM();
@@ -372,7 +372,7 @@ function walk(side, qty) {
 }
 // 按方向能开 / 能平的最大数量
 function maxQty(side, px) {
-  if (!isFinite(px) || px <= 0) return 0;
+  if (!Number.isFinite(px) || px <= 0) return 0;
   const dir = side === "buy" ? 1 : -1, closeQ = A.pos && sg(A.pos) !== dir ? A.pos.qty : 0;
   return r3(closeQ + Math.max(0, avail()) * A.lev / (px * (1 + FEE.taker * A.lev)));
 }
@@ -427,7 +427,7 @@ const hist = (o, status, px, t = Date.now()) => { A.hist.unshift({ ...o, status,
 
 // 每个成交价：挂单、条件单、仓位止盈止损
 function onPrice(px, t) {
-  if (!isFinite(px)) return;
+  if (!Number.isFinite(px)) return;
   for (const o of A.orders.slice()) {
     let hit = false, at = px, role = "taker";
     if (o.type === "limit" && ((o.side === "buy" && px <= o.price) || (o.side === "sell" && px >= o.price))) { hit = true; at = o.price; role = "maker"; }
@@ -453,12 +453,12 @@ function onPrice(px, t) {
 }
 // 标记价格：强平；资金费
 function onMark(mk, t) {
-  if (!isFinite(mk)) return;
+  if (!Number.isFinite(mk)) return;
   const p = A.pos;
   if (p) {
     const bal = (p.mode === "cross" ? A.wallet : p.margin) + upnl(mk);
     if (bal <= maint(mk)) {
-      const lp = liqPx(p), at = isFinite(lp) ? lp : mk, q = p.qty, w0 = A.wallet, m0 = p.mode === "cross" ? A.wallet : p.margin;
+      const lp = liqPx(p), at = Number.isFinite(lp) ? lp : mk, q = p.qty, w0 = A.wallet, m0 = p.mode === "cross" ? A.wallet : p.margin;
       fill(p.side === "long" ? "sell" : "buy", q, at, "taker", "强平", true, t);
       // 强平后剩下的那点维持保证金也拿不回来（交易所收作强平清算费）：逐仓亏掉整份保证金，全仓余额清零
       const extra = Math.max(0, Math.min(A.wallet, m0 - (w0 - A.wallet)));
@@ -468,7 +468,7 @@ function onMark(mk, t) {
     }
   }
   if (A.nextFund && t >= A.nextFund) {
-    if (A.pos && isFinite(M.fund)) { const amt = -sg(A.pos) * A.pos.qty * mk * M.fund; A.wallet += amt; ledger("资金费用", amt, A.nextFund); touch(); }
+    if (A.pos && Number.isFinite(M.fund)) { const amt = -sg(A.pos) * A.pos.qty * mk * M.fund; A.wallet += amt; ledger("资金费用", amt, A.nextFund); touch(); }
     A.nextFund = 0;
   }
   if (!A.nextFund && M.fundT > t) A.nextFund = M.fundT;
@@ -505,7 +505,7 @@ function place(side) {
     if (tp && (dir > 0 ? tp <= px : tp >= px)) return msg(`止盈价要${dir > 0 ? "高" : "低"}于进场价`);
     if (sl && (dir > 0 ? sl >= px : sl <= px)) return msg(`止损价要${dir > 0 ? "低" : "高"}于进场价`);
   }
-  const o = { id: nid(), t: Date.now(), type: OT, side, qty, price: isFinite(price) ? price : null, stop: isFinite(stop) ? stop : null, ro, tp, sl, from: FROM };
+  const o = { id: nid(), t: Date.now(), type: OT, side, qty, price: Number.isFinite(price) ? price : null, stop: Number.isFinite(stop) ? stop : null, ro, tp, sl, from: FROM };
   if (OT === "market" || (OT === "limit" && (side === "buy" ? price >= M.ask : price <= M.bid))) {
     const w = walk(side, qty), at = OT === "market" ? w : side === "buy" ? Math.min(price, w) : Math.max(price, w);
     const q = fill(side, qty, at, "taker", OT === "market" ? "市价" : "限价（立即成交）", ro, Date.now(), FROM);
@@ -550,13 +550,13 @@ const C1 = "#e0a526", C2 = "#c25ad1", C3 = "#3a9ad9", C4 = "#8a8f98";   // 指�
 
 // --- 指标计算（和数组对齐，算不出来的位置是 NaN）---
 const nanArr = n => new Array(n).fill(NaN);
-function sma(a, n) { const o = nanArr(a.length); let s = 0, k = 0; for (let i = 0; i < a.length; i++) { const v = a[i]; if (!isFinite(v)) { s = 0; k = 0; continue; } s += v; k++; if (k > n) { s -= a[i - n]; k = n; } if (k === n) o[i] = s / n; } return o; }
-function ema(a, n) { const o = nanArr(a.length), al = 2 / (n + 1); let p = NaN; for (let i = 0; i < a.length; i++) { const v = a[i]; if (!isFinite(v)) continue; p = isFinite(p) ? al * v + (1 - al) * p : v; o[i] = p; } return o; }
+function sma(a, n) { const o = nanArr(a.length); let s = 0, k = 0; for (let i = 0; i < a.length; i++) { const v = a[i]; if (!Number.isFinite(v)) { s = 0; k = 0; continue; } s += v; k++; if (k > n) { s -= a[i - n]; k = n; } if (k === n) o[i] = s / n; } return o; }
+function ema(a, n) { const o = nanArr(a.length), al = 2 / (n + 1); let p = NaN; for (let i = 0; i < a.length; i++) { const v = a[i]; if (!Number.isFinite(v)) continue; p = Number.isFinite(p) ? al * v + (1 - al) * p : v; o[i] = p; } return o; }
 function wma(a, n) { const o = nanArr(a.length), d = n * (n + 1) / 2; for (let i = n - 1; i < a.length; i++) { let s = 0; for (let j = 0; j < n; j++) s += a[i - j] * (n - j); o[i] = s / d; } return o; }
-function rma(a, n) { const o = nanArr(a.length); let p = NaN, s = 0, k = 0; for (let i = 0; i < a.length; i++) { const v = a[i]; if (!isFinite(v)) continue; if (!isFinite(p)) { s += v; k++; if (k === n) { p = s / n; o[i] = p; } } else { p = (p * (n - 1) + v) / n; o[i] = p; } } return o; }
+function rma(a, n) { const o = nanArr(a.length); let p = NaN, s = 0, k = 0; for (let i = 0; i < a.length; i++) { const v = a[i]; if (!Number.isFinite(v)) continue; if (!Number.isFinite(p)) { s += v; k++; if (k === n) { p = s / n; o[i] = p; } } else { p = (p * (n - 1) + v) / n; o[i] = p; } } return o; }
 const hhv = (a, n, i) => { let m = -Infinity; for (let j = Math.max(0, i - n + 1); j <= i; j++) m = Math.max(m, a[j]); return m; };
 const llv = (a, n, i) => { let m = Infinity; for (let j = Math.max(0, i - n + 1); j <= i; j++) m = Math.min(m, a[j]); return m; };
-function rsi(c, n) { const up = [NaN], dn = [NaN]; for (let i = 1; i < c.length; i++) { const d = c[i] - c[i - 1]; up.push(Math.max(d, 0)); dn.push(Math.max(-d, 0)); } const u = rma(up, n), d = rma(dn, n); return u.map((x, i) => !isFinite(x) ? NaN : d[i] === 0 ? 100 : 100 - 100 / (1 + x / d[i])); }
+function rsi(c, n) { const up = [NaN], dn = [NaN]; for (let i = 1; i < c.length; i++) { const d = c[i] - c[i - 1]; up.push(Math.max(d, 0)); dn.push(Math.max(-d, 0)); } const u = rma(up, n), d = rma(dn, n); return u.map((x, i) => !Number.isFinite(x) ? NaN : d[i] === 0 ? 100 : 100 - 100 / (1 + x / d[i])); }
 function trueRange(h, l, c) { return h.map((x, i) => i ? Math.max(x - l[i], Math.abs(x - c[i - 1]), Math.abs(l[i] - c[i - 1])) : x - l[i]); }
 function calc() {
   const o = BARS.map(b => b.o), h = BARS.map(b => b.h), l = BARS.map(b => b.l), c = BARS.map(b => b.c), v = BARS.map(b => b.v), n = BARS.length, R = {};
@@ -564,7 +564,7 @@ function calc() {
   if (on("MA")) [7, 25, 99].forEach(p => R["MA" + p] = sma(c, p));
   if (on("EMA")) [7, 25, 99].forEach(p => R["EMA" + p] = ema(c, p));
   if (on("WMA")) [7, 25, 99].forEach(p => R["WMA" + p] = wma(c, p));
-  if (on("BOLL")) { const m = sma(c, 20); R.BOLL_M = m; const sd = m.map((x, i) => { if (!isFinite(x)) return NaN; let s = 0; for (let j = i - 19; j <= i; j++) s += (c[j] - x) ** 2; return Math.sqrt(s / 20); });
+  if (on("BOLL")) { const m = sma(c, 20); R.BOLL_M = m; const sd = m.map((x, i) => { if (!Number.isFinite(x)) return NaN; let s = 0; for (let j = i - 19; j <= i; j++) s += (c[j] - x) ** 2; return Math.sqrt(s / 20); });
     R.BOLL_U = m.map((x, i) => x + 2 * sd[i]); R.BOLL_D = m.map((x, i) => x - 2 * sd[i]); }
   if (on("SAR")) { const s = nanArr(n); if (n > 2) { let up = c[1] >= c[0], af = 0.02, ep = up ? h[1] : l[1], sar = up ? l[0] : h[0];
     for (let i = 1; i < n; i++) { sar = sar + af * (ep - sar);
@@ -573,19 +573,19 @@ function calc() {
       s[i] = sar; } } R.SAR = s; R.SAR_UP = s.map((x, i) => x < l[i] ? x : NaN); R.SAR_DN = s.map((x, i) => x > h[i] ? x : NaN); }
   if (on("VWAP")) { const r = nanArr(n); let pv = 0, vv = 0, day = -1; for (let i = 0; i < n; i++) { const d = Math.floor(BARS[i].t / 864e5); if (d !== day) { day = d; pv = 0; vv = 0; } pv += (h[i] + l[i] + c[i]) / 3 * v[i]; vv += v[i]; r[i] = vv ? pv / vv : NaN; } R.VWAP = r; }
   if (on("SUPER")) { const atr = rma(trueRange(h, l, c), 10), up = nanArr(n), dn = nanArr(n); let fu = NaN, fl = NaN, tr = 1;
-    for (let i = 0; i < n; i++) { if (!isFinite(atr[i])) continue; const m = (h[i] + l[i]) / 2, bu = m + 3 * atr[i], bl = m - 3 * atr[i];
-      fu = !isFinite(fu) || bu < fu || c[i - 1] > fu ? bu : fu; fl = !isFinite(fl) || bl > fl || c[i - 1] < fl ? bl : fl;
+    for (let i = 0; i < n; i++) { if (!Number.isFinite(atr[i])) continue; const m = (h[i] + l[i]) / 2, bu = m + 3 * atr[i], bl = m - 3 * atr[i];
+      fu = !Number.isFinite(fu) || bu < fu || c[i - 1] > fu ? bu : fu; fl = !Number.isFinite(fl) || bl > fl || c[i - 1] < fl ? bl : fl;
       tr = tr === 1 && c[i] < fl ? -1 : tr === -1 && c[i] > fu ? 1 : tr; if (tr === 1) up[i] = fl; else dn[i] = fu; } R.SUPER_UP = up; R.SUPER_DN = dn; }
   if (on("VOL")) { R.VOL = v; R.VOL_MA5 = sma(v, 5); R.VOL_MA10 = sma(v, 10); }
   if (on("MACD")) { const e12 = ema(c, 12), e26 = ema(c, 26), dif = e12.map((x, i) => x - e26[i]), dea = ema(dif, 9); R.DIF = dif; R.DEA = dea; R.MACD = dif.map((x, i) => x - dea[i]); }
   if (on("KDJ")) { const K = nanArr(n), D = nanArr(n), J = nanArr(n); let k = 50, d = 50;
     for (let i = 8; i < n; i++) { const hh = hhv(h, 9, i), ll = llv(l, 9, i), rsv = hh === ll ? 50 : (c[i] - ll) / (hh - ll) * 100; k = 2 / 3 * k + rsv / 3; d = 2 / 3 * d + k / 3; K[i] = k; D[i] = d; J[i] = 3 * k - 2 * d; } R.K = K; R.D = D; R.J = J; }
   if (on("RSI")) [6, 12, 24].forEach(p => R["RSI" + p] = rsi(c, p));
-  if (on("StochRSI")) { const r = rsi(c, 14), st = r.map((x, i) => { if (!isFinite(x) || i < 13) return NaN; const w = r.slice(i - 13, i + 1); if (w.some(y => !isFinite(y))) return NaN; const a = Math.min(...w), b = Math.max(...w); return b === a ? 0 : (x - a) / (b - a) * 100; });
+  if (on("StochRSI")) { const r = rsi(c, 14), st = r.map((x, i) => { if (!Number.isFinite(x) || i < 13) return NaN; const w = r.slice(i - 13, i + 1); if (w.some(y => !Number.isFinite(y))) return NaN; const a = Math.min(...w), b = Math.max(...w); return b === a ? 0 : (x - a) / (b - a) * 100; });
     R.SRSI_K = sma(st, 3); R.SRSI_D = sma(R.SRSI_K, 3); }
   if (on("WR")) R.WR = c.map((x, i) => { if (i < 13) return NaN; const hh = hhv(h, 14, i), ll = llv(l, 14, i); return hh === ll ? 0 : (hh - x) / (hh - ll) * 100; });
   if (on("OBV")) { const ob = []; let s = 0; for (let i = 0; i < n; i++) { if (i) s += c[i] > c[i - 1] ? v[i] : c[i] < c[i - 1] ? -v[i] : 0; ob.push(s); } R.OBV = ob; R.OBV_MA = sma(ob, 30); }
-  if (on("CCI")) { const tp = h.map((x, i) => (x + l[i] + c[i]) / 3), m = sma(tp, 20); R.CCI = tp.map((x, i) => { if (!isFinite(m[i])) return NaN; let md = 0; for (let j = i - 19; j <= i; j++) md += Math.abs(tp[j] - m[i]); md /= 20; return md ? (x - m[i]) / (0.015 * md) : 0; }); }
+  if (on("CCI")) { const tp = h.map((x, i) => (x + l[i] + c[i]) / 3), m = sma(tp, 20); R.CCI = tp.map((x, i) => { if (!Number.isFinite(m[i])) return NaN; let md = 0; for (let j = i - 19; j <= i; j++) md += Math.abs(tp[j] - m[i]); md /= 20; return md ? (x - m[i]) / (0.015 * md) : 0; }); }
   if (on("DMI")) { const pdm = [0], mdm = [0]; for (let i = 1; i < n; i++) { const u = h[i] - h[i - 1], d = l[i - 1] - l[i]; pdm.push(u > d && u > 0 ? u : 0); mdm.push(d > u && d > 0 ? d : 0); }
     const tr = rma(trueRange(h, l, c), 14), p = rma(pdm, 14), m = rma(mdm, 14), pdi = p.map((x, i) => x / tr[i] * 100), mdi = m.map((x, i) => x / tr[i] * 100);
     const dx = pdi.map((x, i) => x + mdi[i] ? Math.abs(x - mdi[i]) / (x + mdi[i]) * 100 : NaN); R.PDI = pdi; R.MDI = mdi; R.ADX = rma(dx, 14); }
@@ -638,7 +638,7 @@ function buildChart() {
 }
 function pt(d, i) {
   const time = sh(BARS[i].t), v = RES[d.key] && RES[d.key][i];
-  if (!isFinite(v)) return { time };
+  if (!Number.isFinite(v)) return { time };
   if (d.kind === "vol") return { time, value: v, color: (BARS[i].c >= BARS[i].o ? cssv("--good") : cssv("--bad")) + "88" };
   if (d.kind === "hist") return { time, value: v, color: (v >= 0 ? cssv("--good") : cssv("--bad")) + "aa" };
   return { time, value: v };
@@ -659,13 +659,13 @@ function updLast() {
   drawCanvas();
 }
 // SAR / SuperTrend 分成上下两条线画，数值显示当前那条
-const lgVal = (k, i) => { const g = x => RES[x] && RES[x][i]; return k === "SAR_UP" ? g("SAR") : k === "SUPER_UP" ? (isFinite(g("SUPER_UP")) ? g("SUPER_UP") : g("SUPER_DN")) : g(k); };
+const lgVal = (k, i) => { const g = x => RES[x] && RES[x][i]; return k === "SAR_UP" ? g("SAR") : k === "SUPER_UP" ? (Number.isFinite(g("SUPER_UP")) ? g("SUPER_UP") : g("SUPER_DN")) : g(k); };
 // 每格左上角显示指标数值（鼠标所在的 K 线，没指着就是最新一根）
 function legend(idx) {
   legend.hover = idx != null;
   const i = idx == null || idx >= BARS.length || idx < 0 ? BARS.length - 1 : idx;
   if (!chart || i < 0) return;
-  const fv = (key, v) => !isFinite(v) ? "—" : key.startsWith("VOL") || key.startsWith("OBV") ? (Math.abs(v) >= 1e3 ? (v / 1e3).toFixed(2) + "K" : v.toFixed(2)) : Math.abs(v) >= 1000 ? v.toFixed(1) : v.toFixed(2);
+  const fv = (key, v) => !Number.isFinite(v) ? "—" : key.startsWith("VOL") || key.startsWith("OBV") ? (Math.abs(v) >= 1e3 ? (v / 1e3).toFixed(2) + "K" : v.toFixed(2)) : Math.abs(v) >= 1000 ? v.toFixed(1) : v.toFixed(2);
   const b = BARS[i], heights = chart.panes().map((_, p) => paneSz(p).height);
   const groups = [[`<span>开 ${p1(b.o)} 高 ${p1(b.h)} 低 ${p1(b.l)} 收 <b class="${b.c >= b.o ? "good" : "bad"}">${p1(b.c)}</b></span>`]];
   SER.forEach(d => { if (!d.name) return; (groups[d.pane] = groups[d.pane] || [`<span class="lgn">${esc(IND_NAME[d.ind] || d.ind)}</span>`]).push(`<span style="color:${d.color || "var(--fg2)"}">${d.name === (IND_NAME[d.ind] || d.ind) && d.pane ? "" : d.name + " "}${fv(d.key, lgVal(d.key, i))}</span>`); });
@@ -861,7 +861,7 @@ function drawLines(force) {
   const want = [];
   if (p) {
     want.push([p.entry, cssv("--accent"), `${p.side === "long" ? "多" : "空"} ${q3(p.qty)}`, 0]);
-    if (isFinite(lp)) want.push([lp, cssv("--warn"), "强平", 2]);
+    if (Number.isFinite(lp)) want.push([lp, cssv("--warn"), "强平", 2]);
     if (p.tp) want.push([p.tp, cssv("--good"), "止盈", 2]);
     if (p.sl) want.push([p.sl, cssv("--bad"), "止损", 2]);
   }
@@ -879,7 +879,7 @@ function connMkt() {
   ws.onmessage = m => {
     const { stream, data: d } = JSON.parse(m.data); M.msgAt = Date.now();
     if (stream.endsWith("@aggTrade")) {
-      M.last = +d.p; M.ready = M.ready || isFinite(M.mark);
+      M.last = +d.p; M.ready = M.ready || Number.isFinite(M.mark);
       M.trades.unshift([+d.p, +d.q, d.T, d.m]); M.trades.length = Math.min(M.trades.length, 40);
       A.lastT = d.T;
       if (M.ready) onPrice(M.last, d.T);
@@ -887,7 +887,7 @@ function connMkt() {
     } else if (stream.includes("@markPrice")) {
       M.mark = +d.p; M.fund = +d.r; M.fundT = +d.T;
       if (M.ready) onMark(M.mark, d.E);
-      M.ready = M.ready || isFinite(M.last); dirty = true;
+      M.ready = M.ready || Number.isFinite(M.last); dirty = true;
     } else if (stream.endsWith("@ticker")) {
       M.tk = { chg: +d.P, hi: +d.h, lo: +d.l, qv: +d.q }; M.tkAt = Date.now();
     } else if (stream.includes("@kline_")) {
@@ -940,11 +940,11 @@ function setTxt(id, v, c) { const el = $(id); if (el.textContent !== v) el.textC
 function renderTop() {
   const prev = renderTop.prev; renderTop.prev = M.last;
   setTxt("hLast", p1(M.last), "big num " + (M.last > prev ? "good" : M.last < prev ? "bad" : $("hLast").className.replace("big num ", "")));
-  setTxt("hChg", isFinite(M.tk.chg) ? sgnTxt(M.tk.chg) + "%" : "—", "num " + cls(M.tk.chg));
+  setTxt("hChg", Number.isFinite(M.tk.chg) ? sgnTxt(M.tk.chg) + "%" : "—", "num " + cls(M.tk.chg));
   setTxt("hMark", p1(M.mark)); setTxt("hHi", p1(M.tk.hi)); setTxt("hLo", p1(M.tk.lo));
-  setTxt("hQv", isFinite(M.tk.qv) ? (M.tk.qv / 1e9).toFixed(2) + "B" : "—");
+  setTxt("hQv", Number.isFinite(M.tk.qv) ? (M.tk.qv / 1e9).toFixed(2) + "B" : "—");
   const left = M.fundT - Date.now(), hh = Math.max(0, Math.floor(left / 36e5)), mm = Math.max(0, Math.floor(left % 36e5 / 6e4)), ss = Math.max(0, Math.floor(left % 6e4 / 1e3));
-  setTxt("hFund", isFinite(M.fund) ? `${(M.fund * 100).toFixed(4)}% / ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : "—");
+  setTxt("hFund", Number.isFinite(M.fund) ? `${(M.fund * 100).toFixed(4)}% / ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : "—");
   document.title = `${p1(M.last)} BTC 模拟盘 · ${ACCT_NAME}`;
 }
 const MOB = matchMedia("(max-width:820px)");
@@ -1022,9 +1022,11 @@ document.addEventListener("pointerdown", e => { if (e.target.closest(".bottom,.b
 function render() {
   if (!dirty) return; dirty = false;
   const held = Date.now() < HOLD;
-  renderTop(); if (!held) { renderBook(); renderPos(); } renderForm(); renderAcct(); drawLines();
+  // 每一块单独画：某一块出错只影响它自己，价格、订单簿等其他部分照常刷新
+  const safe = f => { try { f(); } catch (e) { if (!safe.seen) { safe.seen = true; console.error(e); $("fMsg").className = "msg bad"; $("fMsg").textContent = "页面有一块显示出错（已跳过，其余照常刷新）：" + (e.message || e); } } };
+  safe(renderTop); if (!held) { safe(renderBook); safe(renderPos); } safe(renderForm); safe(renderAcct); safe(drawLines);
   if (held) dirty = true;
-  const k = A.u + "|" + A.orders.length; if (k !== tblKey) { tblKey = k; renderTables(); }
+  const k = A.u + "|" + A.orders.length; if (k !== tblKey) { tblKey = k; safe(renderTables); }
 }
 
 // ---------------- 交互 ----------------
@@ -1038,9 +1040,9 @@ $("btabs").onclick = e => { const b = e.target.closest("[data-bp]"); if (!b) ret
 $("otabs").onclick = e => { const b = e.target.closest("[data-ot]"); if (!b) return; OT = b.dataset.ot;
   [...$("otabs").children].forEach(x => x.setAttribute("aria-selected", x === b));
   $("fPriceF").hidden = OT !== "limit"; $("fStopF").hidden = OT !== "stop"; $("fMktF").hidden = OT !== "market";
-  if (OT === "limit" && !$("fPrice").value && isFinite(M.last)) $("fPrice").value = M.last.toFixed(1);
+  if (OT === "limit" && !$("fPrice").value && Number.isFinite(M.last)) $("fPrice").value = M.last.toFixed(1);
   dirty = true; };
-document.querySelectorAll("[data-fill]").forEach(b => b.onclick = () => { if (isFinite(M.last)) { $(b.dataset.fill).value = M.last.toFixed(1); dirty = true; } });
+document.querySelectorAll("[data-fill]").forEach(b => b.onclick = () => { if (Number.isFinite(M.last)) { $(b.dataset.fill).value = M.last.toFixed(1); dirty = true; } });
 ["asks", "bids"].forEach(id => $(id).onclick = e => { const r = e.target.closest("[data-px]"); HOLD = 0; if (!r) return;
   if (OT === "market") $("otabs").querySelector('[data-ot="limit"]').click();
   $(OT === "stop" ? "fStop" : "fPrice").value = (+r.dataset.px).toFixed(1); dirty = true; });
@@ -1091,7 +1093,7 @@ document.querySelector(".bottom").addEventListener("click", e => {
   const a = b.dataset.act, p = A.pos; if (!p) return;
   if (a === "mkt") { if (confirm(`按市价平掉全部 ${q3(p.qty)} BTC ${p.side === "long" ? "多" : "空"}单？`)) closeMarket(); }
   if (a === "lmt") closeLimit(+$("lcPx").value);
-  if (a === "lmtp") { const v = prompt("限价平仓价格（USDT）", isFinite(M.last) ? M.last.toFixed(1) : ""); if (v) closeLimit(+v); }
+  if (a === "lmtp") { const v = prompt("限价平仓价格（USDT）", Number.isFinite(M.last) ? M.last.toFixed(1) : ""); if (v) closeLimit(+v); }
   if (a === "tpsl") { $("tpInfo").textContent = `${p.side === "long" ? "多" : "空"} ${q3(p.qty)} BTC · 开仓 ${p1(p.entry)} · 现价 ${p1(M.last)}。价格碰到就按市价全部平仓。`;
     $("dTp").value = p.tp || ""; $("dSl").value = p.sl || ""; tpEst(); $("tpDlg").hidden = false; }
 });
@@ -1267,7 +1269,7 @@ async function fromCall() {
   if (CLOUD.token) await cloudSync();
   await catchUp();
   connMkt(); connBook();
-  if (isFinite(M.last)) $("fPrice").value = M.last.toFixed(1);
+  if (Number.isFinite(M.last)) $("fPrice").value = M.last.toFixed(1);
   await fromCall();
   dirty = true;
   setInterval(() => { dirty = true; }, 1000);
@@ -1282,7 +1284,13 @@ async function fromCall() {
   // 云端：页面在前台时每 15 秒同步一次，切回这个页面时马上同步
   setInterval(() => { if (document.visibilityState === "visible") cloudSync(); }, 15000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { cloudSync(); pollTk(); } });
-  (function loop() { render(); requestAnimationFrame(loop); })();
+  // 刷新循环：哪一块出错都不能让整页停住（出错的那块跳过，下一帧接着画），错误显示在下单区下面
+  (function loop() {
+    try { render(); } catch (e) { dirty = true; if (!loop.err) { loop.err = e; console.error(e); $("fMsg").className = "msg bad"; $("fMsg").textContent = "页面有一块显示出错（已跳过，其余照常刷新）：" + (e.message || e); } }
+    requestAnimationFrame(loop);
+  })();
+  // 保底：有的手机省电模式会暂停逐帧刷新，再每 0.5 秒画一次
+  setInterval(() => { try { render(); } catch (e) { dirty = true; } }, 500);
 })();
 addEventListener("pagehide", save);
 </script>
