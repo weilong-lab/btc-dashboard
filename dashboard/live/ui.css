@@ -1,0 +1,24 @@
+/* 三个页面共用的顶栏部件：页面切换（固定在最右）+ 设置下拉（账户、涨跌配色、时区） */
+.pnav{display:inline-flex;flex:none;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--card)}
+.pnav a{padding:5px 12px;font-size:13px;line-height:1.5;text-decoration:none;color:var(--fg2);white-space:nowrap;border-left:1px solid var(--line)}
+.pnav a:first-child{border-left:0}
+.pnav a:hover{color:var(--fg)}
+.pnav a[aria-current="page"]{background:var(--accent);color:#fff;font-weight:500}
+.pnav .s{display:none}
+.prefs{position:relative;flex:none}
+.prefs>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:13px;line-height:1.5;padding:5px 10px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--fg);white-space:nowrap;user-select:none}
+.prefs>summary::-webkit-details-marker{display:none}
+.prefs>summary::after{content:"";width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:translateY(-2px) rotate(45deg);margin-left:2px}
+.prefs[open]>summary{border-color:var(--accent)}
+.prefs .gear{color:var(--muted)}
+.prefpop{position:absolute;right:0;top:calc(100% + 6px);z-index:60;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px;display:grid;gap:10px;min-width:230px}
+.prefpop .pr{display:grid;gap:5px}
+.prefpop .pr>span:first-child{font-size:12px;color:var(--muted)}
+.prefpop .pr>:last-child{display:flex;width:100%}
+.prefpop .pr>:last-child>button{flex:1}
+@media(max-width:820px){
+  .pnav a{padding:4px 9px;font-size:12.5px}
+  .pnav .l{display:none}.pnav .s{display:inline}
+  .prefs>summary{padding:4px 8px;font-size:12.5px}
+  .prefs .gear{display:none}
+}

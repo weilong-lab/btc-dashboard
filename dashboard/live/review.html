@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 复盘</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="ui.css">
 <style>
 /* 复盘：只看模拟盘的单。陈总 / 张主任 / 汇总三个视图，颜色和另外两个页面一致 */
 :root{
@@ -32,9 +33,16 @@ button,input,select{font:inherit;color:inherit}
 .num,.t td{font-family:var(--m);font-variant-numeric:tabular-nums}
 .good{color:var(--good)} .bad{color:var(--bad)} .mut{color:var(--muted)} .warn{color:var(--warn)}
 a{color:var(--accent)}
-.hd{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px 14px;padding:8px 16px;flex-wrap:wrap}
-.hd h1{font-size:16px;margin:0}.hd .sp{flex:1}
-.sw{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}.sw button{background:none;border:0;padding:4px 11px;font-size:13px;cursor:pointer;color:var(--muted)}
+.hd{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px 14px;padding:8px 16px}
+.hd h1{font-size:16px;margin:0;white-space:nowrap}.hd .sp{flex:1}
+.hsel{display:flex;gap:8px;align-items:center;flex:1;min-width:0}.hsel #reload{margin-left:auto;flex:none}
+@media(max-width:820px){
+  .hd{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"main nav" "sel sel";padding:6px 10px;gap:6px 8px}
+  .hd h1{grid-area:main}.hd .pnav{grid-area:nav}.hd .hsel{grid-area:sel;min-width:0;overflow-x:auto;scrollbar-width:none}.hd .sp{display:none}
+  .hd .hsel::-webkit-scrollbar{display:none}.hd .hsel{gap:6px}.rl{display:none}
+  .sw button{padding:4px 7px;font-size:12.5px}.hd .lnk{padding:4px 9px;font-size:12.5px}
+}
+.sw{flex:none;display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}.sw button{white-space:nowrap;background:none;border:0;padding:4px 11px;font-size:13px;cursor:pointer;color:var(--muted)}
 .sw button[aria-pressed="true"]{background:var(--accent);color:#fff}
 .lnk{font-size:13px;text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:4px 10px;color:var(--fg);white-space:nowrap;background:none;cursor:pointer}
 .lnk[aria-current="page"]{border-color:var(--accent);color:var(--accent)}
@@ -89,20 +97,15 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .empty{color:var(--muted);text-align:center;padding:22px}
 </style>
 </head>
-<body>
+<body data-page="review">
 <header class="hd">
   <h1>BTC 复盘</h1>
-  <span class="sw" id="viewSw" role="group" aria-label="看谁的"></span>
-  <span class="sw" id="rangeSw" role="group" aria-label="时间范围"></span>
-  <span class="sp"></span>
-  <span class="status" id="st">读取中…</span>
-  <button type="button" class="lnk" id="reload">刷新</button>
-  <a class="lnk" href="./">作战面板</a>
-  <a class="lnk" href="sim.html">模拟盘</a>
-  <a class="lnk" href="review.html" aria-current="page">复盘</a>
+  <div class="hsel"><span class="sw" id="viewSw" role="group" aria-label="看谁的"></span><span class="sw" id="rangeSw" role="group" aria-label="时间范围"></span><button type="button" class="lnk" id="reload" aria-label="刷新">↻<span class="rl"> 刷新</span></button></div>
+  <nav class="pnav"></nav>
 </header>
 
 <main>
+  <p class="status" id="st" style="margin:0">读取中…</p>
   <section class="card"><h2>总览 <small id="kpiNote"></small></h2><div class="kpis" id="kpis"></div><div id="sample"></div></section>
   <section class="card"><h2>资金曲线 <small>每平一单累计一次，已扣手续费和资金费</small></h2><div id="curve"></div></section>
   <div class="two">
@@ -126,6 +129,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
 <script src="review-core.js"></script>
+<script src="ui.js"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -153,7 +157,7 @@ function sw(el, items, cur, on) {
 }
 function renderSw() {
   sw($("viewSw"), [["main", "陈总"], ["zhang", "张主任"], ["all", "汇总"]], VIEW, k => { VIEW = k; lsSet("btc_rev_view", k); renderSw(); render(); });
-  sw($("rangeSw"), [["all", "全部"], ["30", "近 30 天"], ["7", "近 7 天"]], RANGE, k => { RANGE = k; lsSet("btc_rev_range", k); renderSw(); render(); });
+  sw($("rangeSw"), [["all", "全部"], ["30", "30天"], ["7", "7天"]], RANGE, k => { RANGE = k; lsSet("btc_rev_range", k); renderSw(); render(); });
   sw($("lstSw"), [["all", "全部"], ["win", "赚的"], ["loss", "亏的"], ["flag", "有执行问题"], ["open", "持仓中"]], LST, k => { LST = k; renderSw(); renderList(); });
 }
 

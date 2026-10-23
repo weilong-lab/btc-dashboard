@@ -7,6 +7,7 @@
 <title>BTC 作战面板</title>
 <meta name="dashboard-release" content="2026-10-22-market-colors-v6">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="ui.css">
 <style>
 .fee-cols{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:16px}.fee-cols>.plv+ .plv{border-left:1px solid var(--line);padding-left:16px}
 /* 布局：手机优先的单列卡片流，宽屏两列；顶部价格条吸顶 */
@@ -43,7 +44,17 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .conn.bad i{background:var(--fall-red)}
 /* 盘口、成交数字位数变化时不要让顶栏忽高忽低 */
 .top .conn{white-space:nowrap}
-.tzseg{margin-left:auto;flex:none}
+.tzseg{flex:none}
+.hmain{display:flex;align-items:baseline;gap:4px 12px;flex:none}
+.hinfo{display:flex;align-items:center;gap:4px 12px;min-width:0}
+.htools{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+.top .refresh{padding:5px 11px}
+/* 手机顶栏：价格 + 页面切换 / 连接状态 + 工具 / 目录 */
+@media(max-width:820px){
+  .top{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"main nav" "info tools" "toc toc";gap:6px 8px}
+  .top .hmain{grid-area:main;min-width:0}.top .pnav{grid-area:nav}.top .hinfo{grid-area:info}.top .htools{grid-area:tools;gap:6px}.top .toc{grid-area:toc}
+  .top .px{font-size:22px}.top .hinfo #book{display:none}.top .hinfo{overflow:hidden}.top .hinfo .conn{min-width:0}.top #connText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.top .refresh{padding:4px 9px;font-size:12.5px}
+}
 .tzseg button{font-size:12.5px;padding:5px 9px;white-space:nowrap}
 .tzseg button[aria-pressed="true"]{background:var(--accent);color:#fff}
 .refresh{font:inherit;font-size:13px;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
@@ -266,25 +277,26 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 .ma td small{display:block;font-size:10.5px;color:var(--muted);font-family:var(--f)}
 </style>
 </head>
-<body>
+<body data-page="panel">
 
 <div class="top">
-  <span class="px num" id="px">—</span>
-  <span class="chg num" id="chg">—</span>
-  <span class="conn num" id="book"></span>
-  <span class="conn" id="conn"><i></i><span id="connText">连接中…</span></span>
-  <div class="seg tzseg" role="group" aria-label="时区">
-    <button type="button" data-tz="Asia/Tokyo" aria-pressed="true">东京时间</button>
-    <button type="button" data-tz="Asia/Shanghai" aria-pressed="false">北京时间</button>
+  <div class="hmain"><span class="px num" id="px">—</span><span class="chg num" id="chg">—</span></div>
+  <div class="hinfo"><span class="conn num" id="book"></span><span class="conn" id="conn"><i></i><span id="connText">连接中…</span></span></div>
+  <div class="htools">
+    <button class="refresh" id="refresh" type="button">手动刷新</button>
+    <details class="prefs"><summary><span class="who"></span><span class="gear">· 设置</span></summary><div class="prefpop">
+      <div class="pr"><span>账户</span><div class="seg tzseg acctseg" role="group" aria-label="账户" id="acctSw"></div></div>
+      <div class="pr"><span>时区</span><div class="seg tzseg" role="group" aria-label="时区">
+        <button type="button" data-tz="Asia/Tokyo" aria-pressed="true">东京时间</button>
+        <button type="button" data-tz="Asia/Shanghai" aria-pressed="false">北京时间</button>
+      </div></div>
+      <div class="pr"><span>涨跌配色</span><div class="seg tzseg" role="group" aria-label="涨跌配色">
+        <button type="button" data-market-colors="green-up" aria-pressed="true">绿涨红跌</button>
+        <button type="button" data-market-colors="red-up" aria-pressed="false">红涨绿跌</button>
+      </div></div>
+    </div></details>
   </div>
-  <div class="seg tzseg" role="group" aria-label="涨跌配色">
-    <button type="button" data-market-colors="green-up" aria-pressed="true">绿涨红跌</button>
-    <button type="button" data-market-colors="red-up" aria-pressed="false">红涨绿跌</button>
-  </div>
-  <div class="seg tzseg acctseg" role="group" aria-label="账户" id="acctSw"></div>
-  <button class="refresh" id="refresh" type="button">手动刷新</button>
-  <a class="refresh simlnk" href="sim.html">模拟盘</a>
-  <a class="refresh simlnk" href="review.html">复盘</a>
+  <nav class="pnav"></nav>
   <nav class="toc" id="toc" aria-label="目录"></nav>
 </div>
 <div class="lay edlg" id="edlg" role="dialog" aria-label="修改止盈止损" hidden>
@@ -559,6 +571,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 
 </div>
 
+<script src="ui.js"></script>
 <script src="weights.js"></script>
 <script src="context.js"></script>
 <script src="model.js"></script>
