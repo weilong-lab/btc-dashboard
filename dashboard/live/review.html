@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 复盘</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css?v=20261023c">
+<link rel="stylesheet" href="ui.css?v=20261023d">
 <style>
 /* 复盘：只看模拟盘的单。陈总 / 张主任 / 汇总三个视图，颜色和另外两个页面一致 */
 :root{
@@ -128,8 +128,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 <div class="dlg" id="dlg" hidden><div id="dBox"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
-<script src="review-core.js?v=20261023c"></script>
-<script src="ui.js?v=20261023c"></script>
+<script src="review-core.js?v=20261023d"></script>
+<script src="ui.js?v=20261023d"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -353,6 +353,7 @@ async function openDetail(key) {
       ${x.closed ? `<b class="num ${cls(x.net)}">${u2(x.net)} USDT</b><span class="mut num">手续费 ${u2(-(tr.fee || 0))} · 资金费 ${u2(x.fund)}</span>` : ""}<span class="sp"></span><button type="button" class="lnk" id="dClose">关闭</button></div>
     <div class="two">${sec("开仓总结", esc(rv.o ? rv.o.sum : tr.rsn ? "盘面快照还没拍好（拍完会出现在这里）" : "这一单没有开仓快照（更新之前下的单）"))}
       ${sec("平仓总结", tr.exit ? esc(rv.c ? rv.c.sum : "平仓快照还没拍好") : "还在持仓")}</div>
+    ${(tr.adds || []).map((ad, i) => sec(`第 ${i + 1} 次加仓 · ${fmtT(ad.t)}`, esc(ad.rv ? ad.rv.sum : `+${ad.qty.toFixed(3)} BTC @ ${p1(ad.px)}${ad.tags && ad.tags.length ? " · 理由：" + ad.tags.map(k => RV.TAG_NAME[k] || k).join("、") : ""}（盘面快照还没拍好）`))).join("")}
     ${tr.exit ? sec("平仓后走势", esc(aft)) : ""}
     <div class="two"><section class="card"><h2>开仓理由 <small>✓ 当时读数对得上 · ✗ 对不上 · 没法自动核对的显示读数</small></h2>${rsn}</section>
       <section class="card"><h2>过程记录</h2>${moves.length ? `<div class="chk">${moves.map(m => `<div>${m}</div>`).join("")}</div>` : `<p class="mut">没有加仓、部分平仓或改止盈止损。</p>`}
@@ -365,12 +366,14 @@ async function openDetail(key) {
   $("dClose").onclick = closeDetail;
   $("dTf").innerHTML = ["1m", "5m", "15m", "1h", "4h"].map(tf => `<button type="button" data-tf="${tf}" aria-selected="${tf === DX.tf}">${RV.TFN[tf]}</button>`).join("");
   $("dTf").onclick = e => { const b = e.target.closest("[data-tf]"); if (!b) return; DX.tf = b.dataset.tf; [...$("dTf").children].forEach(c => c.setAttribute("aria-selected", c === b)); drawDetail(); };
-  const [so, sc] = await Promise.all([RV.loadSnap(TOKEN, x.a, tr.id, "open"), tr.exit ? RV.loadSnap(TOKEN, x.a, tr.id, "close") : null]);
+  const addK = (tr.adds || []).map((_, i) => "add" + (i + 1));
+  const [so, sc, ...sa] = await Promise.all([RV.loadSnap(TOKEN, x.a, tr.id, "open"), tr.exit ? RV.loadSnap(TOKEN, x.a, tr.id, "close") : null, ...addK.map(k => RV.loadSnap(TOKEN, x.a, tr.id, k))]);
   if (!DX || DX.x !== x) return;
   DX.snaps = { open: so, close: sc };
   if (so && so.view && ["1m", "5m", "15m", "1h", "4h"].includes(so.view.tf)) { DX.tf = so.view.tf; [...$("dTf").children].forEach(c => c.setAttribute("aria-selected", c.dataset.tf === DX.tf)); }
-  $("dShots").innerHTML = so && so.shot || sc && sc.shot ? `<section class="card"><h2>当时屏幕上的图 <small>下单 / 平仓那一刻截的（含指标和画线）</small></h2><div class="shots">
-    ${so && so.shot ? `<figure><figcaption>开仓 ${fmtT(tr.t)}</figcaption><img src="${so.shot}" alt="开仓时的 K 线图"></figure>` : ""}${sc && sc.shot ? `<figure><figcaption>平仓 ${fmtT(tr.exit.t)}</figcaption><img src="${sc.shot}" alt="平仓时的 K 线图"></figure>` : ""}</div></section>` : "";
+  const figs = [[so, `开仓 ${fmtT(tr.t)}`], ...sa.map((z, i) => [z, `第 ${i + 1} 次加仓 ${fmtT(tr.adds[i].t)}`]), [sc, tr.exit ? `平仓 ${fmtT(tr.exit.t)}` : ""]].filter(([z]) => z && z.shot);
+  $("dShots").innerHTML = figs.length ? `<section class="card"><h2>当时屏幕上的图 <small>开仓、每次加仓、平仓那一刻截的（含指标和画线）</small></h2><div class="shots">
+    ${figs.map(([z, cap]) => `<figure><figcaption>${cap}</figcaption><img src="${z.shot}" alt="${cap} 时的 K 线图"></figure>`).join("")}</div></section>` : "";
   renderSnapTables(so, sc);
   drawDetail();
 }
@@ -446,7 +449,7 @@ async function drawDetail() {
   // 开平仓箭头和计划线
   const at = t => sh(Math.floor(t / RV.TFMS[tf]) * RV.TFMS[tf]), L = tr.side === "long", acc = cssv("--accent"), plan = RV.planOf(tr);
   const mk = [{ time: at(tr.t), position: L ? "belowBar" : "aboveBar", color: acc, shape: L ? "arrowUp" : "arrowDown", text: `开${L ? "多" : "空"} ${p1(tr.entry)}` },
-    ...(tr.adds || []).map(z => ({ time: at(z.t), position: L ? "belowBar" : "aboveBar", color: acc, shape: L ? "arrowUp" : "arrowDown", text: "加仓" })),
+    ...(tr.adds || []).map((z, i) => ({ time: at(z.t), position: L ? "belowBar" : "aboveBar", color: acc, shape: L ? "arrowUp" : "arrowDown", text: `加仓${i + 1} ${p1(z.px)}` })),
     ...(tr.cr || []).filter(z => !tr.exit || Math.abs(z.t - tr.exit.t) > 1000).map(z => ({ time: at(z.t), position: L ? "aboveBar" : "belowBar", color: cssv("--warn"), shape: L ? "arrowDown" : "arrowUp", text: "减仓" })),
     ...(tr.exit ? [{ time: at(tr.exit.t), position: L ? "aboveBar" : "belowBar", color: cssv("--warn"), shape: L ? "arrowDown" : "arrowUp", text: `平 ${p1(tr.exit.px)}` }] : [])].sort((a, b) => a.time - b.time);
   try { LC.createSeriesMarkers(cs, mk); } catch (e) { /* 标记失败不影响 K 线 */ }

@@ -231,6 +231,23 @@ const RV = (() => {
     flags.forEach(([, t]) => out.push("⚠ " + t + "。"));
     return out.join("\n");
   }
+  // 第 i+1 次加仓：这一笔自己的理由、核对、当时盘面
+  function addSummary(tr, i, snap, chk, flags) {
+    const ad = tr.adds[i], L = tr.side === "long", out = [];
+    const base = tr.qty - tr.adds.reduce((t, a) => t + a.qty, 0), after = base + tr.adds.slice(0, i + 1).reduce((t, a) => t + a.qty, 0);
+    out.push(`第 ${i + 1} 次加仓：${L ? "多" : "空"} +${ad.qty.toFixed(3)} BTC @ ${p1(ad.px)}，开仓后 ${dur(ad.t - tr.t)}，加完共 ${after.toFixed(3)} BTC。`);
+    if (ad.tags && ad.tags.length) out.push(`理由：\n${chk.map(([k, ok, txt]) => `  ${ok === true ? "✓" : ok === false ? "✗" : "·"} ${TAG_NAME[k] || k}：${txt}`).join("\n")}`);
+    else out.push("这一笔加仓没有记理由（更新之前下的单）。");
+    if (ad.conf) out.push(`信心：${CONF_NAME[ad.conf]}。`);
+    if (ad.note) out.push(`备注：${ad.note}`);
+    out.push(`盘面：${trendLine(snap)}。过去 5 分钟 ${pc(snap.chg.m5)}、1 小时 ${pc(snap.chg.h1)}、4 小时 ${pc(snap.chg.h4)}。`);
+    const v = snap.view && snap.view.tf; out.push(`指标：${indLine(snap, v && snap.rd[v] ? v : "5m")}。`);
+    const ml = mktLine(snap); if (ml) out.push(ml + "。");
+    out.push(`${sessLine(snap)}。`);
+    if (!snap.live) out.push("（页面关着时成交、打开后补算的，盘面按 K 线补拍。）");
+    flags.forEach(([, t]) => out.push("⚠ " + t + "。"));
+    return out.join("\n");
+  }
   function closeSummary(tr, snap, cf, why) {
     const x = tr.exit, out = [], net = (tr.real || 0) - (tr.fee || 0), im = tr.qty * tr.entry / tr.lev;
     out.push(`拿了 ${dur(x.t - tr.t)}，平在 ${p1(x.px)}（${x.why}${why ? ` · 理由：${CLOSE_NAME[why.why] || why.why}${why.note ? "，" + why.note : ""}` : ""}）。`);
@@ -310,6 +327,6 @@ const RV = (() => {
   }
 
   return { TAGS, TAG_NAME, CONF, CONF_NAME, CLOSE_WHY, CLOSE_NAME, TFN, TFMS, SNAP_TF, REC_REPO, readings, session, capture, verify, openFlags, closeFlags, planOf,
-    openSummary, closeSummary, after, afterSummary, afterWin, idbPut, idbGet, cloudPut, cloudGet, snapPath, loadSnap, unpack, klRange, b64d, dur, pc, sg, p1,
+    openSummary, addSummary, closeSummary, after, afterSummary, afterWin, idbPut, idbGet, cloudPut, cloudGet, snapPath, loadSnap, unpack, klRange, b64d, dur, pc, sg, p1,
     ind: { sma, ema, rsi, kdj, boll, macd } };
 })();

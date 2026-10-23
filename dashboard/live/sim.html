@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 模拟盘</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css?v=20261023c">
+<link rel="stylesheet" href="ui.css?v=20261023d">
 <style>
 /* 模拟合约交易：布局参照常见的 U 本位合约下单界面（K 线 · 订单簿 · 下单 · 仓位），颜色和面板一致 */
 :root{
@@ -90,6 +90,11 @@ a{color:var(--accent)}
 .mrow{display:flex;gap:6px;margin-bottom:8px}
 .mrow button{flex:1;background:var(--chip);border:0;border-radius:4px;padding:5px 0;cursor:pointer;font-weight:500}
 .otabs{display:flex;gap:14px;margin-bottom:8px}
+.fatabs{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:10px;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.fatabs button{background:none;border:0;padding:6px 0;cursor:pointer;color:var(--muted);font-weight:500}
+.fatabs button[aria-selected="true"]{background:var(--chip);color:var(--fg);font-weight:600}
+.mrow .hedge{flex:1;display:flex;align-items:center;justify-content:center;background:var(--chip);border-radius:4px;color:var(--fg2);font-size:12px}
+.costs i{font-style:normal}
 .otabs button{background:none;border:0;padding:2px 0;cursor:pointer;color:var(--muted)}.otabs button[aria-selected="true"]{color:var(--fg);font-weight:600}
 .av{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-bottom:6px}.av b{color:var(--fg);font-family:var(--m);font-weight:500}
 .fld{display:flex;align-items:center;background:var(--chip);border-radius:6px;margin-bottom:8px;border:1px solid transparent;padding:0 10px;height:38px}
@@ -232,7 +237,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
   </section>
 
   <section class="formbox">
-    <div class="mrow"><button type="button" id="modeBtn">全仓</button><button type="button" id="levBtn">20x</button></div>
+    <div class="mrow"><button type="button" id="modeBtn">全仓</button><button type="button" id="levBtn">20x</button><span class="hedge">双向持仓</span></div>
+    <div class="fatabs" role="tablist" id="fatabs"><button type="button" data-fa="open" aria-selected="true">开仓</button><button type="button" data-fa="close" aria-selected="false">平仓</button></div>
     <div class="otabs" role="tablist" id="otabs">
       <button type="button" data-ot="limit" aria-selected="true">限价</button>
       <button type="button" data-ot="market" aria-selected="false">市价</button>
@@ -245,12 +251,12 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
     <div class="fld"><label for="fQty">数量</label><input id="fQty" inputmode="decimal" autocomplete="off" placeholder="0"><button type="button" id="unitBtn" class="u" style="color:var(--fg2)">BTC ⇄</button></div>
     <div class="qhint" id="fQtyHint"></div>
     <div class="pct" id="pct"><button type="button" data-p="10">10%</button><button type="button" data-p="25">25%</button><button type="button" data-p="50">50%</button><button type="button" data-p="75">75%</button><button type="button" data-p="100">100%</button></div>
-    <div class="chk"><label><input type="checkbox" id="fTpsl">止盈 / 止损</label><label><input type="checkbox" id="fRo">只减仓</label></div>
+    <div class="chk" id="tpslRow"><label><input type="checkbox" id="fTpsl">止盈 / 止损</label></div>
     <div class="tpsl" id="tpslBox">
       <div class="fld"><label for="fTp">止盈</label><input id="fTp" inputmode="decimal" autocomplete="off" placeholder="开多填高于进场的价"><span class="u">USDT</span></div>
       <div class="fld"><label for="fSl">止损</label><input id="fSl" inputmode="decimal" autocomplete="off" placeholder="开多填低于进场的价"><span class="u">USDT</span></div>
     </div>
-    <div class="costs"><span>开多成本 <b id="cBuy">—</b></span><span>开空成本 <b id="cSell">—</b></span><span>可开多 <b id="mBuy">—</b></span><span>可开空 <b id="mSell">—</b></span></div>
+    <div class="costs"><span><i id="cBuyL">开多成本</i> <b id="cBuy">—</b></span><span><i id="cSellL">开空成本</i> <b id="cSell">—</b></span><span><i id="mBuyL">可开多</i> <b id="mBuy">—</b></span><span><i id="mSellL">可开空</i> <b id="mSell">—</b></span></div>
     <div class="go"><button type="button" class="buy" id="goBuy">买入 / 开多</button><button type="button" class="sell" id="goSell">卖出 / 开空</button></div>
     <div class="msg" id="fMsg"></div>
   </section>
@@ -281,7 +287,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
     <div class="btns"><button type="button" class="sbtn" id="resetBtn">重置模拟账户</button><button type="button" class="sbtn cloud-on" id="cloudBtn">连接云端</button><button type="button" class="sbtn" id="syncNow">立即同步</button></div>
     <p class="note" id="cloudSt"></p>
     <details class="slogbox"><summary>同步记录</summary><div class="sync-log"></div></details>
-    <p class="note">规则：单向持仓，BTCUSDT 永续。行情、订单簿、标记价格和资金费率都是币安实时公开数据。市价单按订单簿逐档吃单成交（吃单手续费 0.05%），限价单挂着等最新成交价碰到才成交（挂单手续费 0.02%），限价单价格已经穿过盘口会马上按吃单成交。止盈止损按最新成交价触发、市价平仓。强平按标记价格：保证金余额跌到维持保证金（仓位价值的 0.4%）以下就按强平价全部平掉。资金费每 8 小时按当时费率收付。页面关着时不会实时盯盘，下次打开会用 1 分钟 K 线把这段时间补算一遍（同一分钟里先按开盘 → 低/高 → 收盘的顺序走）。只是模拟，不会下真实订单。</p>
+    <p class="note">规则：双向持仓（和币安「双向持仓」一样），BTCUSDT 永续。多仓、空仓可以同时拿着，各有各的止盈止损；同方向再开会合并成一仓（均价），每次加仓单独问理由、单独拍快照。下单区「开仓」只开新仓或加仓，「平仓」只平你选的那一边；仓位列表里每一边也能单独平。杠杆和全仓 / 逐仓两边共用。行情、订单簿、标记价格和资金费率都是币安实时公开数据。市价单按订单簿逐档吃单成交（吃单手续费 0.05%），限价单挂着等最新成交价碰到才成交（挂单手续费 0.02%），限价单价格已经穿过盘口会马上按吃单成交。止盈止损按最新成交价触发、市价平仓。强平按标记价格：保证金余额跌到维持保证金（仓位价值的 0.4%）以下就按强平价全部平掉。资金费每 8 小时按当时费率收付。页面关着时不会实时盯盘，下次打开会用 1 分钟 K 线把这段时间补算一遍（同一分钟里先按开盘 → 低/高 → 收盘的顺序走）。只是模拟，不会下真实订单。</p>
   </section>
 </main>
 
@@ -341,8 +347,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
-<script src="review-core.js?v=20261023c"></script>
-<script src="ui.js?v=20261023c"></script>
+<script src="review-core.js?v=20261023d"></script>
+<script src="ui.js?v=20261023d"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -374,9 +380,17 @@ const cls = x => x > 0 ? "good" : x < 0 ? "bad" : "";
 
 // ---------------- 账户状态（本机保存 + 可选同步到私有仓库） ----------------
 // u = 0：这台设备上从没用过的账户，先以云端为准，绝不拿空账户覆盖云端（重置时 touch() 会把 u 改成当前时间）
-const blank = bal => ({ v: 1, start: bal, wallet: bal, lev: 20, mode: "cross", pos: null, orders: [], hist: [], fills: [], trades: [], ledger: [{ t: Date.now(), type: "初始资金", amt: bal }], lastT: Date.now(), nextFund: 0, seq: 0, u: 0, draws: [] });
-let A = (() => { try { const x = JSON.parse(lsGet(SKEY)); return x && x.v === 1 ? x : null; } catch (e) { return null; } })() || blank(10000);
-A.trades = A.trades || [];
+const blank = bal => ({ v: 1, start: bal, wallet: bal, lev: 20, mode: "cross", ps: { long: null, short: null }, orders: [], hist: [], fills: [], trades: [], ledger: [{ t: Date.now(), type: "初始资金", amt: bal }], lastT: Date.now(), nextFund: 0, seq: 0, u: 0, draws: [] });
+// 双向持仓：A.ps = { long, short } 两边各一仓。旧数据（单向持仓的 A.pos、只减仓的委托）在这里转过来，持仓和委托原样保留
+function norm(x) {
+  if (!x) return x;
+  if (!x.ps) { x.ps = { long: null, short: null }; if (x.pos) x.ps[x.pos.side] = x.pos; }
+  delete x.pos;
+  x.orders = (x.orders || []).map(o => o.ps ? o : { ...o, ps: o.ro ? (o.side === "buy" ? "short" : "long") : (o.side === "buy" ? "long" : "short"), close: !!o.ro });
+  x.trades = x.trades || []; x.draws = x.draws || [];
+  return x;
+}
+let A = norm((() => { try { const x = JSON.parse(lsGet(SKEY)); return x && x.v === 1 ? x : null; } catch (e) { return null; } })() || blank(10000));
 const M = { last: NaN, mark: NaN, fund: NaN, fundT: 0, bid: NaN, ask: NaN, book: { b: [], a: [] }, trades: [], tk: {}, ok: false, ready: false };
 let dirty = true, saveT = 0;
 function touch() { A.u = Date.now(); dirty = true; clearTimeout(saveT); saveT = setTimeout(save, 400); cloudSoon(); }
@@ -386,20 +400,29 @@ const ledger = (type, amt, t = Date.now()) => { A.ledger.unshift({ t, type, amt 
 let toastT = 0;
 function toast(s) { const el = $("toast"); el.textContent = s; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), 2600); }
 
-// ---------------- 计算 ----------------
+// ---------------- 计算（双向持仓：多仓、空仓可以同时存在，各算各的；同方向再开合并成一仓） ----------------
+const SIDES = ["long", "short"], SNAME = { long: "多", short: "空" };
 const sg = p => p.side === "long" ? 1 : -1;
-const upnl = (px = M.mark) => A.pos && Number.isFinite(px) ? sg(A.pos) * A.pos.qty * (px - A.pos.entry) : 0;
-const posIM = () => A.pos ? A.pos.qty * A.pos.entry / A.pos.lev : 0;
-const ordIM = () => A.orders.filter(o => !o.ro).reduce((t, o) => t + o.qty * (o.price || o.stop || M.last) / A.lev, 0);
-const maint = (px = M.mark) => A.pos && Number.isFinite(px) ? A.pos.qty * px * MMR : 0;
+const posL = () => SIDES.map(s => A.ps[s]).filter(Boolean);
+const hasPos = () => posL().length > 0;
+// 开多 / 平空 = 买入；开空 / 平多 = 卖出
+const sideOf = (ps, act) => (ps === "long") === (act === "open") ? "buy" : "sell";
+const upnl1 = (p, px = M.mark) => p && Number.isFinite(px) ? sg(p) * p.qty * (px - p.entry) : 0;
+const upnl = (px = M.mark) => posL().reduce((t, p) => t + upnl1(p, px), 0);
+const im1 = p => p ? p.qty * p.entry / p.lev : 0;
+const posIM = () => posL().reduce((t, p) => t + im1(p), 0);
+const ordIM = () => A.orders.filter(o => !o.close).reduce((t, o) => t + o.qty * (o.price || o.stop || M.last) / A.lev, 0);
+const maint1 = (p, px = M.mark) => p && Number.isFinite(px) ? p.qty * px * MMR : 0;
+const maint = (px = M.mark) => posL().reduce((t, p) => t + maint1(p, px), 0);
 function avail() {
-  if (!A.pos) return A.wallet - ordIM();
-  return A.pos.mode === "cross" ? A.wallet + Math.min(0, upnl()) - posIM() - ordIM() : A.wallet - A.pos.margin - ordIM();
+  if (A.mode === "cross") return A.wallet + Math.min(0, upnl()) - posIM() - ordIM();
+  return A.wallet - posL().reduce((t, p) => t + p.margin, 0) - ordIM();
 }
-// 强平价：保证金（全仓 = 钱包余额，逐仓 = 这一仓的保证金）+ 浮亏 = 维持保证金 时的标记价格
-function liqPx(p = A.pos) {
+// 强平价：逐仓 = 这一仓的保证金扛到维持保证金；全仓 = 钱包余额 + 另一边仓位的浮盈亏（按现在的标记价算）扛到两边的维持保证金
+function liqPx(p) {
   if (!p) return NaN;
-  const W = p.mode === "cross" ? A.wallet : p.margin, q = p.qty, e = p.entry;
+  const o = A.ps[p.side === "long" ? "short" : "long"];
+  const W = p.mode === "cross" ? A.wallet + (o ? upnl1(o) - maint1(o) : 0) : p.margin, q = p.qty, e = p.entry;
   const x = p.side === "long" ? (q * e - W) / (q * (1 - MMR)) : (W + q * e) / (q * (1 + MMR));
   return x > 0 ? x : NaN;
 }
@@ -412,60 +435,59 @@ function walk(side, qty) {
   if (left > 1e-12) cost += left * lv.at(-1)[0];
   return cost / qty;
 }
-// 按方向能开 / 能平的最大数量
-function maxQty(side, px) {
+// 能开 / 能平的最大数量
+function maxQty(ps, act, px) {
+  if (act === "close") return A.ps[ps] ? A.ps[ps].qty : 0;
   if (!Number.isFinite(px) || px <= 0) return 0;
-  const dir = side === "buy" ? 1 : -1, closeQ = A.pos && sg(A.pos) !== dir ? A.pos.qty : 0;
-  return r3(closeQ + Math.max(0, avail()) * A.lev / (px * (1 + FEE.taker * A.lev)));
+  return r3(Math.max(0, avail()) * A.lev / (px * (1 + FEE.taker * A.lev)));
 }
 
 // ---------------- 成交 ----------------
-// 每一仓从开到平记一条（作战面板把它当成「模拟盘」的喊单，显示在喊单记录和持仓里）
+// 每一仓从开到平记一条（作战面板把它当成「模拟盘」的喊单）；同方向加仓记在这一条的 adds 里，每次加仓的理由、快照、总结分开存
 const trOf = p => p && A.trades.find(x => x.id === p.tid);
-// R：下单时填的理由 { o: 开单 / 加仓理由, c: 平仓理由 }
-function fill(side, qty, px, role, why, ro, t = Date.now(), from = null, R = null) {
-  const dir = side === "buy" ? 1 : -1;
-  let q = qty, realized = 0, newTr = null, endTr = null;
-  if (ro) q = A.pos && sg(A.pos) !== dir ? Math.min(q, A.pos.qty) : 0;
-  q = r3(q); if (q <= 0) return 0;
+// ps：long / short 哪一边；act：open 开仓（含加仓）/ close 平仓；R：下单时填的理由 { o: 开仓 / 加仓理由, c: 平仓理由 }
+function fill(ps, act, qty, px, role, why, t = Date.now(), from = null, R = null) {
+  const p0 = A.ps[ps], dir = ps === "long" ? 1 : -1, side = sideOf(ps, act);
+  let q = r3(act === "close" ? Math.min(qty, p0 ? p0.qty : 0) : qty), realized = 0, newTr = null, endTr = null, addN = 0;
+  if (q <= 0) return 0;
   const fee = q * px * FEE[role];
   A.wallet -= fee; ledger("手续费", -fee, t);
-  let rest = q;
-  if (A.pos && sg(A.pos) !== dir) {
-    const c = Math.min(rest, A.pos.qty), tr = trOf(A.pos);
-    realized = sg(A.pos) * c * (px - A.pos.entry);
-    if (tr) { tr.cq = (tr.cq || 0) + c; tr.cv = (tr.cv || 0) + c * px; tr.real = (tr.real || 0) + realized; tr.fee = (tr.fee || 0) + fee * c / q; tr.u = t;
-      if (R && R.c) (tr.cr = tr.cr || []).push({ t, qty: c, px, ...R.c });
-      if (A.pos.qty - c <= 1e-9) { tr.exit = { t, px: tr.cv / tr.cq, why }; endTr = tr; } }
+  if (act === "close") {
+    const p = p0, tr = trOf(p);
+    realized = dir * q * (px - p.entry);
+    if (tr) { tr.cq = (tr.cq || 0) + q; tr.cv = (tr.cv || 0) + q * px; tr.real = (tr.real || 0) + realized; tr.fee = (tr.fee || 0) + fee; tr.u = t;
+      if (R && R.c) (tr.cr = tr.cr || []).push({ t, qty: q, px, ...R.c });
+      if (p.qty - q <= 1e-9) { tr.exit = { t, px: tr.cv / tr.cq, why }; endTr = tr; } }
     A.wallet += realized; ledger("已实现盈亏", realized, t);
-    if (A.pos.mode === "isolated") A.pos.margin -= A.pos.margin * c / A.pos.qty;
-    A.pos.qty = r3(A.pos.qty - c + 1e-9); rest = r3(rest - c + 1e-9);
-    if (A.pos.qty <= 0) { A.pos = null; A.orders = A.orders.filter(o => !o.ro); }
-  }
-  if (rest > 0) {
-    if (!A.pos) {
-      const tr = { id: nid(), t, side: dir > 0 ? "long" : "short", entry: px, qty: 0, lev: A.lev, mode: A.mode, tp: null, sl: null, mods: [], fee: 0, from, u: t,
+    if (p.mode === "isolated") p.margin -= p.margin * q / p.qty;
+    p.qty = r3(p.qty - q + 1e-9);
+    if (p.qty <= 0) { A.ps[ps] = null; A.orders = A.orders.filter(o => !(o.close && o.ps === ps)); }
+  } else {
+    if (!p0) {
+      const tr = { id: nid(), t, side: ps, entry: px, qty: 0, lev: A.lev, mode: A.mode, tp: null, sl: null, mods: [], fee: 0, from, u: t,
         rsn: R && R.o || null, hi: px, hiT: t, lo: px, loT: t };
       A.trades.unshift(tr); A.trades.length = Math.min(A.trades.length, 300); newTr = tr;
-      A.pos = { side: tr.side, qty: 0, entry: px, lev: A.lev, mode: A.mode, margin: 0, t, tp: null, sl: null, tid: tr.id };
+      A.ps[ps] = { side: ps, qty: 0, entry: px, lev: A.lev, mode: A.mode, margin: 0, t, tp: null, sl: null, tid: tr.id };
     }
-    const p = A.pos;
-    p.entry = (p.entry * p.qty + px * rest) / (p.qty + rest); p.qty = r3(p.qty + rest + 1e-9);
-    if (p.mode === "isolated") p.margin += rest * px / p.lev;
-    const tr = trOf(p); if (tr) { tr.entry = p.entry; tr.qty = r3((tr.qty || 0) + rest + 1e-9); tr.lev = p.lev; tr.fee = (tr.fee || 0) + fee * rest / q; tr.u = t;
-      if (tr !== newTr && R && R.o) (tr.adds = tr.adds || []).push({ t, qty: rest, px, ...R.o }); }
+    const p = A.ps[ps];
+    p.entry = (p.entry * p.qty + px * q) / (p.qty + q); p.qty = r3(p.qty + q + 1e-9);
+    if (p.mode === "isolated") p.margin += q * px / p.lev;
+    const tr = trOf(p);
+    if (tr) { tr.entry = p.entry; tr.qty = r3((tr.qty || 0) + q + 1e-9); tr.lev = p.lev; tr.fee = (tr.fee || 0) + fee; tr.u = t;
+      if (tr !== newTr) { (tr.adds = tr.adds || []).push({ t, qty: q, px, ...(R && R.o ? R.o : { tags: [], note: "" }) }); addN = tr.adds.length; } }
   }
-  // 开仓和平仓那一刻拍盘面快照（等止盈止损设好再拍）
+  if (A.wallet < 0) A.wallet = 0;
+  A.fills.unshift({ t, side, ps, act, px, qty: q, fee, realized, role, why });
+  A.fills.length = Math.min(A.fills.length, 500);
+  // 开仓、每次加仓、平仓那一刻拍盘面快照（等止盈止损设好再拍）
   if (endTr) { const id = endTr.id; setTimeout(() => snapStart(id, "close", t), 0); }
   if (newTr) { const id = newTr.id; setTimeout(() => snapStart(id, "open", t), 0); }
-  if (A.wallet < 0) A.wallet = 0;
-  A.fills.unshift({ t, side, px, qty: q, fee, realized, role, why });
-  A.fills.length = Math.min(A.fills.length, 500);
+  if (addN) { const id = trOf(A.ps[ps]).id; setTimeout(() => snapStart(id, "add" + addN, t), 0); }
   touch();
   return q;
 }
-function setTpsl(tp, sl, t = Date.now()) {
-  const p = A.pos; if (!p) return;
+function setTpsl(ps, tp, sl, t = Date.now()) {
+  const p = A.ps[ps]; if (!p) return;
   p.tp = tp || null; p.sl = sl || null;
   const tr = trOf(p); if (!tr || (tr.tp === p.tp && tr.sl === p.sl)) return;
   if (!tr.mods.length && t - tr.t < 5000) { tr.tp = p.tp; tr.sl = p.sl; }       // 开仓时一起设的算原计划
@@ -473,54 +495,61 @@ function setTpsl(tp, sl, t = Date.now()) {
   tr.u = t; touch();
 }
 const hist = (o, status, px, t = Date.now()) => { A.hist.unshift({ ...o, status, fillPx: px, done: t }); A.hist.length = Math.min(A.hist.length, 300); };
+const actTxt = (ps, act) => (act === "open" ? "开" : "平") + SNAME[ps];
 
-// 每个成交价：挂单、条件单、仓位止盈止损
+// 每个成交价：挂单、条件单、两边仓位各自的止盈止损
 function onPrice(px, t) {
   if (!Number.isFinite(px)) return;
   // 持仓期间的最高 / 最低价（复盘算最大浮盈、最大浮亏）
-  const ht = A.pos && trOf(A.pos);
-  if (ht) { if (!(px <= ht.hi)) { ht.hi = px; ht.hiT = t; } if (!(px >= ht.lo)) { ht.lo = px; ht.loT = t; } }
+  posL().forEach(p => { const ht = trOf(p); if (ht) { if (!(px <= ht.hi)) { ht.hi = px; ht.hiT = t; } if (!(px >= ht.lo)) { ht.lo = px; ht.loT = t; } } });
   for (const o of A.orders.slice()) {
     let hit = false, at = px, role = "taker";
     if (o.type === "limit" && ((o.side === "buy" && px <= o.price) || (o.side === "sell" && px >= o.price))) { hit = true; at = o.price; role = "maker"; }
     if (o.type === "stop" && (o.dir > 0 ? px >= o.stop : px <= o.stop)) hit = true;
     if (!hit) continue;
     A.orders = A.orders.filter(x => x.id !== o.id);
-    const q = fill(o.side, o.qty, at, role, o.type === "limit" ? "限价成交" : "条件单触发", o.ro, t, o.from, { o: o.rsn, c: o.crsn });
-    hist(o, q > 0 ? "已成交" : "已取消（无仓可减）", at, t);
-    if (q > 0 && !o.ro && (o.tp || o.sl) && A.pos) setTpsl(o.tp || A.pos.tp, o.sl || A.pos.sl, t);
-    if (q > 0) toast(`${o.type === "limit" ? "限价单" : "条件单"}成交：${o.side === "buy" ? "买入" : "卖出"} ${q3(q)} BTC @ ${p1(at)}`);
+    const q = fill(o.ps, o.close ? "close" : "open", o.qty, at, role, o.type === "limit" ? "限价成交" : "条件单触发", t, o.from, { o: o.rsn, c: o.crsn });
+    hist(o, q > 0 ? "已成交" : "已取消（没有可平的仓位）", at, t);
+    if (q > 0 && !o.close && (o.tp || o.sl) && A.ps[o.ps]) setTpsl(o.ps, o.tp || A.ps[o.ps].tp, o.sl || A.ps[o.ps].sl, t);
+    if (q > 0) toast(`${o.type === "limit" ? "限价单" : "条件单"}成交：${actTxt(o.ps, o.close ? "close" : "open")} ${q3(q)} BTC @ ${p1(at)}`);
     touch();
   }
-  const p = A.pos;
-  if (p) {
+  for (const p of posL()) {
     const L = p.side === "long";
     const slHit = p.sl && (L ? px <= p.sl : px >= p.sl), tpHit = p.tp && (L ? px >= p.tp : px <= p.tp);
     if (slHit || tpHit) {
       const q = p.qty;
-      fill(L ? "sell" : "buy", q, px, "taker", slHit ? "止损" : "止盈", true, t);
-      toast(`${slHit ? "止损" : "止盈"}触发：${q3(q)} BTC 已按 ${p1(px)} 市价平仓`);
+      fill(p.side, "close", q, px, "taker", slHit ? "止损" : "止盈", t);
+      toast(`${SNAME[p.side]}仓${slHit ? "止损" : "止盈"}触发：${q3(q)} BTC 已按 ${p1(px)} 市价平仓`);
     }
   }
 }
-// 标记价格：强平；资金费
+// 标记价格：强平（逐仓一仓一仓算；全仓看整个账户）；资金费两边各收各的
+function liquidate(p, at, t) {
+  const q = p.qty;
+  fill(p.side, "close", q, at, "taker", "强平", t);
+  toast(`${SNAME[p.side]}仓被强平：${q3(q)} BTC @ ${p1(at)}`);
+}
 function onMark(mk, t) {
   if (!Number.isFinite(mk)) return;
-  const p = A.pos;
-  if (p) {
-    const bal = (p.mode === "cross" ? A.wallet : p.margin) + upnl(mk);
-    if (bal <= maint(mk)) {
-      const lp = liqPx(p), at = Number.isFinite(lp) ? lp : mk, q = p.qty, w0 = A.wallet, m0 = p.mode === "cross" ? A.wallet : p.margin;
-      fill(p.side === "long" ? "sell" : "buy", q, at, "taker", "强平", true, t);
-      // 强平后剩下的那点维持保证金也拿不回来（交易所收作强平清算费）：逐仓亏掉整份保证金，全仓余额清零
-      const extra = Math.max(0, Math.min(A.wallet, m0 - (w0 - A.wallet)));
-      if (extra > 0) { A.wallet -= extra; ledger("强平清算费", -extra, t); }
-      if (p.mode === "cross") A.orders.forEach(o => hist(o, "已取消（强平）", NaN, t)), A.orders = [];
-      toast(`仓位被强平：${q3(q)} BTC @ ${p1(at)}`);
+  if (A.mode === "isolated") {
+    for (const p of posL()) {
+      if (p.mode !== "isolated" || p.margin + upnl1(p, mk) > maint1(p, mk)) continue;
+      const lp = liqPx(p), m0 = p.margin, w0 = A.wallet;
+      liquidate(p, Number.isFinite(lp) ? lp : mk, t);
+      // 强平后剩下的那点保证金也拿不回来（交易所收作强平清算费）：逐仓亏掉整份保证金
+      const extra = Math.max(0, m0 - (w0 - A.wallet));
+      if (extra > 0) { A.wallet = Math.max(0, A.wallet - extra); ledger("强平清算费", -extra, t); }
     }
+  } else if (hasPos() && A.wallet + upnl(mk) <= maint(mk)) {
+    posL().forEach(p => liquidate(p, mk, t));
+    // 全仓：余额清零，委托全部取消
+    if (A.wallet > 0) { ledger("强平清算费", -A.wallet, t); A.wallet = 0; }
+    A.orders.forEach(o => hist(o, "已取消（强平）", NaN, t)); A.orders = [];
   }
   if (A.nextFund && t >= A.nextFund) {
-    if (A.pos && Number.isFinite(M.fund)) { const amt = -sg(A.pos) * A.pos.qty * mk * M.fund; A.wallet += amt; ledger("资金费用", amt, A.nextFund); touch(); }
+    if (Number.isFinite(M.fund)) posL().forEach(p => { const amt = -sg(p) * p.qty * mk * M.fund; A.wallet += amt; ledger("资金费用", amt, A.nextFund); });
+    if (hasPos()) touch();
     A.nextFund = 0;
   }
   if (!A.nextFund && M.fundT > t) A.nextFund = M.fundT;
@@ -531,79 +560,83 @@ let FROM = null;   // 从作战面板「放进模拟盘」带过来的喊单（�
 // 数量单位（和币安一样）：BTC；USDT·成本 = 填保证金，自动乘杠杆；USDT·价值 = 填仓位价值（名义）
 const UNITS = { btc: "BTC", cost: "USDT·成本", usdt: "USDT·价值" }, UNEXT = { btc: "cost", cost: "usdt", usdt: "btc" };
 let OT = "limit", UNIT = UNITS[lsGet("btc_sim_unit")] ? lsGet("btc_sim_unit") : "cost";
+let FA = "open";   // 下单区：开仓 / 平仓（和币安双向持仓一样）
 const MIN_NOTIONAL = 50;    // 币安 BTCUSDT 永续：每单至少 0.001 BTC，且仓位价值至少 50 USDT
 const toQty = (v, px) => UNIT === "cost" ? r3(v * A.lev / px) : UNIT === "usdt" ? r3(v / px) : r3(v);
 const fromQty = (q, px) => UNIT === "cost" ? (q * px / A.lev).toFixed(2) : UNIT === "usdt" ? (q * px).toFixed(2) : q.toFixed(3);
 function refPx() { return OT === "limit" ? +$("fPrice").value : OT === "stop" ? +$("fStop").value : M.last; }
 function qtyIn(px) { return toQty(+$("fQty").value, px); }
 // 先检查能不能下（不通过就在下单区说原因，返回 null），通过了再弹窗问理由，确认后再按当时的盘口成交
-function check(side) {
+function check(ps, act) {
   const msg = s => { $("fMsg").textContent = s; $("fMsg").className = "msg bad"; return null; };
   if (!M.ready) return msg("行情还没连上，稍等");
-  const dir = side === "buy" ? 1 : -1, ro = $("fRo").checked;
+  const side = sideOf(ps, act), close = act === "close", p = A.ps[ps];
   const price = OT === "limit" ? +$("fPrice").value : NaN, stop = OT === "stop" ? +$("fStop").value : NaN;
   if (OT === "limit" && !(price > 0)) return msg("先填价格");
   if (OT === "stop" && !(stop > 0)) return msg("先填触发价");
   const px = OT === "limit" ? price : OT === "stop" ? stop : (side === "buy" ? M.ask : M.bid) || M.last;
-  const qty = qtyIn(px);
-  if (!(qty >= STEP) || qty * px < MIN_NOTIONAL) { const minQ = Math.max(STEP, Math.ceil(MIN_NOTIONAL / px / STEP) * STEP);
+  let qty = qtyIn(px);
+  if (close) {
+    if (!p) return msg(`现在没有${SNAME[ps]}仓可以平`);
+    qty = Math.min(qty, p.qty);
+    if (!(qty >= STEP)) return msg("先填要平的数量");
+  } else if (!(qty >= STEP) || qty * px < MIN_NOTIONAL) { const minQ = Math.max(STEP, Math.ceil(MIN_NOTIONAL / px / STEP) * STEP);
     return msg(`太小了：币安每单至少 ${q3(minQ)} BTC（仓位价值约 ${p1(minQ * px)} USDT）。按现在 ${A.lev} 倍杠杆，保证金至少约 ${p2(minQ * px / A.lev)} USDT${UNIT === "usdt" ? "；如果你填的是保证金，把单位切到「USDT·成本」" : ""}`); }
-  const closeQ = A.pos && sg(A.pos) !== dir ? A.pos.qty : 0;
-  if (ro && !closeQ) return msg("只减仓：现在没有可以减的反向仓位");
-  const openQ = ro ? 0 : Math.max(0, qty - closeQ), need = openQ * px / A.lev + qty * px * FEE.taker;
-  if (openQ > 0 && need > avail()) return msg(`可用余额不足：需要约 ${p2(need)} USDT，可用 ${p2(avail())} USDT`);
+  const need = close ? 0 : qty * px / A.lev + qty * px * FEE.taker;
+  if (need > avail()) return msg(`可用余额不足：需要约 ${p2(need)} USDT，可用 ${p2(avail())} USDT`);
   let tp = null, sl = null;
-  if ($("fTpsl").checked && !ro) {
+  if ($("fTpsl").checked && !close) {
+    const dir = ps === "long" ? 1 : -1;
     tp = +$("fTp").value || null; sl = +$("fSl").value || null;
     if (tp && (dir > 0 ? tp <= px : tp >= px)) return msg(`止盈价要${dir > 0 ? "高" : "低"}于进场价`);
     if (sl && (dir > 0 ? sl >= px : sl <= px)) return msg(`止损价要${dir > 0 ? "低" : "高"}于进场价`);
   }
-  return { side, dir, ro, price, stop, px, qty, closeQ, openQ, tp, sl };
+  return { ps, act, side, close, price, stop, px, qty, tp, sl };
 }
-function place(side) {
-  const c = check(side); if (!c) return;
-  const add = c.openQ > 0 && A.pos && sg(A.pos) === c.dir, closing = c.closeQ > 0;
-  const what = `${TYPE[OT]} ${side === "buy" ? "买入" : "卖出"} ${q3(c.qty)} BTC${OT === "limit" ? ` @ ${p1(c.price)}` : OT === "stop" ? ` · 触发价 ${p1(c.stop)}` : ""}`;
-  const parts = [closing && `平掉 ${q3(Math.min(c.qty, c.closeQ))} BTC ${A.pos.side === "long" ? "多" : "空"}单`, c.openQ > 0 && `${add ? "加仓" : "开" + (c.dir > 0 ? "多" : "空")} ${q3(c.openQ)} BTC`].filter(Boolean).join("，再");
-  askReason({ open: c.openQ > 0 ? (add ? "add" : "open") : null, close: closing, info: `${what}（${parts}）`, ok: "确认下单" }).then(R => {
+function place(ps, act) {
+  const c = check(ps, act); if (!c) return;
+  const add = !c.close && !!A.ps[ps];
+  const what = `${TYPE[OT]} ${actTxt(ps, act)} ${q3(c.qty)} BTC${OT === "limit" ? ` @ ${p1(c.price)}` : OT === "stop" ? ` · 触发价 ${p1(c.stop)}` : ""}${add ? `（${SNAME[ps]}仓已有 ${q3(A.ps[ps].qty)} BTC，这一笔是加仓）` : ""}`;
+  askReason({ open: c.close ? null : add ? "add" : "open", close: c.close, info: what, ok: "确认下单" }).then(R => {
     if (!R) { $("fMsg").className = "msg"; $("fMsg").textContent = "已取消，没有下单"; return; }
-    const c2 = check(side); if (c2) exec(c2, R);
+    const c2 = check(ps, act); if (c2) exec(c2, R);
   });
 }
 function exec(c, R) {
-  const { side, ro, price, stop, qty, tp, sl } = c;
-  const o = { id: nid(), t: Date.now(), type: OT, side, qty, price: Number.isFinite(price) ? price : null, stop: Number.isFinite(stop) ? stop : null, ro, tp, sl, from: FROM, rsn: R.o, crsn: R.c };
+  const { ps, act, side, close, price, stop, qty, tp, sl } = c;
+  const o = { id: nid(), t: Date.now(), type: OT, ps, close, side, qty, price: Number.isFinite(price) ? price : null, stop: Number.isFinite(stop) ? stop : null, tp, sl, from: close ? null : FROM, rsn: R.o, crsn: R.c };
   if (OT === "market" || (OT === "limit" && (side === "buy" ? price >= M.ask : price <= M.bid))) {
     const w = walk(side, qty), at = OT === "market" ? w : side === "buy" ? Math.min(price, w) : Math.max(price, w);
-    const q = fill(side, qty, at, "taker", OT === "market" ? "市价" : "限价（立即成交）", ro, Date.now(), FROM, R);
+    const q = fill(ps, act, qty, at, "taker", OT === "market" ? "市价" : "限价（立即成交）", Date.now(), o.from, R);
     hist(o, "已成交", at);
-    if (q > 0 && !ro && (tp || sl) && A.pos) setTpsl(tp || A.pos.tp, sl || A.pos.sl);
-    $("fMsg").className = "msg good"; $("fMsg").textContent = `已成交：${side === "buy" ? "买入" : "卖出"} ${q3(q)} BTC，均价 ${p1(at)}`;
+    if (q > 0 && !close && (tp || sl) && A.ps[ps]) setTpsl(ps, tp || A.ps[ps].tp, sl || A.ps[ps].sl);
+    $("fMsg").className = "msg good"; $("fMsg").textContent = `已成交：${actTxt(ps, act)} ${q3(q)} BTC，均价 ${p1(at)}`;
   } else {
     if (OT === "stop") o.dir = stop >= M.last ? 1 : -1;
     A.orders.unshift(o); touch();
-    $("fMsg").className = "msg"; $("fMsg").textContent = `已挂单：${OT === "limit" ? "限价" : "条件市价"} ${side === "buy" ? "买入" : "卖出"} ${q3(qty)} BTC @ ${p1(OT === "limit" ? price : stop)}`;
+    $("fMsg").className = "msg"; $("fMsg").textContent = `已挂单：${OT === "limit" ? "限价" : "条件市价"} ${actTxt(ps, act)} ${q3(qty)} BTC @ ${p1(OT === "limit" ? price : stop)}`;
   }
   $("fQty").value = "";
-  if (FROM) { FROM = null; history.replaceState(null, "", location.pathname); $("goBuy").style.outline = $("goSell").style.outline = ""; }
+  if (FROM && !close) { FROM = null; history.replaceState(null, "", location.pathname); $("goBuy").style.outline = $("goSell").style.outline = ""; }
   touch();
 }
-function closeMarket(R) {
-  if (!A.pos) return;
-  const side = A.pos.side === "long" ? "sell" : "buy", q = A.pos.qty, at = walk(side, q);
-  fill(side, q, at, "taker", "市价平仓", true, Date.now(), null, R);
-  hist({ id: nid(), t: Date.now(), type: "market", side, qty: q, ro: true }, "已成交", at);
-  toast(`已市价平仓 ${q3(q)} BTC，均价 ${p1(at)}`);
+function closeMarket(ps, R) {
+  const p = A.ps[ps]; if (!p) return;
+  const side = sideOf(ps, "close"), q = p.qty, at = walk(side, q);
+  fill(ps, "close", q, at, "taker", "市价平仓", Date.now(), null, R);
+  hist({ id: nid(), t: Date.now(), type: "market", ps, close: true, side, qty: q }, "已成交", at);
+  toast(`已市价平${SNAME[ps]} ${q3(q)} BTC，均价 ${p1(at)}`);
 }
-function closeLimit(price, R) {
-  if (!A.pos || !(price > 0)) return toast("先填平仓价格");
-  const side = A.pos.side === "long" ? "sell" : "buy", q = A.pos.qty;
-  if (side === "sell" ? price <= M.bid : price >= M.ask) { closeMarket(R); return; }
-  A.orders.unshift({ id: nid(), t: Date.now(), type: "limit", side, qty: q, price, stop: null, ro: true, crsn: R && R.c }); touch();
-  toast(`已挂限价平仓单 ${q3(q)} BTC @ ${p1(price)}`);
+function closeLimit(ps, price, R) {
+  const p = A.ps[ps];
+  if (!p || !(price > 0)) return toast("先填平仓价格");
+  const side = sideOf(ps, "close"), q = p.qty;
+  if (side === "sell" ? price <= M.bid : price >= M.ask) { closeMarket(ps, R); return; }
+  A.orders.unshift({ id: nid(), t: Date.now(), type: "limit", ps, close: true, side, qty: q, price, stop: null, crsn: R && R.c }); touch();
+  toast(`已挂限价平${SNAME[ps]}单 ${q3(q)} BTC @ ${p1(price)}`);
 }
 // 平仓前先问为什么平（止盈止损、强平自动触发的不问）
-function askClose(info, ok) { return A.pos ? askReason({ open: null, close: true, info, ok }) : Promise.resolve(null); }
+function askClose(ps, info, ok) { return A.ps[ps] ? askReason({ open: null, close: true, info, ok }) : Promise.resolve(null); }
 
 // ---------------- 开单 / 平仓理由弹窗：下单时必须选，取消就不下单 ----------------
 let RSN = null;
@@ -664,12 +697,15 @@ function shot() {
   } catch (e) { return null; }
 }
 const SNAPQ = new Set();
+// 每一份快照的小结存在哪：开仓 tr.rv.o、平仓 tr.rv.c、第 n 次加仓 tr.adds[n-1].rv
+const addIdx = kind => /^add\d+$/.test(kind) ? +kind.slice(3) - 1 : -1;
+function rvOf(tr, kind) { if (!tr) return null; const i = addIdx(kind); return i >= 0 ? (tr.adds && tr.adds[i] ? tr.adds[i].rv : null) : tr.rv && tr.rv[kind === "open" ? "o" : "c"]; }
 async function snapStart(id, kind, t) {
-  const key = id + kind, tr0 = A.trades.find(x => x.id === id);
-  if (SNAPQ.has(key) || !tr0 || (tr0.rv && tr0.rv[kind === "open" ? "o" : "c"])) return;
+  const key = id + kind, tr0 = A.trades.find(x => x.id === id), ai = addIdx(kind), add0 = ai >= 0 && tr0 && tr0.adds ? tr0.adds[ai] : null;
+  if (SNAPQ.has(key) || !tr0 || rvOf(tr0, kind) || (ai >= 0 && !add0)) return;
   SNAPQ.add(key);
   const live = Date.now() - t < 120e3;
-  const ctx = { id, acct: ACCT, kind, t, px: kind === "open" ? tr0.entry : tr0.exit.px, side: tr0.side, qty: tr0.qty, lev: tr0.lev, mode: tr0.mode, token: CLOUD.token,
+  const ctx = { id, acct: ACCT, kind, t, px: kind === "open" ? tr0.entry : add0 ? add0.px : tr0.exit.px, side: tr0.side, qty: add0 ? add0.qty : tr0.qty, lev: tr0.lev, mode: tr0.mode, token: CLOUD.token,
     mark: live ? M.mark : NaN, fund: live ? M.fund : NaN, book: live ? bookSnap() : null,
     view: { tf: TF, ind: { main: [...IND.main], sub: [...IND.sub] }, draws: JSON.parse(JSON.stringify(A.draws || [])) }, shot: live ? shot() : null };
   try {
@@ -679,10 +715,15 @@ async function snapStart(id, kind, t) {
     if (kind === "open") {
       const rsn = tr.rsn, chk = rsn ? RV.verify(rsn.tags, snap, tr) : [], flags = RV.openFlags(tr, snap, A.trades, A.wallet, TZOFF);
       tr.rv.o = { chk, flags, sum: RV.openSummary(tr, snap, rsn, chk, flags), sess: snap.sess.name, trend: Object.fromEntries(["5m", "1h", "4h"].map(tf => [tf, snap.rd[tf] && snap.rd[tf].trend])), live: snap.live, at: Date.now() };
+    } else if (ai >= 0) {
+      const ad = tr.adds[ai], chk = ad.tags && ad.tags.length ? RV.verify(ad.tags, snap, tr) : [];
+      const flags = RV.openFlags({ id: "add", side: tr.side, t: ad.t, qty: ad.qty, entry: ad.px, lev: tr.lev }, snap, A.trades, A.wallet, TZOFF).filter(f => f[0] !== "many");
+      ad.rv = { chk, flags, sum: RV.addSummary(tr, ai, snap, chk, flags), live: snap.live, at: Date.now() };
     } else {
       const auto = ["止盈", "止损", "强平"].includes(tr.exit.why), why = auto ? null : (tr.cr || []).at(-1) || null, cf = RV.closeFlags(tr);
       tr.rv.c = { flags: cf.flags, mfe: cf.mfe, mae: cf.mae, got: cf.got, why: why && why.why, sum: RV.closeSummary(tr, snap, cf, why), live: snap.live, at: Date.now() };
     }
+    tr.u = Math.max(tr.u || 0, Date.now());
     touch(); dirty = true;
     await RV.idbPut(`${ACCT}:${id}:${kind}`, snap);
     snapUpload(id, kind);
@@ -691,11 +732,11 @@ async function snapStart(id, kind, t) {
 let upBusy = false;
 async function snapUpload(id, kind) {
   if (!CLOUD.token || CLOUD.ro || upBusy) return;
-  const tr = A.trades.find(x => x.id === id), k = kind === "open" ? "o" : "c";
-  if (!tr || !tr.rv || !tr.rv[k] || tr.rv[k].up) return;
+  const r0 = rvOf(A.trades.find(x => x.id === id), kind);
+  if (!r0 || r0.up) return;
   const snap = await RV.idbGet(`${ACCT}:${id}:${kind}`); if (!snap) return;
   upBusy = true;
-  try { if (await RV.cloudPut(CLOUD.token, RV.snapPath(ACCT, id, kind), snap)) { const t2 = A.trades.find(x => x.id === id); if (t2 && t2.rv && t2.rv[k]) { t2.rv[k].up = 1; touch(); } } }
+  try { if (await RV.cloudPut(CLOUD.token, RV.snapPath(ACCT, id, kind), snap)) { const r2 = rvOf(A.trades.find(x => x.id === id), kind); if (r2) { r2.up = 1; touch(); } } }
   catch (e) { /* 下次再传 */ } finally { upBusy = false; }
 }
 // 补漏：这台设备拍了但还没传上去的快照；页面关着时成交、还没拍的快照（按 K 线补拍）
@@ -704,8 +745,9 @@ async function snapSweep() {
     // 过 3 分钟还没有快照的才补（刚成交的那台设备几秒内就拍好了，别重复拍）
     const old = t => Date.now() - t > 180e3 && Date.now() - t < 7 * 864e5;
     if ((!tr.rv || !tr.rv.o) && old(tr.t)) await snapStart(tr.id, "open", tr.t);
+    for (let i = 0; i < (tr.adds || []).length; i++) if (!tr.adds[i].rv && old(tr.adds[i].t)) await snapStart(tr.id, "add" + (i + 1), tr.adds[i].t);
     if (tr.exit && (!tr.rv || !tr.rv.c) && old(tr.exit.t)) await snapStart(tr.id, "close", tr.exit.t);
-    for (const kind of ["open", "close"]) await snapUpload(tr.id, kind);
+    for (const kind of ["open", ...(tr.adds || []).map((_, i) => "add" + (i + 1)), "close"]) await snapUpload(tr.id, kind);
   }
 }
 
@@ -1030,15 +1072,15 @@ function onKline(k) {
 let lineKey = "";
 function drawLines(force) {
   if (!cs) return;
-  const p = A.pos, lp = liqPx();
   const want = [];
-  if (p) {
-    want.push([p.entry, cssv("--accent"), `${p.side === "long" ? "多" : "空"} ${q3(p.qty)}`, 0]);
-    if (Number.isFinite(lp)) want.push([lp, cssv("--warn"), "强平", 2]);
-    if (p.tp) want.push([p.tp, cssv("--good"), "止盈", 2]);
-    if (p.sl) want.push([p.sl, cssv("--bad"), "止损", 2]);
-  }
-  A.orders.forEach(o => want.push([o.price || o.stop, cssv("--muted"), `${o.side === "buy" ? "买" : "卖"} ${q3(o.qty)}`, 1]));
+  posL().forEach(p => {
+    const n = SNAME[p.side], lp = liqPx(p);
+    want.push([p.entry, cssv("--accent"), `${n} ${q3(p.qty)}`, 0]);
+    if (Number.isFinite(lp)) want.push([lp, cssv("--warn"), `${n}强平`, 2]);
+    if (p.tp) want.push([p.tp, cssv("--good"), `${n}止盈`, 2]);
+    if (p.sl) want.push([p.sl, cssv("--bad"), `${n}止损`, 2]);
+  });
+  A.orders.forEach(o => want.push([o.price || o.stop, cssv("--muted"), `${oAct(o)} ${q3(o.qty)}`, 1]));
   const key = JSON.stringify(want.map(w => [Math.round(w[0] * 10), w[2]]));
   if (!force && key === lineKey) return;
   lineKey = key;
@@ -1082,7 +1124,7 @@ function renderConn() { $("conn").className = "conn" + (M.ok ? " ok" : ""); $("c
 // 页面关着的那段时间：用 1 分钟 K 线和历史资金费率补算
 async function catchUp() {
   const from = A.lastT || 0, now = Date.now();
-  if (!from || now - from < 90e3 || (!A.pos && !A.orders.length)) { A.lastT = now; return; }
+  if (!from || now - from < 90e3 || (!hasPos() && !A.orders.length)) { A.lastT = now; return; }
   const start = Math.max(from, now - 5 * 864e5);
   let bars = [], s = start;
   for (let i = 0; i < 6 && s < now; i++) {
@@ -1098,7 +1140,7 @@ async function catchUp() {
     if (t + 6e4 <= from) continue;
     while (funds.length && funds[0].t <= t) {
       const f = funds.shift();
-      if (A.pos) { const amt = -sg(A.pos) * A.pos.qty * o * f.r; A.wallet += amt; ledger("资金费用", amt, f.t); }
+      posL().forEach(p => { const amt = -sg(p) * p.qty * o * f.r; A.wallet += amt; ledger("资金费用", amt, f.t); });
     }
     for (const px of (c >= o ? [o, l, h, c] : [o, h, l, c])) { onPrice(px, t); onMark(px, t); }
   }
@@ -1135,58 +1177,70 @@ function renderForm() {
   $("modeBtn").textContent = A.mode === "cross" ? "全仓" : "逐仓";
   $("levBtn").textContent = A.lev + "x";
   setTxt("fAvail", `${p2(avail())} USDT`);
-  const px = OT === "market" ? M.last : refPx() || M.last;
-  const mb = maxQty("buy", px), ms = maxQty("sell", px), u = UNIT !== "btc";
-  setTxt("mBuy", u ? `${fromQty(mb, px)} USDT` : `${q3(mb)} BTC`); setTxt("mSell", u ? `${fromQty(ms, px)} USDT` : `${q3(ms)} BTC`);
-  const q = qtyIn(px), cost = dir => { if (!(q > 0)) return "—"; const closeQ = A.pos && sg(A.pos) !== dir ? A.pos.qty : 0; return p2(Math.max(0, q - closeQ) * px / A.lev) + " USDT"; };
-  setTxt("cBuy", cost(1)); setTxt("cSell", cost(-1));
+  const px = OT === "market" ? M.last : refPx() || M.last, close = FA === "close", u = UNIT !== "btc";
+  // 开仓：左 开多 / 右 开空；平仓：左 平空（买入）/ 右 平多（卖出）
+  const L = close ? "short" : "long", R = close ? "long" : "short";
+  setTxt("goBuy", close ? "买入 / 平空" : "买入 / 开多"); setTxt("goSell", close ? "卖出 / 平多" : "卖出 / 开空");
+  $("goBuy").disabled = close && !A.ps.short; $("goSell").disabled = close && !A.ps.long;
+  const mx = ps => { const m = maxQty(ps, FA, px); return u ? `${fromQty(m, px)} USDT` : `${q3(m)} BTC`; };
+  setTxt("mBuyL", close ? "可平空" : "可开多"); setTxt("mSellL", close ? "可平多" : "可开空");
+  setTxt("mBuy", mx(L)); setTxt("mSell", mx(R));
+  const q = qtyIn(px), cost = ps => !(q > 0) ? "—" : close ? `${q3(Math.min(q, A.ps[ps] ? A.ps[ps].qty : 0))} BTC` : p2(q * px / A.lev) + " USDT";
+  setTxt("cBuyL", close ? "平空数量" : "开多成本"); setTxt("cSellL", close ? "平多数量" : "开空成本");
+  setTxt("cBuy", cost(L)); setTxt("cSell", cost(R));
+  $("tpslRow").hidden = close; if (close) $("tpslBox").classList.remove("on"); else $("tpslBox").classList.toggle("on", $("fTpsl").checked);
   $("unitBtn").textContent = UNITS[UNIT] + " ⇄";
   $("fQty").placeholder = UNIT === "cost" ? "保证金" : UNIT === "usdt" ? "仓位价值" : "0.000";
   setTxt("fQtyHint", q > 0 && UNIT !== "btc" ? `≈ ${q3(q)} BTC · 仓位价值 ${p2(q * px)} USDT` : q > 0 ? `仓位价值 ${p2(q * px)} USDT · 保证金 ${p2(q * px / A.lev)} USDT` : "");
 }
 function posRow(p) {
-  const L = p.side === "long", lp = liqPx(p), u = upnl(), im = p.mode === "cross" ? posIM() : p.margin, roe = im ? u / im * 100 : NaN;
-  const mb = (p.mode === "cross" ? A.wallet : p.margin) + u, ratio = mb > 0 ? maint() / mb * 100 : 100;
+  const L = p.side === "long", lp = liqPx(p), u = upnl1(p), im = im1(p), roe = im ? u / im * 100 : NaN;
+  const mb = A.mode === "cross" ? A.wallet + upnl() : p.margin + u, mm = A.mode === "cross" ? maint() : maint1(p), ratio = mb > 0 ? mm / mb * 100 : 100;
   return { L, lp, u, im, roe, ratio };
 }
 function renderPos() {
-  const p = A.pos;
-  setTxt("nPos", p ? "1" : "0"); setTxt("nOrd", String(A.orders.length));
-  const keep = document.activeElement && document.activeElement.id === "lcPx" ? $("lcPx").value : null;
-  if (!p) { $("posT").innerHTML = `<tbody><tr><td class="empty f">没有仓位</td></tr></tbody>`; $("posC").innerHTML = `<p class="empty">没有仓位</p>`; return; }
-  const { L, lp, u, im, roe, ratio } = posRow(p);
-  const side = `<b class="${L ? "good" : "bad"}">${L ? "多" : "空"}</b>`;
-  const tpsl = `${p.tp ? p1(p.tp) : "—"} / ${p.sl ? p1(p.sl) : "—"}`;
-  if (!keep) $("posT").innerHTML = `<thead><tr><th>合约</th><th>数量(BTC)</th><th>开仓价格</th><th>标记价格</th><th>强平价格</th><th>保证金比率</th><th>保证金</th><th>未实现盈亏（回报率）</th><th>止盈 / 止损</th><th>平仓</th></tr></thead><tbody><tr>
-    <td class="f">${side} BTCUSDT 永续<small>${p.mode === "cross" ? "全仓" : "逐仓"} ${p.lev}x</small></td><td class="${L ? "good" : "bad"}">${L ? "" : "-"}${q3(p.qty)}</td><td>${p1(p.entry)}</td><td>${p1(M.mark)}</td><td class="warn">${p1(lp)}</td>
-    <td class="${ratio > 80 ? "bad" : ""}">${ratio.toFixed(2)}%</td><td>${p2(im)}<small>${p.mode === "cross" ? "全仓" : "逐仓"}</small></td>
-    <td class="${cls(u)}">${sgnTxt(u)} USDT<small class="${cls(u)}">${sgnTxt(roe)}%</small></td>
-    <td>${tpsl} <button type="button" class="sbtn" data-act="tpsl">✎</button></td>
-    <td class="f"><div class="lc"><button type="button" class="sbtn" data-act="mkt">市价</button><input id="lcPx" inputmode="decimal" placeholder="价格"><button type="button" class="sbtn" data-act="lmt">限价</button></div></td></tr></tbody>`;
-  else { const r = $("posT").querySelector("tbody tr"); if (r) { r.cells[3].textContent = p1(M.mark); r.cells[7].innerHTML = `${sgnTxt(u)} USDT<small class="${cls(u)}">${sgnTxt(roe)}%</small>`; r.cells[7].className = cls(u); } }
-  $("posC").innerHTML = `<div class="pc"><div class="h">${side}<b>BTCUSDT 永续</b><span class="tag">${p.mode === "cross" ? "全仓" : "逐仓"} ${p.lev}x</span></div>
+  const ps = posL();
+  setTxt("nPos", String(ps.length)); setTxt("nOrd", String(A.orders.length));
+  const focus = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.lc;
+  if (!ps.length) { $("posT").innerHTML = `<tbody><tr><td class="empty f">没有仓位</td></tr></tbody>`; $("posC").innerHTML = `<p class="empty">没有仓位</p>`; return; }
+  const rows = ps.map(p => ({ p, ...posRow(p) }));
+  const key = rows.map(r => r.p.side + r.p.qty + r.p.entry + r.p.tp + r.p.sl).join("|");
+  if (!focus || key !== renderPos.key) {
+    renderPos.key = key;
+    $("posT").innerHTML = `<thead><tr><th>合约</th><th>数量(BTC)</th><th>开仓价格</th><th>标记价格</th><th>强平价格</th><th>保证金比率</th><th>保证金</th><th>未实现盈亏（回报率）</th><th>止盈 / 止损</th><th>平仓</th></tr></thead><tbody>` +
+      rows.map(({ p, L, lp, u, im, roe, ratio }) => `<tr data-ps="${p.side}">
+      <td class="f"><b class="${L ? "good" : "bad"}">${L ? "多" : "空"}</b> BTCUSDT 永续<small>${p.mode === "cross" ? "全仓" : "逐仓"} ${p.lev}x</small></td><td class="${L ? "good" : "bad"}">${L ? "" : "-"}${q3(p.qty)}</td><td>${p1(p.entry)}</td><td>${p1(M.mark)}</td><td class="warn">${p1(lp)}</td>
+      <td class="${ratio > 80 ? "bad" : ""}">${ratio.toFixed(2)}%</td><td>${p2(im)}<small>${p.mode === "cross" ? "全仓" : "逐仓"}</small></td>
+      <td class="${cls(u)}">${sgnTxt(u)} USDT<small class="${cls(u)}">${sgnTxt(roe)}%</small></td>
+      <td>${p.tp ? p1(p.tp) : "—"} / ${p.sl ? p1(p.sl) : "—"} <button type="button" class="sbtn" data-act="tpsl" data-ps="${p.side}">✎</button></td>
+      <td class="f"><div class="lc"><button type="button" class="sbtn" data-act="mkt" data-ps="${p.side}">市价</button><input data-lc="${p.side}" inputmode="decimal" placeholder="价格"><button type="button" class="sbtn" data-act="lmt" data-ps="${p.side}">限价</button></div></td></tr>`).join("") + "</tbody>";
+  } else rows.forEach(({ p, u, roe }) => { const r = $("posT").querySelector(`tr[data-ps="${p.side}"]`); if (r) { r.cells[3].textContent = p1(M.mark); r.cells[7].innerHTML = `${sgnTxt(u)} USDT<small class="${cls(u)}">${sgnTxt(roe)}%</small>`; r.cells[7].className = cls(u); } });
+  $("posC").innerHTML = rows.map(({ p, L, lp, u, im, roe, ratio }) => `<div class="pc"><div class="h"><b class="${L ? "good" : "bad"}">${L ? "多" : "空"}</b><b>BTCUSDT 永续</b><span class="tag">${p.mode === "cross" ? "全仓" : "逐仓"} ${p.lev}x</span></div>
     <div class="pl"><span class="mut">未实现盈亏(USDT)</span><span class="mut">回报率</span></div>
     <div class="pl"><b class="${cls(u)}">${sgnTxt(u)}</b><b class="${cls(u)}">${sgnTxt(roe)}%</b></div>
     <div class="g"><div><span>数量(BTC)</span><b>${q3(p.qty)}</b></div><div><span>保证金</span><b>${p2(im)}</b></div><div><span>保证金比率</span><b class="${ratio > 80 ? "bad" : ""}">${ratio.toFixed(2)}%</b></div>
       <div><span>开仓价格</span><b>${p1(p.entry)}</b></div><div><span>标记价格</span><b>${p1(M.mark)}</b></div><div><span>强平价格</span><b class="warn">${p1(lp)}</b></div>
       <div><span>止盈</span><b>${p.tp ? p1(p.tp) : "—"}</b></div><div><span>止损</span><b>${p.sl ? p1(p.sl) : "—"}</b></div></div>
-    <div class="bs"><button type="button" data-act="tpsl">止盈止损</button><button type="button" data-act="lmtp">限价平仓</button><button type="button" data-act="mkt">市价平仓</button></div></div>`;
+    <div class="bs"><button type="button" data-act="tpsl" data-ps="${p.side}">止盈止损</button><button type="button" data-act="lmtp" data-ps="${p.side}">限价平仓</button><button type="button" data-act="mkt" data-ps="${p.side}">市价平仓</button></div></div>`).join("");
 }
 const TYPE = { limit: "限价", market: "市价", stop: "条件市价" };
+// 委托 / 成交的方向：开多 / 开空 / 平多 / 平空（买入记绿、卖出记红）
+const oAct = o => o.ps ? actTxt(o.ps, o.close ? "close" : "open") : (o.side === "buy" ? "买入" : "卖出");
 function renderTables() {
-  $("ordT").innerHTML = A.orders.length ? `<thead><tr><th>时间</th><th>类型</th><th>方向</th><th>价格 / 触发价</th><th>数量(BTC)</th><th>只减仓</th><th>止盈 / 止损</th><th></th></tr></thead><tbody>` +
-    A.orders.map(o => `<tr><td>${fmtT(o.t)}</td><td class="f">${TYPE[o.type]}</td><td class="f ${o.side === "buy" ? "good" : "bad"}">${o.side === "buy" ? "买入" : "卖出"}</td><td>${p1(o.price || o.stop)}${o.type === "stop" ? `<small>${o.dir > 0 ? "≥" : "≤"} 触发</small>` : ""}</td><td>${q3(o.qty)}</td><td class="f">${o.ro ? "是" : "否"}</td><td>${o.tp ? p1(o.tp) : "—"} / ${o.sl ? p1(o.sl) : "—"}</td><td><button type="button" class="sbtn" data-oedit="${o.id}">改单</button><button type="button" class="sbtn" data-cancel="${o.id}">撤单</button></td></tr>`).join("") +
-    `</tbody>` + (A.orders.length > 1 ? `<tfoot><tr><td colspan="8"><button type="button" class="sbtn" data-cancel="all">全部撤单</button></td></tr></tfoot>` : "") : `<tbody><tr><td class="empty f">没有委托</td></tr></tbody>`;
+  $("ordT").innerHTML = A.orders.length ? `<thead><tr><th>时间</th><th>类型</th><th>方向</th><th>价格 / 触发价</th><th>数量(BTC)</th><th>止盈 / 止损</th><th></th></tr></thead><tbody>` +
+    A.orders.map(o => `<tr><td>${fmtT(o.t)}</td><td class="f">${TYPE[o.type]}</td><td class="f ${o.side === "buy" ? "good" : "bad"}">${oAct(o)}</td><td>${p1(o.price || o.stop)}${o.type === "stop" ? `<small>${o.dir > 0 ? "≥" : "≤"} 触发</small>` : ""}</td><td>${q3(o.qty)}</td><td>${o.tp ? p1(o.tp) : "—"} / ${o.sl ? p1(o.sl) : "—"}</td><td><button type="button" class="sbtn" data-oedit="${o.id}">改单</button><button type="button" class="sbtn" data-cancel="${o.id}">撤单</button></td></tr>`).join("") +
+    `</tbody>` + (A.orders.length > 1 ? `<tfoot><tr><td colspan="7"><button type="button" class="sbtn" data-cancel="all">全部撤单</button></td></tr></tfoot>` : "") : `<tbody><tr><td class="empty f">没有委托</td></tr></tbody>`;
   $("histT").innerHTML = A.hist.length ? `<thead><tr><th>时间</th><th>类型</th><th>方向</th><th>委托价</th><th>成交均价</th><th>数量(BTC)</th><th>状态</th></tr></thead><tbody>` +
-    A.hist.slice(0, 100).map(o => `<tr><td>${fmtT(o.done)}</td><td class="f">${TYPE[o.type] || o.type}${o.ro ? "<small>只减仓</small>" : ""}</td><td class="f ${o.side === "buy" ? "good" : "bad"}">${o.side === "buy" ? "买入" : "卖出"}</td><td>${o.price ? p1(o.price) : o.stop ? p1(o.stop) : "市价"}</td><td>${p1(o.fillPx)}</td><td>${q3(o.qty)}</td><td class="f">${o.status}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="empty f">没有记录</td></tr></tbody>`;
+    A.hist.slice(0, 100).map(o => `<tr><td>${fmtT(o.done)}</td><td class="f">${TYPE[o.type] || o.type}</td><td class="f ${o.side === "buy" ? "good" : "bad"}">${oAct(o)}</td><td>${o.price ? p1(o.price) : o.stop ? p1(o.stop) : "市价"}</td><td>${p1(o.fillPx)}</td><td>${q3(o.qty)}</td><td class="f">${o.status}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="empty f">没有记录</td></tr></tbody>`;
   $("fillT").innerHTML = A.fills.length ? `<thead><tr><th>时间</th><th>方向</th><th>价格</th><th>数量(BTC)</th><th>手续费</th><th>角色</th><th>已实现盈亏</th><th>原因</th></tr></thead><tbody>` +
-    A.fills.slice(0, 150).map(f => `<tr><td>${fmtT(f.t)}</td><td class="f ${f.side === "buy" ? "good" : "bad"}">${f.side === "buy" ? "买入" : "卖出"}</td><td>${p1(f.px)}</td><td>${q3(f.qty)}</td><td>${f.fee.toFixed(4)}</td><td class="f">${f.role === "maker" ? "挂单" : "吃单"}</td><td class="${cls(f.realized)}">${f.realized ? sgnTxt(f.realized) : "0.00"}</td><td class="f">${esc(f.why)}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="empty f">没有成交</td></tr></tbody>`;
+    A.fills.slice(0, 150).map(f => `<tr><td>${fmtT(f.t)}</td><td class="f ${f.side === "buy" ? "good" : "bad"}">${f.ps ? actTxt(f.ps, f.act) : f.side === "buy" ? "买入" : "卖出"}</td><td>${p1(f.px)}</td><td>${q3(f.qty)}</td><td>${f.fee.toFixed(4)}</td><td class="f">${f.role === "maker" ? "挂单" : "吃单"}</td><td class="${cls(f.realized)}">${f.realized ? sgnTxt(f.realized) : "0.00"}</td><td class="f">${esc(f.why)}</td></tr>`).join("") + "</tbody>" : `<tbody><tr><td class="empty f">没有成交</td></tr></tbody>`;
   $("ledT").innerHTML = `<thead><tr><th>时间</th><th>类型</th><th>金额(USDT)</th></tr></thead><tbody>` +
     A.ledger.slice(0, 200).map(x => `<tr><td>${fmtT(x.t)}</td><td class="f">${x.type}</td><td class="${cls(x.amt)}">${sgnTxt(x.amt, 4)}</td></tr>`).join("") + "</tbody>";
 }
 function renderAcct() {
   const u = upnl(), mb = A.wallet + u, mm = maint();
-  setTxt("aRatio", A.pos ? (maint() / Math.max(1e-9, A.pos.mode === "cross" ? mb : A.pos.margin + u) * 100).toFixed(2) + "%" : "0.00%");
+  const ratio = !hasPos() ? 0 : A.mode === "cross" ? mm / Math.max(1e-9, mb) : Math.max(...posL().map(p => maint1(p) / Math.max(1e-9, p.margin + upnl1(p))));
+  setTxt("aRatio", (ratio * 100).toFixed(2) + "%");
   setTxt("aMM", p2(mm)); setTxt("aMB", p2(mb)); setTxt("aW", p2(A.wallet));
   setTxt("aU", sgnTxt(u), cls(u)); setTxt("aTot", `${sgnTxt(mb - A.start)}（${sgnTxt((mb / A.start - 1) * 100)}%）`, cls(mb - A.start));
 }
@@ -1221,7 +1275,7 @@ document.querySelectorAll("[data-fill]").forEach(b => b.onclick = () => { if (Nu
   $(OT === "stop" ? "fStop" : "fPrice").value = (+r.dataset.px).toFixed(1); dirty = true; });
 $("pct").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return;
   const px = (OT === "market" ? M.last : refPx()) || M.last, f = +b.dataset.p / 100;
-  const m = Math.max(maxQty("buy", px), maxQty("sell", px)), q = r3(m * f);
+  const m = FA === "close" ? Math.max(maxQty("long", "close", px), maxQty("short", "close", px)) : maxQty("long", "open", px), q = r3(m * f);
   $("fQty").value = fromQty(q, px); dirty = true; };
 $("unitBtn").onclick = () => { const px = refPx() || M.last, v = +$("fQty").value;
   const q = v && px ? toQty(v, px) : 0;
@@ -1229,33 +1283,37 @@ $("unitBtn").onclick = () => { const px = refPx() || M.last, v = +$("fQty").valu
   if (q) $("fQty").value = fromQty(q, px); dirty = true; };
 ["fQty", "fPrice", "fStop"].forEach(id => $(id).addEventListener("input", () => { dirty = true; }));
 $("fTpsl").onchange = () => $("tpslBox").classList.toggle("on", $("fTpsl").checked);
-$("goBuy").onclick = () => place("buy"); $("goSell").onclick = () => place("sell");
+$("goBuy").onclick = () => FA === "close" ? place("short", "close") : place("long", "open");
+$("goSell").onclick = () => FA === "close" ? place("long", "close") : place("short", "open");
+$("fatabs").onclick = e => { const b = e.target.closest("[data-fa]"); if (!b) return; FA = b.dataset.fa;
+  [...$("fatabs").children].forEach(x => x.setAttribute("aria-selected", x === b)); $("fMsg").textContent = ""; dirty = true; };
 document.querySelectorAll(".dlg:not([data-own])").forEach(d => d.addEventListener("click", e => { if (e.target === d || e.target.hasAttribute("data-close")) d.hidden = true; }));
 // 杠杆
 $("levBtn").onclick = () => {
-  if (A.pos && A.pos.mode === "isolated") return toast("逐仓有仓位时不能改杠杆，先平仓");
+  if (A.mode === "isolated" && hasPos()) return toast("逐仓有仓位时不能改杠杆，先平仓");
   $("levR").value = A.lev; $("levV").textContent = A.lev + "x"; levHint(); $("levDlg").hidden = false; };
 function levHint() { const l = +$("levR").value; $("levV").textContent = l + "x";
   $("levHint").textContent = `${l} 倍：价格反向约 ${(100 / l - MMR * 100).toFixed(2)}% 就会强平（逐仓按投入的保证金算；全仓要亏光整个账户才强平）。可开最大名义约 ${p2(Math.max(0, avail()) * l)} USDT。`; }
 $("levR").oninput = levHint;
 document.querySelectorAll("[data-l]").forEach(b => b.onclick = () => { $("levR").value = b.dataset.l; levHint(); });
 $("levOk").onclick = () => { const l = +$("levR").value;
-  if (A.pos && A.pos.mode === "cross" && A.wallet + upnl() < A.pos.qty * A.pos.entry / l) return toast("余额不够支撑这么低的杠杆");
-  A.lev = l; if (A.pos) A.pos.lev = l; touch(); $("levDlg").hidden = true; };
+  if (A.mode === "cross" && hasPos() && A.wallet + upnl() < posL().reduce((t, p) => t + p.qty * p.entry, 0) / l) return toast("余额不够支撑这么低的杠杆");
+  A.lev = l; posL().forEach(p => { p.lev = l; }); touch(); $("levDlg").hidden = true; };
 // 保证金模式
 let modeSel = A.mode;
-$("modeBtn").onclick = () => { if (A.pos || A.orders.length) return toast("有仓位或委托时不能切换保证金模式");
+$("modeBtn").onclick = () => { if (hasPos() || A.orders.length) return toast("有仓位或委托时不能切换保证金模式");
   modeSel = A.mode; document.querySelectorAll("[data-m]").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === modeSel)); $("modeDlg").hidden = false; };
 document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { modeSel = b.dataset.m; document.querySelectorAll("[data-m]").forEach(x => x.setAttribute("aria-pressed", x === b)); });
 $("modeOk").onclick = () => { A.mode = modeSel; touch(); $("modeDlg").hidden = true; };
 // 仓位操作
-function tpEst() { const p = A.pos; if (!p) return; const tp = +$("dTp").value, sl = +$("dSl").value, f = x => sg(p) * p.qty * (x - p.entry) - p.qty * x * FEE.taker;
+let TPS = "long";   // 止盈止损弹窗正在改哪一边
+function tpEst() { const p = A.ps[TPS]; if (!p) return; const tp = +$("dTp").value, sl = +$("dSl").value, f = x => sg(p) * p.qty * (x - p.entry) - p.qty * x * FEE.taker;
   $("tpEst").innerHTML = `${tp ? `打到止盈预计 <b class="${cls(f(tp))}">${sgnTxt(f(tp))} USDT</b>` : "不设止盈"}；${sl ? `打到止损预计 <b class="${cls(f(sl))}">${sgnTxt(f(sl))} USDT</b>` : "不设止损"}（已扣平仓手续费）`; }
 ["dTp", "dSl"].forEach(id => $(id).oninput = tpEst);
-$("tpOk").onclick = () => { const p = A.pos; if (!p) return; const tp = +$("dTp").value || null, sl = +$("dSl").value || null, L = p.side === "long";
+$("tpOk").onclick = () => { const p = A.ps[TPS]; if (!p) return; const tp = +$("dTp").value || null, sl = +$("dSl").value || null, L = p.side === "long";
   if (tp && (L ? tp <= M.last : tp >= M.last)) return toast(`止盈价要${L ? "高" : "低"}于现价`);
   if (sl && (L ? sl >= M.last : sl <= M.last)) return toast(`止损价要${L ? "低" : "高"}于现价`);
-  setTpsl(tp, sl); touch(); $("tpDlg").hidden = true; toast("止盈止损已保存"); };
+  setTpsl(TPS, tp, sl); touch(); $("tpDlg").hidden = true; toast(`${SNAME[TPS]}仓止盈止损已保存`); };
 document.querySelector(".bottom").addEventListener("click", e => {
   const b = e.target.closest("[data-act],[data-cancel],[data-oedit]"); if (!b) return;
   if (b.dataset.oedit) { HOLD = 0; return oEditOpen(b.dataset.oedit); }
@@ -1263,12 +1321,12 @@ document.querySelector(".bottom").addEventListener("click", e => {
   if (b.dataset.cancel) { const all = b.dataset.cancel === "all";
     A.orders.filter(o => all || o.id === b.dataset.cancel).forEach(o => hist(o, "已撤销", NaN));
     A.orders = all ? [] : A.orders.filter(o => o.id !== b.dataset.cancel); touch(); return; }
-  const a = b.dataset.act, p = A.pos; if (!p) return;
-  const what = `${q3(p.qty)} BTC ${p.side === "long" ? "多" : "空"}单`;
-  if (a === "mkt") askClose(`按市价平掉全部 ${what}`, "确认平仓").then(R => R && closeMarket(R));
-  if (a === "lmt") { const v = +$("lcPx").value; if (!(v > 0)) return toast("先填平仓价格"); askClose(`限价 ${p1(v)} 平掉全部 ${what}`, "确认平仓").then(R => R && closeLimit(v, R)); }
-  if (a === "lmtp") { const v = prompt("限价平仓价格（USDT）", Number.isFinite(M.last) ? M.last.toFixed(1) : ""); if (v && +v > 0) askClose(`限价 ${p1(+v)} 平掉全部 ${what}`, "确认平仓").then(R => R && closeLimit(+v, R)); }
-  if (a === "tpsl") { $("tpInfo").textContent = `${p.side === "long" ? "多" : "空"} ${q3(p.qty)} BTC · 开仓 ${p1(p.entry)} · 现价 ${p1(M.last)}。价格碰到就按市价全部平仓。`;
+  const a = b.dataset.act, ps = b.dataset.ps, p = A.ps[ps]; if (!p) return;
+  const what = `${q3(p.qty)} BTC ${SNAME[ps]}单`;
+  if (a === "mkt") askClose(ps, `按市价平掉全部 ${what}`, "确认平仓").then(R => R && closeMarket(ps, R));
+  if (a === "lmt") { const el = document.querySelector(`[data-lc="${ps}"]`), v = el ? +el.value : 0; if (!(v > 0)) return toast("先填平仓价格"); askClose(ps, `限价 ${p1(v)} 平掉全部 ${what}`, "确认平仓").then(R => R && closeLimit(ps, v, R)); }
+  if (a === "lmtp") { const v = prompt("限价平仓价格（USDT）", Number.isFinite(M.last) ? M.last.toFixed(1) : ""); if (v && +v > 0) askClose(ps, `限价 ${p1(+v)} 平掉全部 ${what}`, "确认平仓").then(R => R && closeLimit(ps, +v, R)); }
+  if (a === "tpsl") { TPS = ps; $("tpInfo").textContent = `${p.side === "long" ? "多" : "空"} ${q3(p.qty)} BTC · 开仓 ${p1(p.entry)} · 现价 ${p1(M.last)}。价格碰到就按市价全部平仓。`;
     $("dTp").value = p.tp || ""; $("dSl").value = p.sl || ""; tpEst(); $("tpDlg").hidden = false; }
 });
 // 修改当前委托：限价单改价格 / 数量，条件单改触发价 / 数量，开仓单还能改止盈止损；改完价格已经穿过盘口的限价单会马上成交（和交易所一样）
@@ -1276,25 +1334,24 @@ let oEditId = null;
 function oEditOpen(id) {
   const o = A.orders.find(x => x.id === id); if (!o) return;
   oEditId = id;
-  $("oInfo").textContent = `${TYPE[o.type]} ${o.side === "buy" ? "买入" : "卖出"}${o.ro ? "（只减仓）" : ""} · 下单于 ${fmtT(o.t)} · 现价 ${p1(M.last)}`;
+  $("oInfo").textContent = `${TYPE[o.type]} ${oAct(o)} · 下单于 ${fmtT(o.t)} · 现价 ${p1(M.last)}`;
   $("oPxL").textContent = o.type === "stop" ? "触发价" : "价格";
   $("oPx").value = o.type === "stop" ? o.stop : o.price; $("oQty").value = q3(o.qty);
-  $("oTpsl").hidden = o.ro; $("oTp").value = o.tp || ""; $("oSl").value = o.sl || ""; $("oMsg").textContent = "";
+  $("oTpsl").hidden = !!o.close; $("oTp").value = o.tp || ""; $("oSl").value = o.sl || ""; $("oMsg").textContent = "";
   $("oDlg").hidden = false;
 }
 $("oOk").onclick = () => {
   const o = A.orders.find(x => x.id === oEditId), msg = t => { $("oMsg").textContent = t; };
   if (!o) { $("oDlg").hidden = true; return; }
-  const px = +$("oPx").value, qty = r3(+$("oQty").value), dir = o.side === "buy" ? 1 : -1;
+  const px = +$("oPx").value, qty = r3(+$("oQty").value), dir = o.ps === "long" ? 1 : -1;
   if (!(px > 0)) return msg(o.type === "stop" ? "触发价要大于 0" : "价格要大于 0");
-  if (!(qty >= STEP) || qty * px < MIN_NOTIONAL) return msg(`太小了：每单至少 ${STEP} BTC，且仓位价值至少 ${MIN_NOTIONAL} USDT`);
-  const tp = o.ro ? null : +$("oTp").value || null, sl = o.ro ? null : +$("oSl").value || null;
+  if (!(qty >= STEP) || (!o.close && qty * px < MIN_NOTIONAL)) return msg(`太小了：每单至少 ${STEP} BTC，且仓位价值至少 ${MIN_NOTIONAL} USDT`);
+  const tp = o.close ? null : +$("oTp").value || null, sl = o.close ? null : +$("oSl").value || null;
   if (tp && (dir > 0 ? tp <= px : tp >= px)) return msg(`止盈价要${dir > 0 ? "高" : "低"}于委托价`);
   if (sl && (dir > 0 ? sl >= px : sl <= px)) return msg(`止损价要${dir > 0 ? "低" : "高"}于委托价`);
   // 保证金：先把这张单原来占的放回去再算
-  const closeQ = A.pos && sg(A.pos) !== dir ? A.pos.qty : 0, openQ = o.ro ? 0 : Math.max(0, qty - closeQ);
-  const freed = o.ro ? 0 : o.qty * (o.price || o.stop || M.last) / A.lev, need = openQ * px / A.lev + qty * px * FEE.taker;
-  if (openQ > 0 && need > avail() + freed) return msg(`可用余额不足：需要约 ${p2(need)} USDT，可用 ${p2(avail() + freed)} USDT`);
+  const freed = o.close ? 0 : o.qty * (o.price || o.stop || M.last) / A.lev, need = o.close ? 0 : qty * px / A.lev + qty * px * FEE.taker;
+  if (need > avail() + freed) return msg(`可用余额不足：需要约 ${p2(need)} USDT，可用 ${p2(avail() + freed)} USDT`);
   const old = { ...o };
   if (o.type === "stop") { o.stop = px; o.dir = px >= M.last ? 1 : -1; } else o.price = px;
   o.qty = qty; o.tp = tp; o.sl = sl;
@@ -1304,16 +1361,16 @@ $("oOk").onclick = () => {
   if (o.type === "limit" && (o.side === "buy" ? px >= M.ask : px <= M.bid)) {
     A.orders = A.orders.filter(x => x.id !== o.id);
     const w = walk(o.side, qty), at = o.side === "buy" ? Math.min(px, w) : Math.max(px, w);
-    const q = fill(o.side, qty, at, "taker", "限价（改单后立即成交）", o.ro, Date.now(), o.from, { o: o.rsn, c: o.crsn });
-    hist(o, q > 0 ? "已成交" : "已取消（无仓可减）", at);
-    if (q > 0 && !o.ro && (tp || sl) && A.pos) setTpsl(tp || A.pos.tp, sl || A.pos.sl);
-    toast(q > 0 ? `改单后价格已穿过盘口，立即成交 ${q3(q)} BTC @ ${p1(at)}` : "只减仓：没有可以减的仓位，已取消");
+    const q = fill(o.ps, o.close ? "close" : "open", qty, at, "taker", "限价（改单后立即成交）", Date.now(), o.from, { o: o.rsn, c: o.crsn });
+    hist(o, q > 0 ? "已成交" : "已取消（没有可平的仓位）", at);
+    if (q > 0 && !o.close && (tp || sl) && A.ps[o.ps]) setTpsl(o.ps, tp || A.ps[o.ps].tp, sl || A.ps[o.ps].sl);
+    toast(q > 0 ? `改单后价格已穿过盘口，立即成交 ${q3(q)} BTC @ ${p1(at)}` : "没有可以平的仓位，已取消");
   } else toast(`委托已修改：${p1(px)} · ${q3(qty)} BTC`);
   dirty = true; tblKey = "";
 };
 
 $("resetBtn").onclick = () => { const v = prompt("重置模拟账户：清空仓位、委托和全部记录。初始资金（USDT）：", "10000"); if (v === null) return;
-  const bal = Math.max(10, +v || 10000), keepDraws = A.draws; A = blank(bal); A.draws = keepDraws || []; touch(); dirty = true; tblKey = ""; toast(`已重置，初始资金 ${p2(bal)} USDT`); };
+  const bal = Math.max(10, +v || 10000), keepDraws = A.draws; A = norm(blank(bal)); A.draws = keepDraws || []; touch(); dirty = true; tblKey = ""; toast(`已重置，初始资金 ${p2(bal)} USDT`); };
 $("chartTog").onclick = () => { const f = $("chartbox").classList.toggle("fold"); lsSet("btc_sim_fold", f ? "1" : "0"); if (!f) buildChart(); };
 // 手机默认收起 K 线（先看下单和订单簿），点「K 线」展开；记住上次的选择
 { const f = lsGet("btc_sim_fold"); if (f === "1" || (f === null && matchMedia("(max-width:820px)").matches)) $("chartbox").classList.add("fold"); }
@@ -1350,14 +1407,14 @@ function renderSyncLog() {
   const html = a.length ? `<table class="slog"><tbody>${a.slice(0, 30).map(x => `<tr><td>${new Date(x.t).toLocaleString("zh-CN", { timeZone: TZ, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}</td><td>${esc(x.page)}</td><td class="${x.kind}">${esc(x.what)}</td><td>${esc(x.detail || "")}</td></tr>`).join("")}</tbody></table>` : `<p class="note">还没有同步记录。</p>`;
   document.querySelectorAll(".sync-log").forEach(el => el.innerHTML = html);
 }
-const simSum = () => `余额 ${p2(A.wallet)} · ${A.pos ? `${A.pos.side === "long" ? "多" : "空"} ${q3(A.pos.qty)} BTC` : "无仓位"} · 委托 ${A.orders.length} · 画线 ${(A.draws || []).length}`;
+const simSum = () => `余额 ${p2(A.wallet)} · ${hasPos() ? posL().map(p => `${SNAME[p.side]} ${q3(p.qty)} BTC`).join("、") : "无仓位"} · 委托 ${A.orders.length} · 画线 ${(A.draws || []).length}`;
 async function cloudSync(manual = false) {
   if (!CLOUD.token || CLOUD.busy) return;
   CLOUD.busy = true; renderCloud();
   try {
     await (typeof UI !== "undefined" ? UI.checkToken : async () => {})(CLOUD.token);
     const remote = await cloudGet();
-    if (remote && remote.v === 1 && (remote.u || 0) > (A.u || 0)) { const lt = Math.max(A.lastT || 0, remote.lastT || 0); A = remote; A.lastT = lt; A.draws = A.draws || []; A.trades = A.trades || []; save(); dirty = true; tblKey = ""; drawCanvas(); CLOUD.pushedU = A.u;
+    if (remote && remote.v === 1 && (remote.u || 0) > (A.u || 0)) { const lt = Math.max(A.lastT || 0, remote.lastT || 0); A = norm(remote); A.lastT = lt; A.draws = A.draws || []; A.trades = A.trades || []; save(); dirty = true; tblKey = ""; drawCanvas(); CLOUD.pushedU = A.u;
       syncLog("模拟盘", "从云端更新", `别的设备 ${fmtT(remote.u)} 的改动 · ${simSum()}`, "good"); }
     else if (!CLOUD.ro && (A.u || 0) > 0 && (!remote || (A.u || 0) > (remote.u || 0))) {
       const r = await fetch(`https://api.github.com/repos/${REC_REPO}/contents/${AF("sim.json")}`, { method: "PUT", headers: { Authorization: `Bearer ${CLOUD.token}`, Accept: "application/vnd.github+json" },
@@ -1399,7 +1456,8 @@ async function fromCall() {
   const long = c.side === "long", limit = c.entry === "limit" && c.ref;
   $("otabs").querySelector(`[data-ot="${limit ? "limit" : "market"}"]`).click();
   if (limit) $("fPrice").value = (+c.ref).toFixed(1);
-  if (c.lev && (!A.pos || A.pos.mode === "cross")) { A.lev = Math.min(125, Math.max(1, Math.round(c.lev))); if (A.pos) A.pos.lev = A.lev; touch(); }
+  if (c.lev && !(A.mode === "isolated" && hasPos())) { A.lev = Math.min(125, Math.max(1, Math.round(c.lev))); posL().forEach(p => { p.lev = A.lev; }); touch(); }
+  $("fatabs").querySelector('[data-fa="open"]').click();
   let calls; try { calls = JSON.parse(lsGet(AK("btc_journal_v1"))) || {}; } catch (e) { calls = {}; }
   const amt = c.amt || calls.defAmt || 100, lev = c.lev || calls.defLev || A.lev, px = limit ? +c.ref : M.last || +c.ref;
   const qty = r3(amt * lev / px);

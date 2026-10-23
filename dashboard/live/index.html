@@ -7,7 +7,7 @@
 <title>BTC 作战面板</title>
 <meta name="dashboard-release" content="2026-10-22-market-colors-v6">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css?v=20261023c">
+<link rel="stylesheet" href="ui.css?v=20261023d">
 <style>
 .fee-cols{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:16px}.fee-cols>.plv+ .plv{border-left:1px solid var(--line);padding-left:16px}
 /* 布局：手机优先的单列卡片流，宽屏两列；顶部价格条吸顶 */
@@ -572,8 +572,8 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 
 </div>
 
-<script src="ui.js?v=20261023c"></script>
-<script src="review-core.js?v=20261023c"></script>
+<script src="ui.js?v=20261023d"></script>
+<script src="review-core.js?v=20261023d"></script>
 <script src="weights.js"></script>
 <script src="context.js"></script>
 <script src="model.js"></script>
@@ -2151,9 +2151,9 @@ function renderPositions() {
       <td>${isFinite(s.toStop) ? fmt(s.toStop) : "—"}</td><td>${isFinite(s.toTgt) ? fmt(s.toTgt) : "—"}</td><td class="txt">${s.why ? `<b class="bad">该卖了：${s.why}</b>` : x.w && x.w.length ? x.w.map(a => `<span class="${a.lv}">⚠ ${esc(a.text.split("。")[0])}</span>`).join("<br>") : "持有中 · 盘面正常"}</td>
       <td class="txt">${c.sim ? `<a class="btn sm" href="sim.html">去模拟盘操作</a>` : `<button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}`}</td></tr>`; }).join("") + "</tbody>" : "");
   // 模拟盘还没成交的挂单（限价 / 条件单）：成交了就变成上面的持仓，撤了就消失
-  const pend = ((SIM_DOC && SIM_DOC.orders) || []).filter(o => !o.ro), TY = { limit: "限价", stop: "条件市价" }, TN = typeof RV !== "undefined" ? RV.TAG_NAME : {};
+  const pend = ((SIM_DOC && SIM_DOC.orders) || []).filter(o => !o.ro && !o.close), TY = { limit: "限价", stop: "条件市价" }, TN = typeof RV !== "undefined" ? RV.TAG_NAME : {};
   setHTML($("pSimOrd"), pend.length ? `<h3 class="sub-h">模拟盘挂单 · 等成交</h3><div class="tablewrap"><table class="jt"><thead><tr><th>方向</th><th>类型</th><th>价格 / 触发价</th><th>数量</th><th>止盈 / 止损</th><th>下单时间</th><th>理由</th><th></th></tr></thead><tbody>` +
-    pend.map(o => `<tr><td class="${o.side === "buy" ? "good" : "bad"}">${o.side === "buy" ? "多" : "空"}</td><td class="txt">${TY[o.type] || o.type}</td><td>${fmt(o.price || o.stop)}</td><td>${(+o.qty).toFixed(3)} BTC</td><td>${o.tp ? fmt(o.tp) : "—"} / ${o.sl ? fmt(o.sl) : "—"}</td><td>${fmtDTs(o.t)}</td><td class="txt">${o.rsn && o.rsn.tags ? esc(o.rsn.tags.map(k => TN[k] || k).join("、")) : "—"}</td><td class="txt"><a class="btn sm" href="sim.html">去模拟盘</a></td></tr>`).join("") + "</tbody></table></div>" : "");
+    pend.map(o => { const L = o.ps ? o.ps === "long" : o.side === "buy"; return `<tr><td class="${L ? "good" : "bad"}">${L ? "开多" : "开空"}</td><td class="txt">${TY[o.type] || o.type}</td><td>${fmt(o.price || o.stop)}</td><td>${(+o.qty).toFixed(3)} BTC</td><td>${o.tp ? fmt(o.tp) : "—"} / ${o.sl ? fmt(o.sl) : "—"}</td><td>${fmtDTs(o.t)}</td><td class="txt">${o.rsn && o.rsn.tags ? esc(o.rsn.tags.map(k => TN[k] || k).join("、")) : "—"}</td><td class="txt"><a class="btn sm" href="sim.html">去模拟盘</a></td></tr>`; }).join("") + "</tbody></table></div>" : "");
   const done = C.calls.filter(c => c.exit).sort((a, b) => b.exit.t - a.exit.t).slice(0, 10);
   $("pDone").innerHTML = done.length ? `<thead><tr><th>卖出时间</th><th>谁</th><th>方向</th><th>进场 → 卖出</th><th>投入 × 杠杆</th><th>原因</th><th>盈亏 · 未扣手续费<br>金额 / 占投入 %</th><th>盈亏 · 扣手续费后<br>金额 / 占投入 %</th><th>拿了多久</th></tr></thead><tbody>` +
     done.map(c => `<tr><td>${fmtDTs(c.exit.t)}</td><td class="txt">${esc(c.who)}</td><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)} → ${fmt(c.exit.px)}</td><td>${sizeTxt(c)}</td>
