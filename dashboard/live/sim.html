@@ -64,6 +64,7 @@ a{color:var(--accent)}
 @media(pointer:coarse){#chart{touch-action:pan-y}}
 #lgd .lg{position:absolute;left:8px;right:70px;z-index:3;display:flex;flex-wrap:wrap;gap:0 10px;font-family:var(--m);font-size:11px;pointer-events:none;color:var(--fg2);line-height:1.5}
 #lgd .lgn{color:var(--muted)}
+#klMsg{position:absolute;left:50%;top:120px;transform:translateX(-50%);z-index:5;margin:0;max-width:86%;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:12.5px;color:var(--fg2);text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.12)}
 .indbar{display:flex;gap:4px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap}
 #barBox{position:absolute;top:46px;z-index:4;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:11.5px;min-width:150px;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none}
 #barBox div{display:flex;justify-content:space-between;gap:14px;line-height:1.55}#barBox span{color:var(--muted)}#barBox b{font-family:var(--m);font-weight:500}
@@ -219,7 +220,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
     <div class="tabs tf" id="tf" role="tablist" aria-label="K 线周期"></div>
     <div class="indbar tf" id="indbar" aria-label="技术指标"></div>
     <div class="indbar tf" id="drawbar" aria-label="画线工具"></div>
-    <div class="chartwrap"><div id="chart"></div><canvas id="drawCv"></canvas><div id="lgd"></div><div id="barBox" hidden></div></div>
+    <div class="chartwrap"><div id="chart"></div><canvas id="drawCv"></canvas><div id="lgd"></div><div id="barBox" hidden></div><p id="klMsg" hidden></p></div>
   </section>
 
   <section class="bookbox">
@@ -892,10 +893,24 @@ function renderIndBar() {
   const btn = (k, grp) => `<button type="button" data-ind="${k}" data-grp="${grp}" aria-pressed="${IND[grp].includes(k)}">${IND_NAME[k] || k}</button>`;
   $("indbar").innerHTML = `<span>主图</span>${MAIN_IND.map(k => btn(k, "main")).join("")}<span>副图</span>${SUB_IND.map(k => btn(k, "sub")).join("")}`;
 }
+// 历史 K 线拉不下来（有的网络连得上币安推送、连不上接口）：图上说清楚，过几秒再试；这期间先用推送来的最新几根画
 async function loadKl() {
-  const k = await jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=${TF}&limit=600`).catch(() => null);
-  if (!k) return;
-  BARS = k.map(x => ({ t: +x[0], o: +x[1], h: +x[2], l: +x[3], c: +x[4], v: +x[5], q: +x[7] }));
+  clearTimeout(loadKl.t);
+  const tf = TF, n = loadKl.n = (loadKl.n || 0) + 1;
+  let k = null, err = "";
+  try { k = await jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=${tf}&limit=600`); } catch (e) { err = e.message || String(e); }
+  if (n !== loadKl.n || tf !== TF) return;   // 中途换了周期，这次结果不要了
+  if (!Array.isArray(k) || !k.length) {
+    loadKl.fail = (loadKl.fail || 0) + 1;
+    const wait = Math.min(30, 5 * loadKl.fail);
+    $("klMsg").textContent = `历史 K 线没拉下来（连不上 fapi.binance.com${err ? "：" + err : ""}），${wait} 秒后重试。${BARS.length ? "现在显示的是刚收到的实时 K 线。" : ""}价格、订单簿、下单不受影响。`;
+    $("klMsg").hidden = false;
+    loadKl.t = setTimeout(loadKl, wait * 1000);
+    return;
+  }
+  loadKl.fail = 0; $("klMsg").hidden = true;
+  const live = BARS.filter(b => b.t > +k.at(-1)[0]);   // 等待期间推送来的更新的 K 线接在后面
+  BARS = [...k.map(x => ({ t: +x[0], o: +x[1], h: +x[2], l: +x[3], c: +x[4], v: +x[5], q: +x[7] })), ...live];
   setAll();
 }
 // ---------------- 单根 K 线信息框：鼠标移到 / 手指点到哪根，就显示那根的开高低收、涨跌、振幅、成交量 ----------------
@@ -1055,7 +1070,7 @@ addEventListener("keydown", e => {
 });
 function initChart() {
   $("tf").innerHTML = TFS.map(([k, n]) => `<button type="button" data-tf="${k}" aria-selected="${k === TF}">${n}</button>`).join("");
-  $("tf").onclick = e => { const b = e.target.closest("[data-tf]"); if (!b) return; TF = b.dataset.tf; lsSet("btc_sim_tf", TF); [...$("tf").children].forEach(x => x.setAttribute("aria-selected", x === b)); BARS = []; loadKl(); };
+  $("tf").onclick = e => { const b = e.target.closest("[data-tf]"); if (!b) return; TF = b.dataset.tf; lsSet("btc_sim_tf", TF); [...$("tf").children].forEach(x => x.setAttribute("aria-selected", x === b)); BARS = []; loadKl.fail = 0; $("klMsg").hidden = true; loadKl(); };
   renderIndBar();
   $("indbar").onclick = e => { const b = e.target.closest("[data-ind]"); if (!b) return;
     const g = IND[b.dataset.grp], k = b.dataset.ind; IND[b.dataset.grp] = g.includes(k) ? g.filter(x => x !== k) : [...g, k];
@@ -1065,8 +1080,9 @@ function initChart() {
   loadKl();
 }
 function onKline(k) {
-  if (k.i !== TF || !BARS.length) return;
+  if (k.i !== TF) return;
   const b = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.v, q: +k.q }, last = BARS.at(-1);
+  if (!last) { if (loadKl.fail) { BARS = [b]; setAll(); } return; }
   if (b.t === last.t) BARS[BARS.length - 1] = b; else if (b.t > last.t) { BARS.push(b); if (BARS.length > 1000) BARS.shift(); } else return;
   updLast();
 }
