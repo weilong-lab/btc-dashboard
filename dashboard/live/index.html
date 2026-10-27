@@ -481,12 +481,14 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <div class="ufchart" id="ufChart" role="img" aria-label="过去 24 小时 Coinbase 溢价走势"></div>
     <h3 class="sub-h">IBIT 盘中成交（延迟约 15 分钟）</h3>
     <div class="tvw" data-tv="symbol-info" style="--tvh:240px"></div>
+    <h3 class="sub-h">BTC ETF 行情（延迟约 15 分钟）</h3>
+    <div class="tvw" data-tv="market-quotes" style="--tvh:400px"></div>
     <h3 class="sub-h">ETF 实际资金流向（隔天才有，用来对账）</h3>
     <div id="ufEtf" class="ufetf">读取中…</div>
     <div class="note">
       <p><b>Coinbase 溢价是什么：</b>Coinbase 上 BTC 的美元价格，比币安上 BTC 的 USDT 价格贵还是便宜（已按 Coinbase 上的 USDT 美元价换算，去掉 USDT 本身的偏差）。美国现货 ETF 大多把 BTC 托管在 Coinbase，美国机构也主要在 Coinbase 买卖，所以溢价为正，通常说明美国资金买得更积极；为负，说明美国资金在卖。两边都用买一卖一的中间价，每秒更新。</p>
       <p><b>怎么用：</b>看方向和持续时间，不看一两秒的跳动。溢价持续为正、IBIT 成交又明显放大，大概率是美国资金在大举买入；当晚公布的 ETF 资金流向可以核对这个判断。美股休市（夜里、周末）时美国机构交易少，溢价的参考价值更小。「明显」指超出过去 24 小时 80% 的时间所在的区间。</p>
-      <p><b>注意：</b>三个指标反映的是同一件事（美国资金的动向），一起变正不是三个独立的信号。Coinbase 溢价能不能帮助判断涨跌还没有回测，回测出来之前只当背景看。IBIT 用的是 TradingView 免费小工具，数据延迟约 15 分钟；实时的 IBIT 行情需要注册行情服务的免费密钥。ETF 资金流向来自 <a href="https://www.tftc.io/bitcoin-etf-flows" target="_blank" rel="noopener">The Commoner Bitcoin ETF Tracker by TFTC</a>（CC BY 4.0，整理自 SoSoValue 和 Farside），通常隔天更新，最新一天之后可能修正；某只基金显示 0 可能是还没公布，不一定是没有进出。</p>
+      <p><b>注意：</b>三个指标反映的是同一件事（美国资金的动向），一起变正不是三个独立的信号。Coinbase 溢价能不能帮助判断涨跌还没有回测，回测出来之前只当背景看。IBIT 和 BTC ETF 行情用的是 TradingView 免费小工具，数据延迟约 15 分钟（和 TradingView 网站上一样，代码旁的橙色「D」就是延迟标记）；ETF 价格基本就是 BTC 价格按比例换算，涨跌和 BTC 几乎一样，主要看成交量；实时的 IBIT 行情需要注册行情服务的免费密钥。ETF 资金流向来自 <a href="https://www.tftc.io/bitcoin-etf-flows" target="_blank" rel="noopener">The Commoner Bitcoin ETF Tracker by TFTC</a>（CC BY 4.0，整理自 SoSoValue 和 Farside），通常隔天更新，最新一天之后可能修正；某只基金显示 0 可能是还没公布，不一定是没有进出。</p>
     </div>
   </section>
 
@@ -3227,6 +3229,10 @@ function renderSeason() {
     "events": () => ({ importanceFilter: "0,1", countryFilter: "us" }),
     "timeline": () => ({ feedMode: "market", market: "crypto", displayMode: "regular" }),
     "symbol-info": () => ({ symbol: "NASDAQ:IBIT" }),
+    // 美国现货 BTC ETF 按规模排，最后一只是期货 ETF
+    "market-quotes": () => ({ showSymbolLogo: true, symbolsGroups: [{ name: "BTC ETF", symbols: [
+      ["NASDAQ:IBIT", "IBIT 贝莱德"], ["CBOE:FBTC", "FBTC 富达"], ["AMEX:GBTC", "GBTC 灰度"], ["AMEX:BTC", "BTC 灰度迷你"],
+      ["AMEX:BITB", "BITB Bitwise"], ["CBOE:ARKB", "ARKB 方舟"], ["CBOE:HODL", "HODL VanEck"], ["AMEX:BITO", "BITO 期货 ETF"]].map(([name, displayName]) => ({ name, displayName })) }] }),
   };
   const build = el => {
     const kind = el.dataset.tv;
