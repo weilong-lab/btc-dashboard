@@ -475,21 +475,24 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
   </section>
 
   <section data-grp="3" id="usFlowCard" class="card span">
-    <h2>美国资金 <small id="ufUpd">Coinbase 溢价实时 · 未验证，只看方向</small></h2>
+    <h2>美国资金 <small id="ufUpd">Coinbase 溢价实时 · 已回测：信号很弱，只当辅助</small></h2>
     <div class="status" id="ufChips"></div>
     <div class="verdict" id="ufSum">正在连接 Coinbase 和币安…</div>
     <div class="ufchart" id="ufChart" role="img" aria-label="过去 24 小时 Coinbase 溢价走势"></div>
-    <h3 class="sub-h">IBIT 盘中成交（延迟约 15 分钟）</h3>
-    <div class="tvw" data-tv="symbol-info" style="--tvh:240px"></div>
-    <h3 class="sub-h">BTC ETF 行情（延迟约 15 分钟）</h3>
-    <div class="tvw" data-tv="market-quotes" style="--tvh:400px"></div>
     <h3 class="sub-h">ETF 实际资金流向（隔天才有，用来对账）</h3>
     <div id="ufEtf" class="ufetf">读取中…</div>
     <div class="note">
       <p><b>Coinbase 溢价是什么：</b>Coinbase 上 BTC 的美元价格，比币安上 BTC 的 USDT 价格贵还是便宜（已按 Coinbase 上的 USDT 美元价换算，去掉 USDT 本身的偏差）。美国现货 ETF 大多把 BTC 托管在 Coinbase，美国机构也主要在 Coinbase 买卖，所以溢价为正，通常说明美国资金买得更积极；为负，说明美国资金在卖。两边都用买一卖一的中间价，每秒更新。</p>
-      <p><b>怎么用：</b>看方向和持续时间，不看一两秒的跳动。溢价持续为正、IBIT 成交又明显放大，大概率是美国资金在大举买入；当晚公布的 ETF 资金流向可以核对这个判断。美股休市（夜里、周末）时美国机构交易少，溢价的参考价值更小。「明显」指超出过去 24 小时 80% 的时间所在的区间。</p>
-      <p><b>注意：</b>三个指标反映的是同一件事（美国资金的动向），一起变正不是三个独立的信号。Coinbase 溢价能不能帮助判断涨跌还没有回测，回测出来之前只当背景看。IBIT 和 BTC ETF 行情用的是 TradingView 免费小工具，数据延迟约 15 分钟（和 TradingView 网站上一样，代码旁的橙色「D」就是延迟标记）；ETF 价格基本就是 BTC 价格按比例换算，涨跌和 BTC 几乎一样，主要看成交量；实时的 IBIT 行情需要注册行情服务的免费密钥。ETF 资金流向来自 <a href="https://www.tftc.io/bitcoin-etf-flows" target="_blank" rel="noopener">The Commoner Bitcoin ETF Tracker by TFTC</a>（CC BY 4.0，整理自 SoSoValue 和 Farside），通常隔天更新，最新一天之后可能修正；某只基金显示 0 可能是还没公布，不一定是没有进出。</p>
+      <p><b>怎么用：</b>看方向和持续时间，不看一两秒的跳动。溢价持续为正，说明美国资金在持续买入；当晚公布的 ETF 资金流向可以核对这个判断。「明显」指超出过去 24 小时 80% 的时间所在的区间。</p>
+      <p><b>回测结果（2021-05 至 2026-10 的 1 小时数据，最近 400 天另用 5 分钟数据复核）：</b>溢价和之后 15 分钟、1 小时、4 小时的涨跌都是正相关，6 年每年同方向，统计上显著，但很弱（秩相关约 0.02）。溢价比过去 7 天平均高 2 个标准差以上时，之后 4 小时平均只多涨约 0.07–0.09%，上涨的比例仍在 50% 上下。美股盘中并没有比其他时段更准。直接按它做单（美股盘中偏高做多、偏低做空、持有 4 小时）：不扣手续费每笔 +0.08%，按吃单手续费算每笔 −0.02%，挂单 +0.04% 但 2024、2026 年亏钱。结论：有一点信息，但不够单独做单，适合和「方向判断」一起看。24 小时以上没有预测作用。</p>
+      <p><b>注意：</b>Coinbase 溢价和 ETF 资金流向反映的是同一件事（美国资金的动向），两边一致不是两个独立的信号。ETF 资金流向来自 <a href="https://www.tftc.io/bitcoin-etf-flows" target="_blank" rel="noopener">The Commoner Bitcoin ETF Tracker by TFTC</a>（CC BY 4.0，整理自 SoSoValue 和 Farside），通常隔天更新，最新一天之后可能修正；某只基金显示 0 可能是还没公布，不一定是没有进出。</p>
     </div>
+  </section>
+
+  <section data-grp="3" id="etfCard" class="card span">
+    <h2>BTC ETF 行情 <small>美股上市的 BTC ETF · 延迟约 15 分钟</small></h2>
+    <div class="tvw" data-tv="market-quotes" style="--tvh:400px"></div>
+    <p class="note">美国上市的现货 BTC ETF，按规模从大到小排，最后一只 BITO 是期货 ETF。IBIT（贝莱德）规模最大，约占全部现货 BTC ETF 的六成。ETF 的价格基本就是 BTC 价格按比例换算，涨跌和 BTC 几乎一样；只在美股交易时段有成交。数据来自 TradingView 免费小工具，延迟约 15 分钟（和 TradingView 网站上一样，代码旁的橙色「D」就是延迟标记），颜色固定红跌绿涨，不跟随面板的涨跌配色。ETF 每天实际流入流出多少，看<a href="#usFlowCard">「美国资金」卡片</a>。</p>
   </section>
 
   <section data-grp="3" id="tvHeatCard" class="card span">
@@ -3062,8 +3065,11 @@ async function pollUFHist() {
     jfetch("https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=300"),
     jfetch("https://api.exchange.coinbase.com/products/USDT-USD/candles?granularity=300"),
     jfetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=300")]);
-  const um = new Map(u.map(x => [x[0] * 1000, x[4]])), bm = new Map(b.map(x => [+x[0], +x[4]]));
-  UF.hist = c.map(x => [x[0] * 1000, x[4]]).filter(([t]) => bm.has(t)).map(([t, cp]) => [t, ufPrem(cp, bm.get(t), um.get(t))]).sort((a, z) => a[0] - z[0]);
+  const um = new Map(u.map(x => [x[0] * 1000, x[4]])), bm = new Map(b.map(x => [+x[0], +x[4]])), done = Date.now() - 300e3;
+  // 只用已经走完的 5 分钟；USDT-USD 成交少，某根没有 K 线时沿用上一根（当成 1 美元会凭空多出 0.1–0.2% 的「溢价」）
+  let lastU = NaN;
+  UF.hist = c.map(x => [x[0] * 1000, x[4]]).sort((a, z) => a[0] - z[0]).filter(([t]) => t <= done && bm.has(t))
+    .map(([t, cp]) => { if (um.has(t)) lastU = um.get(t); return [t, isFinite(lastU) ? ufPrem(cp, bm.get(t), lastU) : NaN]; }).filter(x => isFinite(x[1]));
   renderUF();
 }
 async function pollETF() {
@@ -3072,7 +3078,7 @@ async function pollETF() {
 }
 function renderUF() {
   if (!$("ufChips")) return;
-  const now = Date.now(), live = isFinite(UF.cb) && isFinite(UF.bn) && now - UF.t < 60e3 ? ufPrem(UF.cb, UF.bn, UF.usdt) : NaN;
+  const now = Date.now(), live = isFinite(UF.cb) && isFinite(UF.bn) && isFinite(UF.usdt) && now - UF.t < 60e3 ? ufPrem(UF.cb, UF.bn, UF.usdt) : NaN;
   const h = UF.hist, v = h.map(x => x[1]), avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN;
   const last1h = avg(h.filter(x => now - x[0] <= 36e5).map(x => x[1])), last24 = avg(h.filter(x => now - x[0] <= 864e5).map(x => x[1]));
   const srt = [...v].sort((a, b) => a - b), q = p => srt.length ? srt[Math.floor(p * (srt.length - 1))] : NaN, lo = q(0.1), hi = q(0.9);
@@ -3083,14 +3089,13 @@ function renderUF() {
     ["Coinbase 溢价 · 此刻", pp(live), cls(live), isFinite(usd) ? `每个 BTC ${usd >= 0 ? "贵" : "便宜"} ${Math.abs(usd).toFixed(1)} 美元` : "连接中…"],
     ["过去 1 小时平均", pp(last1h), cls(last1h), "按 5 分钟收盘价"],
     ["过去 24 小时平均", pp(last24), cls(last24), isFinite(lo) ? `80% 的时间在 ${pp(lo)} ~ ${pp(hi)}` : ""],
-    ["美股时段", sess, sess === "盘中" ? "good" : "mut", sess === "盘中" ? "美国机构在交易，溢价更有参考价值" : "美国机构交易少，溢价参考价值小"],
+    ["美股时段", sess, sess === "盘中" ? "good" : "mut", sess === "盘中" ? "美国机构在交易，ETF 成交集中在这段" : "不在常规交易时段，ETF 成交很少"],
   ].map(([k, x, c, sub]) => `<div class="chip"><span>${k}</span><b class="${c}">${x}</b><span>${esc(sub)}</span></div>`).join(""));
   const ref = isFinite(last1h) ? last1h : live;
   let sum = !isFinite(ref) ? "正在读取 Coinbase 和币安的价格…"
     : ref > hi ? "Coinbase 明显比币安贵：美国资金买得比平时积极。" : ref < lo ? "Coinbase 明显比币安便宜：美国资金在卖，比平时明显。"
     : ref > 0 ? "Coinbase 略贵于币安，美国买盘稍强，在平时的范围内。" : "Coinbase 略便宜于币安，美国卖盘稍强，在平时的范围内。";
-  if (isFinite(ref) && sess !== "盘中") sum += " 现在美股" + sess + "，参考价值较小。";
-  setHTML($("ufSum"), sum + " 未经回测，只看方向。");
+  setHTML($("ufSum"), sum + " 回测：溢价偏高时之后几小时略偏涨、偏低时略偏跌，但幅度远小于手续费，只当方向判断的辅助。");
   // 24 小时曲线：零线上方涨色、下方跌色
   if (h.length > 2) {
     const W = 720, H = 120, t0 = h[0][0], t1 = now, mx = Math.max(0.02, ...v.map(Math.abs), isFinite(live) ? Math.abs(live) : 0);
@@ -3102,7 +3107,7 @@ function renderUF() {
       <line x1="0" x2="${W - 50}" y1="${Y(0)}" y2="${Y(0)}" stroke="${css("--muted")}" stroke-dasharray="3 3"/>
       <polyline points="${pts}" fill="none" stroke="${css("--good")}" stroke-width="1.6" clip-path="url(#ufUp)"/><polyline points="${pts}" fill="none" stroke="${css("--bad")}" stroke-width="1.6" clip-path="url(#ufDn)"/>${ticks}</svg>`);
   }
-  $("ufUpd").textContent = `Coinbase 溢价实时${isFinite(live) ? " · " + fmtClock(UF.t, true) : ""} · 未验证，只看方向`;
+  $("ufUpd").textContent = `Coinbase 溢价实时${isFinite(live) ? " · " + fmtClock(UF.t, true) : ""} · 已回测：信号很弱，只当辅助`;
 }
 function renderETF() {
   const E = S.etf; if (!E || !$("ufEtf")) return;
@@ -3228,7 +3233,6 @@ function renderSeason() {
     "crypto-coins-heatmap": () => ({ dataSource: "Crypto100", blockSize: "market_cap_calc", blockColor: "24h_close_change|5", hasTopBar: true, isDataSetEnabled: false, isZoomEnabled: true, hasSymbolTooltip: true, isMonoSize: false }),
     "events": () => ({ importanceFilter: "0,1", countryFilter: "us" }),
     "timeline": () => ({ feedMode: "market", market: "crypto", displayMode: "regular" }),
-    "symbol-info": () => ({ symbol: "NASDAQ:IBIT" }),
     // 美国现货 BTC ETF 按规模排，最后一只是期货 ETF
     "market-quotes": () => ({ showSymbolLogo: true, symbolsGroups: [{ name: "BTC ETF", symbols: [
       ["NASDAQ:IBIT", "IBIT 贝莱德"], ["CBOE:FBTC", "FBTC 富达"], ["AMEX:GBTC", "GBTC 灰度"], ["AMEX:BTC", "BTC 灰度迷你"],
