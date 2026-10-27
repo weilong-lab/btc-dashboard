@@ -106,6 +106,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .chip span{font-size:11.5px;color:var(--muted)}
 .good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)} .mut{color:var(--muted)}
 .plv{display:block} .plv.good small,.plv.bad small,td.good small,td.bad small{color:inherit}
+/* TradingView 小工具：固定高度占位，进入视野才加载 */
+.tvw{height:var(--tvh,480px);border-radius:6px;overflow:hidden;background:var(--chip)}
+.tvw .tradingview-widget-container,.tvw .tradingview-widget-container__widget{height:100%;width:100%}
+/* 小工具内页没声明深色：iframe 的配色方案和外页不一致时浏览器会垫一层白底，所以固定成 light 让透明背景生效 */
+.tvw iframe{color-scheme:light}
+@media(max-width:820px){.tvw[data-tv="crypto-coins-heatmap"]{height:400px}}
 .note{font-size:12px;color:var(--muted);margin:0}
 .status{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .fc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
@@ -385,6 +391,12 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <p class="note">「实时价」是币安的美股永续合约，一周 7 天 24 小时交易，毫秒级推送，盘前、盘中、盘后、夜盘、周末都有价格。夜盘和周末的价格是币圈交易者定的，成交比正股少，开盘时可能和正股有差距。「相对收盘」以美股上一个常规收盘价为基准（后台监控程序在跑时用 Yahoo 的官方收盘价，否则用永续合约在美东 16:00 的价格）。相关性和贝塔用过去约 20 天的 1 小时涨跌计算；贝塔 1.7 表示 BTC 涨跌 1% 时，这只股票通常涨跌 1.7%。「24 小时走势」是币安永续过去 24 小时的 5 分钟收盘价，最右端是实时价，虚线是美股收盘参考价。「相对 BTC」= 这只股票 1 小时涨跌 − 贝塔 × BTC 1 小时涨跌，正数表示比 BTC 强。回测（约 60 天，1 小时和 5 分钟）里这些股票都不领先 BTC，所以它用来判断这波涨跌是大盘带的还是币圈自己的，不用来预测。</p>
   </section>
 
+  <section id="tvHeatCard" class="card span">
+    <h2>加密货币热图 <small>是 BTC 自己在动，还是全市场一起动</small></h2>
+    <div class="tvw" data-tv="crypto-coins-heatmap" style="--tvh:480px"></div>
+    <p class="note">每个方块是一个币，面积按市值，颜色按 24 小时涨跌（上面一栏可以切换成别的指标）。一片同色 = 全市场一起动，通常是大盘或宏观带的；只有 BTC 动、山寨不动，多半是 BTC 自己的消息或大单。颜色固定绿涨红跌，不跟随面板的涨跌配色。数据来自 TradingView。</p>
+  </section>
+
   <section class="card span" id="moodCard">
     <h2>情绪盘 <small id="moodUpd">持仓方向 · 市场情绪 · 谁更急着成交</small></h2>
     <div class="status" id="moodSplit"></div>
@@ -408,6 +420,12 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <div class="fc" id="fc"></div>
     <div class="verdict" id="fcsum"></div>
     <p class="note">上面一行是<b>已经走出来的行情</b>；下面的格子是<b>接下来</b>那段时间收盘比现在高的概率，两者不是一回事。这个模型的主要依据是 RSI、KDJ 和 24 小时高低位置，本质是「跌多了押反弹、涨多了押回落」，所以急跌时它会偏涨、急涨时会偏跌，这时面板会改标为「超卖反弹倾向 / 超买回落倾向」，并给出同类情况的历史结果。「上涨概率」越偏离 50%，模型把握越大。「历史准确率」减去「±」误差后仍高于 50%，才算这个周期真的有效。大字是收盘结论，只在 K 线收盘时变化；「盘中预估」用最新成交价补全正在走的那根，会来回跳，只作参考。</p>
+  </section>
+
+  <section id="tvTaCard" class="card span">
+    <h2>TradingView 技术评级 <small>外部参考 · 不是本面板的信号</small></h2>
+    <div class="tvw" data-tv="technical-analysis" style="--tvh:430px"></div>
+    <p class="note">TradingView 用 BTCUSDT 永续的十几条均线和震荡指标（RSI、KDJ、MACD 等）投票，多数看涨就显示「买入」，多数看跌就显示「卖出」，上面可以切换周期。它和张主任的方法是同一类指标，我们的回测里这类指标扣掉手续费后没有稳定赚钱，所以只用来看「外面的人大多怎么看」，不进此刻结论、喊单验证和复盘快照（面板读不到这个小窗口里的数字）。</p>
   </section>
 
   <section class="card span" id="volCard">
@@ -563,6 +581,18 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <h2>新闻与异动 <small id="newsUpd">点击标题看原文</small></h2>
     <ul class="list" id="news"><li><span class="t">—</span><span>正在读取新闻源…</span></li></ul>
     <p class="note">每条新闻都标利多 / 利空 / 中性：「AI判断」来自 Claude 或 Muse，「规则判断」是 AI 结果回来前的关键词初判。新闻由后台监控程序每分钟更新，事件日志会记录每条新闻之后的实际涨跌，用来检验这些判断。</p>
+  </section>
+
+  <section id="tvCalCard" class="card span">
+    <h2>财经日历 <small>美国 · 中高重要性 · 时间按本机时区</small></h2>
+    <div class="tvw" data-tv="events" style="--tvh:520px"></div>
+    <p class="note">CPI、非农、FOMC 等数据的公布时间、预期值、前值和实际值。此刻结论里「重大数据前 60 分钟禁止开仓」用的是后台监控程序拉的日历，这里是方便自己翻看的版本，两边偶尔可能差几分钟，以先到的为准。时间按这台设备的系统时区显示，不跟随面板的东京 / 北京切换。</p>
+  </section>
+
+  <section id="tvNewsCard" class="card span">
+    <h2>头条新闻 <small>TradingView 编辑部 · 英文 · 看大方向</small></h2>
+    <div class="tvw" data-tv="timeline" style="--tvh:520px"></div>
+    <p class="note">TradingView 自己写的 BTC 行情评论，英文，大约一周一两篇，免费小工具只给这一类，不是快讯（在 TradingView 网站上看到的路透社、CoinDesk 等快讯没法嵌进来）。适合回头看这几周大家在讨论什么（ETF 流入流出、关键价位、宏观数据）；盯盘时的突发消息仍然看上面的「新闻与异动」。没有利多 / 利空标注，也不进事件日志。</p>
   </section>
 
   <section class="card span" id="rulesCard">
@@ -2919,6 +2949,31 @@ const LKEY = "btc_layout_v1";
   const saved = load();
   if (saved) apply(saved);
   renderNav();
+})();
+// TradingView 小工具：官方嵌入脚本 + JSON 配置；进入视野才加载（手机上省流量），系统深浅色变了就重建
+(function tvWidgets() {
+  const dark = matchMedia("(prefers-color-scheme: dark)");
+  const SYM = "BINANCE:BTCUSDT.P";
+  const cfg = {
+    "technical-analysis": () => ({ symbol: SYM, interval: "1h", showIntervalTabs: true, displayMode: "single" }),
+    "crypto-coins-heatmap": () => ({ dataSource: "Crypto100", blockSize: "market_cap_calc", blockColor: "24h_close_change|5", hasTopBar: true, isDataSetEnabled: false, isZoomEnabled: true, hasSymbolTooltip: true, isMonoSize: false }),
+    "events": () => ({ importanceFilter: "0,1", countryFilter: "us" }),
+    "timeline": () => ({ feedMode: "market", market: "crypto", displayMode: "regular" }),
+  };
+  const build = el => {
+    const kind = el.dataset.tv;
+    el.innerHTML = `<div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>`;
+    const sc = document.createElement("script");
+    sc.src = `https://s3.tradingview.com/external-embedding/embed-widget-${kind}.js`;
+    sc.async = true;
+    sc.textContent = JSON.stringify({ ...cfg[kind](), width: "100%", height: "100%", isTransparent: true, colorTheme: dark.matches ? "dark" : "light", locale: "zh_CN" });
+    el.firstChild.appendChild(sc);
+    el.dataset.built = "1";
+  };
+  const els = [...document.querySelectorAll(".tvw[data-tv]")];
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); build(e.target); } }), { rootMargin: "600px 0px" });
+  els.forEach(el => io.observe(el));
+  dark.addEventListener("change", () => els.forEach(el => { if (el.dataset.built) build(el); }));
 })();
 fullRefresh();
 setInterval(everySecond, 1000);
