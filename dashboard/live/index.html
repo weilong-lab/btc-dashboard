@@ -72,6 +72,17 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .toc a.on{background:var(--accent);color:#fff}
 .toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .toc button.tedit{flex:none;font:inherit;font-size:12.5px;padding:3px 9px;border-radius:999px;border:1px dashed var(--line);background:none;color:var(--muted);cursor:pointer;white-space:nowrap}
+/* 全网合约持仓 / 历年月度涨跌 */
+.dv{min-width:720px}.dv tr.tot td{border-top:1px solid var(--line);font-weight:600}
+.ss{width:100%;border-collapse:separate;border-spacing:2px;font-size:12px;min-width:760px;font-family:var(--m)}
+.ss th{font-weight:500;color:var(--muted);font-size:11.5px;padding:3px 4px;text-align:center;white-space:nowrap;font-family:var(--f)}
+.ss th.cur{color:var(--accent);font-weight:700}
+.ss td{padding:5px 4px;text-align:center;border-radius:4px;white-space:nowrap;background:var(--chip)}
+.ss td.na{background:none;color:var(--muted)}
+.ss td.cur{outline:2px solid var(--accent);outline-offset:-2px}
+.ss td small{display:block;font-size:9.5px;color:var(--fg2);font-family:var(--f)}
+.ss th:first-child,.ss td:first-child{position:sticky;left:0;z-index:1;background:var(--card);text-align:left;font-family:var(--f);color:var(--fg2)}
+.ss tr.st td{background:none;font-weight:600}.ss tr.st1 td{border-top:1px solid var(--line)}
 /* 分组标题：卡片流里的「第几步」和目录里的小标题 */
 .grp{grid-column:1/-1;display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px;margin:14px 2px -2px;padding-bottom:6px;border-bottom:1px solid var(--line)}
 .wrap > .grp:first-child{margin-top:4px}
@@ -400,6 +411,13 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <p class="note">TradingView 用 BTCUSDT 永续的十几条均线和震荡指标（RSI、KDJ、MACD 等）投票，多数看涨就显示「买入」，多数看跌就显示「卖出」，上面可以切换周期。它和张主任的方法是同一类指标，我们的回测里这类指标扣掉手续费后没有稳定赚钱，所以只用来看「外面的人大多怎么看」，不进此刻结论、喊单验证和复盘快照（面板读不到这个小窗口里的数字）。</p>
   </section>
 
+  <section data-grp="2" id="seasonCard" class="card span">
+    <h2>历年月度涨跌 <small id="ssUpd">币安现货 BTCUSDT · 2017 年 8 月至今 · 按 UTC 月份</small></h2>
+    <div class="verdict" id="ssSum">读取中…</div>
+    <div class="tablewrap"><table class="ss" id="ssTbl"></table></div>
+    <p class="note">每格是那一年那个月从月初开盘到月末收盘的涨跌，颜色越深涨跌越大；当月用实时价算，标「进行中」。下面三行是每个月的历年平均、中位数和上涨的年数。<b>只能当背景看：</b>每个月只有 8–9 年的样本，一年的大行情就能把平均值拉偏（所以同时看中位数和上涨年数）；以前的规律也不保证今年还成立。2017 年 8 月币安上线不足一个月，不计入统计。</p>
+  </section>
+
   <section data-grp="3" id="newsCard" class="card span">
     <h2>新闻与异动 <small id="newsUpd">点击标题看原文</small></h2>
     <ul class="list" id="news"><li><span class="t">—</span><span>正在读取新闻源…</span></li></ul>
@@ -426,6 +444,19 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
       <p><b>主动买卖比怎么读：</b>主动买入成交量 ÷ 主动卖出成交量。0.65 = 每 100 份主动卖出量，对应 65 份主动买入量，所以主动卖出更多；不是 65% 的人看多。每笔成交都有买卖双方，统计的是谁主动成交，不是总买量比总卖量多。主动买入可能是开多，也可能是空单平仓，不能直接当成新增多单。</p>
       <p><b>被动买卖比：</b>本页没有单列。同一批成交里，主动卖出的对手就是被动买入，主动买入的对手就是被动卖出；它们不是另外一笔资金，不能当成第二个独立信号。</p>
       <p>来源：<a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">恐惧贪婪指数说明</a> · <a href="https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/market-data" target="_blank" rel="noopener">币安公开数据说明</a>。本页未接入币安广场或 X 大 V 的观点。</p>
+    </div>
+  </section>
+
+  <section data-grp="3" id="derivCard" class="card span">
+    <h2>全网合约持仓 <small id="dvUpd">币安 · OKX · Bybit · Hyperliquid · BTC 永续 · 每分钟更新</small></h2>
+    <div class="status" id="dvChips"></div>
+    <div class="verdict" id="dvSum">读取中…</div>
+    <div class="tablewrap"><table class="ma dv" id="dvTbl"></table></div>
+    <div class="note">
+      <p><b>持仓量是什么：</b>还没平掉的合约有多少。每一张合约都有一个多头和一个空头，所以持仓量不分多空，只说明「押在这上面的钱有多少」。持仓量涨 = 有新资金开仓；跌 = 有人平仓或被强平。</p>
+      <p><b>和价格一起看：</b>价格涨 + 持仓涨，多半是新开多单在推；价格涨 + 持仓跌，多半是空单在平仓（轧空），后劲可能不足；价格跌 + 持仓涨，多半是新开空单在压；价格跌 + 持仓跌，多半是多单在平仓或爆仓。这是常见的读法，不是确定的结论（开仓的人可能多空都有）。</p>
+      <p><b>资金费率：</b>永续合约每隔一段时间多空互付一次钱，让合约价贴近现货。正数 = 做多的付给做空的，说明做多的人更多、更急；负数反过来。0.01% / 8 小时是交易所的默认基准，平时就在这附近；超过 0.03% 算偏热（做多拥挤，容易一跌就连环平仓），转负说明做空拥挤（容易被轧空急涨）。Hyperliquid 每小时结算一次，表里统一折成每 8 小时，方便比较。</p>
+      <p><b>口径：</b>只算这四家的 USDT（Hyperliquid 是 USDC）本位 BTC 永续，单边持仓。TradingView 等网站的「全网持仓」还加上了更多交易所、币本位合约和交割合约，所以会比这里大。24 小时变化只算能读到持仓历史的交易所：币安和 Bybit；OKX 的持仓历史接口不允许网页直接读取，Hyperliquid 不公开持仓历史。</p>
     </div>
   </section>
 
@@ -2982,6 +3013,109 @@ const GRPS = {
   apply(load() || DEFAULT);
   renderNav();
 })();
+// ---------------- 全网合约持仓：币安 / OKX / Bybit / Hyperliquid 的 BTC 永续持仓量和资金费率 ----------------
+// 每家返回 { oi: 现在持仓（BTC，单边）, oi24: 24 小时前持仓, fr: 当期资金费率（小数）, hrs: 结算间隔小时, next: 下次结算时间, px: 标记价 }
+const DERIV = [
+  ["币安", async () => {
+    const [oi, h, f] = await Promise.all([jfetch(`${FAPI}/fapi/v1/openInterest?symbol=BTCUSDT`), jfetch(`${FAPI}/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=25`), jfetch(`${FAPI}/fapi/v1/premiumIndex?symbol=BTCUSDT`)]);
+    return { oi: +oi.openInterest, oi24: h.length >= 25 ? +h[0].sumOpenInterest : NaN, fr: +f.lastFundingRate, hrs: 8, next: +f.nextFundingTime, px: +f.markPrice };   // 历史从旧到新
+  }],
+  ["OKX", async () => {
+    // 持仓历史（rubik 统计接口）不允许网页跨域读取，读不到就只缺 24 小时变化，不影响持仓和资金费率
+    const [oi, h, f] = await Promise.all([jfetch("https://www.okx.com/api/v5/public/open-interest?instId=BTC-USDT-SWAP"), jfetch("https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-history?instId=BTC-USDT-SWAP&period=1H&limit=25").catch(() => null), jfetch("https://www.okx.com/api/v5/public/funding-rate?instId=BTC-USDT-SWAP")]);
+    const o = oi.data[0], r = f.data[0], hd = (h && h.data) || [];   // 历史从新到旧：[时间, 张数, BTC, USD]
+    return { oi: +o.oiCcy, oi24: hd.length >= 25 ? +hd[24][2] : NaN, fr: +r.fundingRate, hrs: (+r.nextFundingTime - +r.fundingTime) / 36e5 || 8, next: +r.fundingTime, px: +o.oiUsd / +o.oiCcy };
+  }],
+  ["Bybit", async () => {
+    // Bybit 的 openInterest 现在多空两边都算，singleOpenInterest 才和其他三家一样是单边
+    const [h, t] = await Promise.all([jfetch("https://api.bybit.com/v5/market/open-interest?category=linear&symbol=BTCUSDT&intervalTime=5min&limit=1"), jfetch("https://api.bybit.com/v5/market/tickers?category=linear&symbol=BTCUSDT")]);
+    const h1 = await jfetch("https://api.bybit.com/v5/market/open-interest?category=linear&symbol=BTCUSDT&intervalTime=1h&limit=25");
+    const x = t.result.list[0], l = h1.result.list || [], one = z => +(z.singleOpenInterest ?? z.openInterest);   // 历史从新到旧
+    return { oi: one(h.result.list[0]), oi24: l.length >= 25 ? one(l[24]) : NaN, fr: +x.fundingRate, hrs: +x.fundingIntervalHour || 8, next: +x.nextFundingTime, px: +x.markPrice };
+  }],
+  ["Hyperliquid", async () => {
+    const d = await fetch("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: '{"type":"metaAndAssetCtxs"}', cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+    const i = d[0].universe.findIndex(u => u.name === "BTC"), c = d[1][i], now = Date.now();
+    return { oi: +c.openInterest, oi24: NaN, fr: +c.funding, hrs: 1, next: Math.ceil(now / 36e5) * 36e5, px: +c.markPx };   // 每小时结算，不公开持仓历史
+  }],
+];
+async function pollDeriv() {
+  const rs = await Promise.allSettled(DERIV.map(([, f]) => f()));
+  S.deriv = { t: Date.now(), rows: DERIV.map(([n], i) => rs[i].status === "fulfilled" ? { n, ...rs[i].value } : { n, err: String(rs[i].reason?.message || rs[i].reason || "读取失败") }) };
+  renderDeriv();
+}
+function renderDeriv() {
+  const D = S.deriv; if (!D || !$("dvTbl")) return;
+  const ok = D.rows.filter(r => !r.err && isFinite(r.oi) && r.oi > 0), now = Date.now();
+  const usd = r => r.oi * (isFinite(r.px) ? r.px : S.price), totU = ok.reduce((a, r) => a + usd(r), 0), totB = ok.reduce((a, r) => a + r.oi, 0);
+  const f8 = r => r.fr * 8 / r.hrs * 100, yr = r => r.fr / r.hrs * 24 * 365 * 100;   // 折成每 8 小时 / 年化（%）
+  const h = ok.filter(r => isFinite(r.oi24) && r.oi24 > 0), oiChg = h.length ? (h.reduce((a, r) => a + r.oi, 0) / h.reduce((a, r) => a + r.oi24, 0) - 1) * 100 : NaN;
+  const wf = totU ? ok.reduce((a, r) => a + f8(r) * usd(r), 0) / totU : NaN;
+  const p24 = S.b60 && S.b60.length > 25 ? S.b60.at(-25).c : NaN, pxChg = isFinite(p24) && isFinite(S.price) ? (S.price / p24 - 1) * 100 : NaN;
+  const yi = n => (n / 1e8).toFixed(1) + " 亿美元";
+  const left = ms => { const m = Math.max(0, Math.round((ms - now) / 6e4)); return m >= 60 ? `${Math.floor(m / 60)} 小时 ${m % 60} 分` : `${m} 分钟`; };
+  const fcls = x => !isFinite(x) ? "" : x > 0.03 ? "bad" : x < -0.005 ? "good" : "";
+  const frWord = x => !isFinite(x) ? "读取失败" : x > 0.03 ? "偏热：做多拥挤" : x > 0.005 ? "正常偏多" : x >= -0.005 ? "中性" : "转负：做空拥挤";
+  let quad = "";
+  if (isFinite(oiChg) && isFinite(pxChg)) {
+    const pu = pxChg > 0.5, pd = pxChg < -0.5, ou = oiChg > 1, od = oiChg < -1;
+    quad = pu && ou ? "价格涨、持仓也涨：多半是新开的多单在推，这波上涨有新资金跟进。" : pu && od ? "价格涨、持仓在减：多半是空单在平仓（轧空）推上去的，没有新资金跟进，后劲可能不足。"
+      : pd && ou ? "价格跌、持仓在涨：多半是新开的空单在压，也可能有人逆势抄底加多，留意之后的轧空或继续下跌。" : pd && od ? "价格跌、持仓也减：多半是多单在平仓或被强平，跌势里杠杆在出清。"
+      : ou ? "价格没怎么动，持仓在涨：多空都在加杠杆，之后容易出一段急动。" : od ? "价格没怎么动，持仓在减：大家在降杠杆，行情可能偏平静。" : "价格和持仓 24 小时都变化不大。";
+  }
+  const frs = ok.map(f8).filter(isFinite), spread = frs.length > 1 ? Math.max(...frs) - Math.min(...frs) : NaN;
+  setHTML($("dvChips"), [
+    ["四家合计持仓", ok.length ? `${Math.round(totB).toLocaleString()} BTC` : "读取失败", "", ok.length ? `约 ${yi(totU)}${ok.length < 4 ? ` · 只有 ${ok.length} 家读到` : ""}` : ""],
+    ["24 小时持仓变化", pct(oiChg), "", `同期价格 ${pct(pxChg)}`],   // 持仓涨跌本身不分利多利空，不上涨跌色
+    ["加权资金费率 / 8 小时", isFinite(wf) ? (wf >= 0 ? "+" : "") + wf.toFixed(4) + "%" : "—", fcls(wf), frWord(wf)],
+  ].map(([k, v, c, sub]) => `<div class="chip"><span>${k}</span><b class="${c}">${v}</b><span>${esc(sub)}</span></div>`).join(""));
+  setHTML($("dvSum"), ok.length ? `${quad} 资金费率${frWord(wf)}（按持仓加权 ${isFinite(wf) ? wf.toFixed(4) : "—"}% / 8 小时，基准是 0.01%）${isFinite(spread) && spread > 0.02 ? `；各家差距较大（最高和最低差 ${spread.toFixed(3)}%），有一家明显更拥挤` : ""}。` : "四家交易所都没读到，可能是网络问题，稍后会自动重试。");
+  const th = `<thead><tr><th>交易所</th><th>持仓量（BTC）</th><th>持仓价值</th><th>占四家</th><th>24 小时变化</th><th>资金费率 / 8 小时</th><th>年化</th><th>下次结算</th></tr></thead>`;
+  const tr = D.rows.map(r => r.err ? `<tr><td class="t">${r.n}</td><td class="t mut" colspan="7">读取失败（${esc(r.err)}）</td></tr>`
+    : `<tr><td class="t">${r.n}</td><td>${Math.round(r.oi).toLocaleString()}</td><td>${yi(usd(r))}</td><td>${totU ? (usd(r) / totU * 100).toFixed(0) + "%" : "—"}</td>`
+    + `<td class="${isFinite(r.oi24) ? "" : "mut"}">${isFinite(r.oi24) ? pct((r.oi / r.oi24 - 1) * 100) : r.n === "Hyperliquid" ? "不公开" : "读不到"}</td>`
+    + `<td class="${fcls(f8(r))}">${(f8(r) >= 0 ? "+" : "") + f8(r).toFixed(4)}%${r.hrs !== 8 ? `<small>每 ${r.hrs} 小时结算</small>` : ""}</td><td>${pct(yr(r), 1)}</td><td>${left(r.next)}<small>${fmtClock(r.next)}</small></td></tr>`).join("");
+  const tot = ok.length ? `<tr class="tot"><td class="t">合计</td><td>${Math.round(totB).toLocaleString()}</td><td>${yi(totU)}</td><td>100%</td><td>${pct(oiChg)}<small>只算${h.map(r => r.n).join("、")}</small></td><td class="${fcls(wf)}">${(wf >= 0 ? "+" : "") + wf.toFixed(4)}%<small>按持仓加权</small></td><td>${pct(wf * 3 * 365, 1)}</td><td></td></tr>` : "";
+  setHTML($("dvTbl"), th + `<tbody>${tr}${tot}</tbody>`);
+  $("dvUpd").textContent = `币安 · OKX · Bybit · Hyperliquid · BTC 永续 · 更新于 ${fmtClock(D.t, true)}`;
+}
+
+// ---------------- 历年月度涨跌：币安现货月 K 线（2017-08 起），当月用实时价 ----------------
+async function pollSeason() {
+  const k = await jfetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1M&limit=1000");
+  S.season = k.map(x => ({ t: +x[0], o: +x[1], c: +x[4] }));
+  renderSeason();
+}
+function renderSeason() {
+  const K = S.season; if (!K || !K.length || !$("ssTbl")) return;
+  const MO = ["1 月", "2 月", "3 月", "4 月", "5 月", "6 月", "7 月", "8 月", "9 月", "10 月", "11 月", "12 月"];
+  const last = K.at(-1), live = isFinite(S.price) ? S.price : last.c, cell = {};
+  K.forEach((b, i) => { const d = new Date(b.t), y = d.getUTCFullYear(), m = d.getUTCMonth(), c = i === K.length - 1 ? live : b.c;
+    cell[y + "-" + m] = { r: (c / b.o - 1) * 100, cur: i === K.length - 1, part: i === 0, o: b.o, c }; });   // 第一根是 2017 年 8 月：月 K 线开盘时间记在 1 号，但币安 17 号才上线
+  const d0 = new Date(K[0].t), dN = new Date(last.t), y0 = d0.getUTCFullYear(), yN = dN.getUTCFullYear(), mN = dN.getUTCMonth();
+  const stat = m => { const v = []; for (let y = y0; y <= yN; y++) { const c = cell[y + "-" + m]; if (c && !c.cur && !c.part) v.push(c.r); }
+    const s = [...v].sort((a, b) => a - b), med = s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : NaN;
+    return { n: v.length, avg: v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN, med, up: v.filter(x => x > 0).length }; };
+  const S12 = MO.map((_, m) => stat(m));
+  const bg = r => `background:color-mix(in srgb,var(${r >= 0 ? "--good" : "--bad"}) ${Math.round(8 + Math.min(1, Math.abs(r) / 40) * 52)}%,transparent)`;
+  const one = (r, extra = "") => `<td style="${bg(r)}"${extra}>${pct(r, 1)}`;
+  let rows = "";
+  for (let y = yN; y >= y0; y--) {
+    let tr = `<tr><td>${y}</td>`;
+    for (let m = 0; m < 12; m++) { const c = cell[y + "-" + m];
+      tr += !c ? `<td class="na">—</td>` : one(c.r, c.cur ? ' class="cur"' : "") + (c.cur ? "<small>进行中</small>" : c.part ? "<small>不足一月</small>" : "") + "</td>"; }
+    const first = [...Array(12).keys()].map(m => cell[y + "-" + m]).find(Boolean), lastc = [...Array(12).keys()].reverse().map(m => cell[y + "-" + m]).find(Boolean);
+    tr += first && !first.part ? one((lastc.c / first.o - 1) * 100) + (lastc.cur ? "<small>至今</small>" : "") + "</td>" : `<td class="na">—</td>`;
+    rows += tr + "</tr>";
+  }
+  const sr = (lab, f, cls) => `<tr class="st ${cls || ""}"><td>${lab}</td>${S12.map(f).join("")}<td></td></tr>`;
+  rows += sr("平均", s => isFinite(s.avg) ? `<td class="${s.avg >= 0 ? "good" : "bad"}">${pct(s.avg, 1)}</td>` : `<td class="na">—</td>`, "st1")
+    + sr("中位数", s => isFinite(s.med) ? `<td class="${s.med >= 0 ? "good" : "bad"}">${pct(s.med, 1)}</td>` : `<td class="na">—</td>`)
+    + sr("上涨年数", s => `<td>${s.up} / ${s.n}</td>`);
+  setHTML($("ssTbl"), `<thead><tr><th>年份</th>${MO.map((x, m) => `<th${m === mN ? ' class="cur"' : ""}>${x}</th>`).join("")}<th>全年</th></tr></thead><tbody>${rows}</tbody>`);
+  const s = S12[mN], c = cell[yN + "-" + mN], nx = S12[(mN + 1) % 12];
+  setHTML($("ssSum"), `现在是 ${MO[mN]}，本月至今 ${pct(c.r, 1)}。过去 ${s.n} 年的 ${MO[mN]}：平均 ${pct(s.avg, 1)}、中位数 ${pct(s.med, 1)}，${s.n} 年里 ${s.up} 年上涨。下个月（${MO[(mN + 1) % 12]}）历史平均 ${pct(nx.avg, 1)}、中位数 ${pct(nx.med, 1)}，${nx.n} 年里 ${nx.up} 年上涨。样本很少，只当背景参考。`);
+}
 // TradingView 小工具：官方嵌入脚本 + JSON 配置；进入视野才加载（手机上省流量），系统深浅色变了就重建
 (function tvWidgets() {
   const sysDark = matchMedia("(prefers-color-scheme: dark)"), isDark = () => typeof UI !== "undefined" ? UI.isDark() : sysDark.matches;
@@ -3016,6 +3150,10 @@ setInterval(() => pollLS().catch(() => {}), 60000);
 setInterval(() => pollFunding().catch(() => {}), 60000);
 setInterval(() => pollStocks(false).catch(() => {}), 60000);
 setInterval(() => pollMood().catch(() => {}), 300000);
+pollDeriv().catch(() => {}); pollSeason().catch(() => {});
+setInterval(() => pollDeriv().catch(() => {}), 60000);
+setInterval(() => { if (S.season) renderSeason(); }, 60000);
+setInterval(() => pollSeason().catch(() => {}), 3600e3);
 setInterval(verifyCalls, 60000);
 // 云端：页面在前台时每 15 秒同步一次，切回这个页面时马上同步（换设备 / 另一个人改的内容很快就能看到）
 setInterval(() => { if (document.visibilityState === "visible") cloudSync(); }, 15000);
