@@ -71,6 +71,16 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .toc a.on{background:var(--accent);color:#fff}
 .toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .toc button.tedit{flex:none;font:inherit;font-size:12.5px;padding:3px 9px;border-radius:999px;border:1px dashed var(--line);background:none;color:var(--muted);cursor:pointer;white-space:nowrap}
+/* 分组标题：卡片流里的「第几步」和目录里的小标题 */
+.grp{grid-column:1/-1;display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px;margin:14px 2px -2px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.wrap > .grp:first-child{margin-top:4px}
+.grp .gn{flex:none;align-self:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font:600 12.5px/22px var(--m);text-align:center}
+.grp b{font-size:16px;font-weight:700}
+.grp .gh{flex-basis:100%;padding-left:30px;font-size:12.5px;color:var(--fg2)}
+@media(min-width:700px){.grp .gh{flex-basis:auto;padding-left:0}}
+.toc .tg{flex:none;align-self:center;font-size:11.5px;font-weight:600;color:var(--accent);padding:3px 2px 3px 8px;white-space:nowrap}
+.toc .tg:first-child{padding-left:2px}
+.lay li small.lg{display:block;font-size:11px;color:var(--muted);line-height:1.3}
 /* 调整卡片顺序 */
 .lay{position:fixed;z-index:20;right:max(12px,env(safe-area-inset-right,0px));top:70px;width:min(340px,calc(100vw - 24px));max-height:calc(100vh - 90px);overflow:auto;
   background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.18);padding:12px;display:flex;flex-direction:column;gap:8px}
@@ -90,9 +100,10 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .edlg form label:last-child{grid-column:1/-1}
 .card{scroll-margin-top:calc(var(--toph,110px) + 10px)}
 @media(min-width:1260px){
-  .toc{position:fixed;left:max(12px,calc((100vw - 1100px) / 2 - 172px));top:76px;width:150px;flex-direction:column;gap:2px;margin:0;overflow:visible}
+  .toc{position:fixed;left:max(12px,calc((100vw - 1100px) / 2 - 172px));top:76px;width:150px;flex-direction:column;gap:2px;margin:0;max-height:calc(100vh - 92px);overflow-y:auto}
   .toc a{background:none;border-radius:6px;padding:5px 10px;font-size:13px}
   .toc a:hover{background:var(--chip)}
+  .toc .tg{align-self:flex-start;padding:10px 10px 2px;font-size:11.5px}.toc .tg:first-child{padding-top:0;padding-left:10px}
   .toc a.on{background:var(--chip);color:var(--accent);font-weight:500}
   .wrap{margin-left:max(180px,calc((100vw - 1100px) / 2))}
 }
@@ -326,7 +337,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 
 <div class="wrap">
 
-  <section class="card span" id="summaryCard">
+  <section data-grp="1" class="card span" id="summaryCard">
     <h2>此刻结论 <small id="sumBasis">依据已收盘 K 线 · 不是投资建议</small></h2>
     <p class="sum-line" id="sumNow">正在读取行情…</p>
     <div class="status" id="sumState"></div>
@@ -340,7 +351,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <p class="note">判断顺序：先看硬性禁止（重大数据前 60 分钟、今日亏损超 15%、保证金占用超三分之一），再看规则 A / B 有没有触发，最后看是不是在急涨急跌后逆势进场。规则 A / B 在扣手续费的真实挂单回测里都没有稳定赚钱，所以即使出现信号也只叫「有参考信号」，仅供模拟验证。仓位按上面填的买入金额 × 杠杆算（名义仓位），每一边显示打到止损亏多少、打到止盈赚多少（都扣了约 0.1% 的开平手续费）和强平价；强平价比止损还近会标红，并给出这个止损下建议的最高杠杆（强平距离至少是止损距离的 2 倍，按 1 ÷ 杠杆 − 0.4% 估算）。买入金额和杠杆会同步到云端，也是喊单记录里没写金额时的默认值。</p>
   </section>
 
-  <section class="card span" id="fastCard">
+  <section data-grp="1" class="card span" id="fastCard">
     <h2>急动提醒 <small>快速行情出现时不要追 · 大行情高发时段</small></h2>
     <div class="fm-now" id="fmNow">正在读取行情…</div>
     <div class="fm-wins" id="fmWins"></div>
@@ -350,7 +361,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <p class="note">「急动」= 最近 5 分钟或 15 分钟已经走了 1 个 ATR 以上（ATR 是过去 24 小时 1 小时 K 线的平均振幅，现在约 <span id="fmAtr">—</span> 美元）。提醒会保留 30 分钟，因为这段时间最容易冲动追单。下面的历史结果来自 2021–2026 年 1 分钟数据：急动后下一分钟顺势市价追进，之后继续同方向的比例，以及「止盈 1 ATR、止损 0.5 ATR、最长 30 分钟」这个打法扣掉 0.10% 往返手续费后的每笔平均。盯盘时间表：2021–2026 年每个小时（东京时间）的振幅和「30 分钟走 3 个 ATR 以上」大行情的频率，相对全天平均的倍数，颜色越深越活跃，当前小时有框；工作日、周六、周日分开，美国夏令时和冬令时分开（美国相关的时段差 1 小时）。时段卡片里的倍数，是那一小时出现「30 分钟内走 3 个 ATR 以上」大行情的频率和平时相比（美东 8:30 那一小时包括没有数据公布的日子，真正有数据的日子会更高）。</p>
   </section>
 
-  <section class="card span" id="posCard">
+  <section data-grp="1" class="card span" id="posCard">
     <h2>持仓与卖出 <small>喊单记录里每一单的进场、卖出计划和卖出记录 · 只做记录和提示，不会下单</small></h2>
     <div class="verdict" id="pAlert">读取中…</div>
     <div class="jbtns"><button type="button" class="btn" id="pNotify">开启桌面提醒</button><span class="note" id="pNotifyMsg"></span></div>
@@ -361,43 +372,45 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <p class="note">每一单进场时就写好卖出计划：止损价、止盈价和最长持有时间（模型的单按「此刻结论」当时给出的；人工喊单按你填的，没填止损止盈就只按时间）。价格碰到止损或止盈、或者到了最长持有时间，这里马上标「该卖了」并发提醒，同时记下卖出时间、价格、原因和盈亏，喊单记录同步显示。你自己提前卖了，可以点「手动卖出」按当前价记一笔。持有期间面板一直盯着盘面：出现急动（5 或 15 分钟走 1 个 ATR 以上）、离止损不到 0.3 个 ATR、15 分钟内进入美股开盘或数据公布时段、出现红色新闻警报，都会在「状态 / 盘面提醒」里标出来并发提醒。回测（2021–2026，4613 笔）里，这些时候马上卖都没有比按原计划拿着更好（平均差 0.05%–0.27%），所以提醒告诉你发生了什么、该检查什么，卖不卖仍按止损、止盈和时间。盈亏是按价格算的百分比，没扣手续费和资金费，也没乘杠杆。后台监控程序运行时，模型的单在浏览器关着时也会记录卖出，并发 Mac 通知。</p>
   </section>
 
-  <section id="statusCard" class="card span">
+  <section data-grp="2" id="statusCard" class="card span">
     <h2>当前状态 <small id="stUpd">—</small></h2>
     <div class="status" id="status"></div>
   </section>
 
-  <section class="card span" id="maCard">
+  <section data-grp="2" class="card span" id="maCard">
     <h2>多周期均线 <small>MA7 / MA25 / MA99 · 均线按已收盘 K 线计算，现价实时</small></h2>
     <div class="tablewrap"><table class="ma" id="ma"></table></div>
     <div class="verdict" id="maSum"></div>
     <p class="note">日线按 UTC 收盘（<span class="tzn">东京时间</span>每天 <span class="tzdc">09:00</span>）。均线排列在回测里没有单独的预测力（加 1 小时趋势过滤并没有让信号变成稳定盈利），这里用来看各周期的趋势是否一致。</p>
   </section>
 
-  <section class="card span" id="askCard">
-    <h2>AI 问盘 <small>点一下才整理 · 复制问题去网页版问 · 不用 Key、不花钱</small></h2>
-    <label for="askQ" class="askl">我的问题（会记在这台设备上）<textarea id="askQ"></textarea></label>
-    <div class="jbtns"><button type="button" class="btn primary" id="askGen">AI 问盘</button><span class="note" id="askMsg"></span></div>
-    <div id="askOut" hidden>
-      <textarea id="askTxt" class="askt" aria-label="生成好的问题（可以改）"></textarea>
-      <div class="jbtns"><button type="button" class="btn primary" data-ask="https://chat.deepseek.com/">复制并打开 DeepSeek</button><button type="button" class="btn" data-ask="https://chatgpt.com/">复制并打开 ChatGPT</button><button type="button" class="btn" data-ask="https://claude.ai/new">复制并打开 Claude</button><button type="button" class="btn" data-ask="">只复制</button></div>
-    </div>
-    <p class="note">点「AI 问盘」时，面板把此刻的行情整理成数据：各周期涨跌、最近两天的转折点（按 15 分钟 K 线，走过约 1 个 ATR 才算转折）、1 小时和 15 分钟 K 线、均线排列、资金费率、持仓量、多空比、恐惧贪婪指数，再加上你的问题和回答格式（先概括走势，再判断形态和接下来的演变）。点下面的按钮会复制问题并打开网页版，你粘贴（⌘V）发送就行；同一个问题可以分别问 DeepSeek、ChatGPT、Claude 对比着看。网页版不能由面板自动提问。AI 对形态的预判没有经过任何回测，只能当作参考。</p>
+  <section data-grp="2" id="fcCard" class="card span">
+    <h2>方向判断 <small>结论按已收盘 K 线 · 盘中预估另列 · 准确率来自模型没见过的数据</small></h2>
+    <div class="moved" id="moved"></div>
+    <div class="fc" id="fc"></div>
+    <div class="verdict" id="fcsum"></div>
+    <p class="note">上面一行是<b>已经走出来的行情</b>；下面的格子是<b>接下来</b>那段时间收盘比现在高的概率，两者不是一回事。这个模型的主要依据是 RSI、KDJ 和 24 小时高低位置，本质是「跌多了押反弹、涨多了押回落」，所以急跌时它会偏涨、急涨时会偏跌，这时面板会改标为「超卖反弹倾向 / 超买回落倾向」，并给出同类情况的历史结果。「上涨概率」越偏离 50%，模型把握越大。「历史准确率」减去「±」误差后仍高于 50%，才算这个周期真的有效。大字是收盘结论，只在 K 线收盘时变化；「盘中预估」用最新成交价补全正在走的那根，会来回跳，只作参考。</p>
   </section>
 
-  <section class="card span" id="usCard">
-    <h2>美股联动 <small id="usSess">—</small></h2>
-    <div class="tablewrap"><table class="ma" id="us"></table></div>
-    <div class="verdict" id="usSum"></div>
-    <p class="note">「实时价」是币安的美股永续合约，一周 7 天 24 小时交易，毫秒级推送，盘前、盘中、盘后、夜盘、周末都有价格。夜盘和周末的价格是币圈交易者定的，成交比正股少，开盘时可能和正股有差距。「相对收盘」以美股上一个常规收盘价为基准（后台监控程序在跑时用 Yahoo 的官方收盘价，否则用永续合约在美东 16:00 的价格）。相关性和贝塔用过去约 20 天的 1 小时涨跌计算；贝塔 1.7 表示 BTC 涨跌 1% 时，这只股票通常涨跌 1.7%。「24 小时走势」是币安永续过去 24 小时的 5 分钟收盘价，最右端是实时价，虚线是美股收盘参考价。「相对 BTC」= 这只股票 1 小时涨跌 − 贝塔 × BTC 1 小时涨跌，正数表示比 BTC 强。回测（约 60 天，1 小时和 5 分钟）里这些股票都不领先 BTC，所以它用来判断这波涨跌是大盘带的还是币圈自己的，不用来预测。</p>
+  <section data-grp="2" id="tvTaCard" class="card span">
+    <h2>TradingView 技术评级 <small>外部参考 · 不是本面板的信号</small></h2>
+    <div class="tvw" data-tv="technical-analysis" style="--tvh:430px"></div>
+    <p class="note">TradingView 用 BTCUSDT 永续的十几条均线和震荡指标（RSI、KDJ、MACD 等）投票，多数看涨就显示「买入」，多数看跌就显示「卖出」，上面可以切换周期。它和张主任的方法是同一类指标，我们的回测里这类指标扣掉手续费后没有稳定赚钱，所以只用来看「外面的人大多怎么看」，不进此刻结论、喊单验证和复盘快照（面板读不到这个小窗口里的数字）。</p>
   </section>
 
-  <section id="tvHeatCard" class="card span">
-    <h2>加密货币热图 <small>是 BTC 自己在动，还是全市场一起动</small></h2>
-    <div class="tvw" data-tv="crypto-coins-heatmap" style="--tvh:480px"></div>
-    <p class="note">每个方块是一个币，面积按市值，颜色按 24 小时涨跌（上面一栏可以切换成别的指标）。一片同色 = 全市场一起动，通常是大盘或宏观带的；只有 BTC 动、山寨不动，多半是 BTC 自己的消息或大单。颜色固定绿涨红跌，不跟随面板的涨跌配色。数据来自 TradingView。</p>
+  <section data-grp="3" id="newsCard" class="card span">
+    <h2>新闻与异动 <small id="newsUpd">点击标题看原文</small></h2>
+    <ul class="list" id="news"><li><span class="t">—</span><span>正在读取新闻源…</span></li></ul>
+    <p class="note">每条新闻都标利多 / 利空 / 中性：「AI判断」来自 Claude 或 Muse，「规则判断」是 AI 结果回来前的关键词初判。新闻由后台监控程序每分钟更新，事件日志会记录每条新闻之后的实际涨跌，用来检验这些判断。</p>
   </section>
 
-  <section class="card span" id="moodCard">
+  <section data-grp="3" id="tvCalCard" class="card span">
+    <h2>财经日历 <small>美国 · 中高重要性 · 时间按本机时区</small></h2>
+    <div class="tvw" data-tv="events" style="--tvh:520px"></div>
+    <p class="note">CPI、非农、FOMC 等数据的公布时间、预期值、前值和实际值。此刻结论里「重大数据前 60 分钟禁止开仓」用的是后台监控程序拉的日历，这里是方便自己翻看的版本，两边偶尔可能差几分钟，以先到的为准。时间按这台设备的系统时区显示，不跟随面板的东京 / 北京切换。</p>
+  </section>
+
+  <section data-grp="3" class="card span" id="moodCard">
     <h2>情绪盘 <small id="moodUpd">持仓方向 · 市场情绪 · 谁更急着成交</small></h2>
     <div class="status" id="moodSplit"></div>
     <div class="verdict" id="moodSum">读取中…</div>
@@ -414,21 +427,43 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     </div>
   </section>
 
-  <section id="fcCard" class="card span">
-    <h2>方向判断 <small>结论按已收盘 K 线 · 盘中预估另列 · 准确率来自模型没见过的数据</small></h2>
-    <div class="moved" id="moved"></div>
-    <div class="fc" id="fc"></div>
-    <div class="verdict" id="fcsum"></div>
-    <p class="note">上面一行是<b>已经走出来的行情</b>；下面的格子是<b>接下来</b>那段时间收盘比现在高的概率，两者不是一回事。这个模型的主要依据是 RSI、KDJ 和 24 小时高低位置，本质是「跌多了押反弹、涨多了押回落」，所以急跌时它会偏涨、急涨时会偏跌，这时面板会改标为「超卖反弹倾向 / 超买回落倾向」，并给出同类情况的历史结果。「上涨概率」越偏离 50%，模型把握越大。「历史准确率」减去「±」误差后仍高于 50%，才算这个周期真的有效。大字是收盘结论，只在 K 线收盘时变化；「盘中预估」用最新成交价补全正在走的那根，会来回跳，只作参考。</p>
+  <section data-grp="3" class="card span" id="usCard">
+    <h2>美股联动 <small id="usSess">—</small></h2>
+    <div class="tablewrap"><table class="ma" id="us"></table></div>
+    <div class="verdict" id="usSum"></div>
+    <p class="note">「实时价」是币安的美股永续合约，一周 7 天 24 小时交易，毫秒级推送，盘前、盘中、盘后、夜盘、周末都有价格。夜盘和周末的价格是币圈交易者定的，成交比正股少，开盘时可能和正股有差距。「相对收盘」以美股上一个常规收盘价为基准（后台监控程序在跑时用 Yahoo 的官方收盘价，否则用永续合约在美东 16:00 的价格）。相关性和贝塔用过去约 20 天的 1 小时涨跌计算；贝塔 1.7 表示 BTC 涨跌 1% 时，这只股票通常涨跌 1.7%。「24 小时走势」是币安永续过去 24 小时的 5 分钟收盘价，最右端是实时价，虚线是美股收盘参考价。「相对 BTC」= 这只股票 1 小时涨跌 − 贝塔 × BTC 1 小时涨跌，正数表示比 BTC 强。回测（约 60 天，1 小时和 5 分钟）里这些股票都不领先 BTC，所以它用来判断这波涨跌是大盘带的还是币圈自己的，不用来预测。</p>
   </section>
 
-  <section id="tvTaCard" class="card span">
-    <h2>TradingView 技术评级 <small>外部参考 · 不是本面板的信号</small></h2>
-    <div class="tvw" data-tv="technical-analysis" style="--tvh:430px"></div>
-    <p class="note">TradingView 用 BTCUSDT 永续的十几条均线和震荡指标（RSI、KDJ、MACD 等）投票，多数看涨就显示「买入」，多数看跌就显示「卖出」，上面可以切换周期。它和张主任的方法是同一类指标，我们的回测里这类指标扣掉手续费后没有稳定赚钱，所以只用来看「外面的人大多怎么看」，不进此刻结论、喊单验证和复盘快照（面板读不到这个小窗口里的数字）。</p>
+  <section data-grp="3" id="tvHeatCard" class="card span">
+    <h2>加密货币热图 <small>是 BTC 自己在动，还是全市场一起动</small></h2>
+    <div class="tvw" data-tv="crypto-coins-heatmap" style="--tvh:480px"></div>
+    <p class="note">每个方块是一个币，面积按市值，颜色按 24 小时涨跌（上面一栏可以切换成别的指标）。一片同色 = 全市场一起动，通常是大盘或宏观带的；只有 BTC 动、山寨不动，多半是 BTC 自己的消息或大单。颜色固定绿涨红跌，不跟随面板的涨跌配色。数据来自 TradingView。</p>
   </section>
 
-  <section class="card span" id="volCard">
+  <section data-grp="3" id="tvNewsCard" class="card span">
+    <h2>头条新闻 <small>TradingView 编辑部 · 英文 · 看大方向</small></h2>
+    <div class="tvw" data-tv="timeline" style="--tvh:520px"></div>
+    <p class="note">TradingView 自己写的 BTC 行情评论，英文，大约一周一两篇，免费小工具只给这一类，不是快讯（在 TradingView 网站上看到的路透社、CoinDesk 等快讯没法嵌进来）。适合回头看这几周大家在讨论什么（ETF 流入流出、关键价位、宏观数据）；盯盘时的突发消息仍然看上面的「新闻与异动」。没有利多 / 利空标注，也不进事件日志。</p>
+  </section>
+
+  <section data-grp="4" class="card span" id="planCard">
+    <h2>交易计划 <small id="planBasis">按已收盘 K 线判断 · 不是投资建议</small></h2>
+    <div class="plan-now" id="planNow"></div>
+    <div class="plans" id="plans"></div>
+    <details class="rules"><summary>规则和回测结果（与模型严格执行、回测同一份参数）</summary>
+      <ol id="ruleText"></ol>
+    </details>
+  </section>
+
+  <section data-grp="4" id="mirrorCard" class="card span">
+    <h2>做多信号 / 做空信号 <small>完全镜像 · 5 分钟 / 15 分钟 / 1 小时同时看</small></h2>
+    <div class="mirror" id="mirror"></div>
+    <details class="rules"><summary>为什么结论不只看交易原则</summary>
+      <p>结论只看已收盘的 K 线，过滤条件和回测、模型严格执行完全一致。用 2020 年以来的全部数据检验：只看 5 分钟信号，做多做空都显著亏损（t 值 -3.8 / -4.7，7 年里最多 1 年为正）；加 1 小时趋势过滤、三周期共振、排除周末低量，或者把信号放到 15 分钟 / 1 小时 / 4 小时 K 线上，都没有变成稳定盈利。按真实挂单执行回测，规则 A（4 小时反弹 / 回落假设实验）和规则 B（交易原则完整信号 + 过滤）也都没有通过，所以这里出现的只是「参考信号」，由模型严格执行继续验证。</p>
+    </details>
+  </section>
+
+  <section data-grp="4" class="card span" id="volCard">
     <h2>波动与扛单 <small>止损和仓位按现在的波动算，不按固定点数 · 不是投资建议</small></h2>
     <div class="status" id="volState"></div>
     <form id="volForm" onsubmit="return false">
@@ -441,24 +476,13 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <p class="note">「逆向」= 进场后、不管最后对不对，价格先朝反方向走的最远距离。2021–2026 年的数据里，这个距离和「过去 24 小时 1 小时 K 线平均振幅」（ATR）成正比：无论行情平静还是剧烈，换算成 ATR 的倍数几乎一样。所以止损和仓位应该跟着 ATR 变，而不是沿用上周的固定点数。建议止损取所选持有时间的 P80 逆向（历史样本里约八成的最大逆向没超过这个距离；这是过去的统计，不代表这一单有八成概率不被扫），仓位 = 余额 × 每笔最多亏 % ÷ 止损幅度，余额和比例在「交易日志与风控」里设置。</p>
   </section>
 
-  <section class="card span" id="planCard">
-    <h2>交易计划 <small id="planBasis">按已收盘 K 线判断 · 不是投资建议</small></h2>
-    <div class="plan-now" id="planNow"></div>
-    <div class="plans" id="plans"></div>
-    <details class="rules"><summary>规则和回测结果（与模型严格执行、回测同一份参数）</summary>
-      <ol id="ruleText"></ol>
-    </details>
+  <section data-grp="4" id="rulerCard" class="card span">
+    <h2>预期振幅 <small id="rulerTag">—</small></h2>
+    <div class="row" id="ruler"></div>
+    <p class="note">止损小于 1h 振幅中位数，被正常波动扫掉的概率很高。</p>
   </section>
 
-  <section id="mirrorCard" class="card span">
-    <h2>做多信号 / 做空信号 <small>完全镜像 · 5 分钟 / 15 分钟 / 1 小时同时看</small></h2>
-    <div class="mirror" id="mirror"></div>
-    <details class="rules"><summary>为什么结论不只看交易原则</summary>
-      <p>结论只看已收盘的 K 线，过滤条件和回测、模型严格执行完全一致。用 2020 年以来的全部数据检验：只看 5 分钟信号，做多做空都显著亏损（t 值 -3.8 / -4.7，7 年里最多 1 年为正）；加 1 小时趋势过滤、三周期共振、排除周末低量，或者把信号放到 15 分钟 / 1 小时 / 4 小时 K 线上，都没有变成稳定盈利。按真实挂单执行回测，规则 A（4 小时反弹 / 回落假设实验）和规则 B（交易原则完整信号 + 过滤）也都没有通过，所以这里出现的只是「参考信号」，由模型严格执行继续验证。</p>
-    </details>
-  </section>
-
-  <section id="calcCard" class="card span">
+  <section data-grp="4" id="calcCard" class="card span">
     <h2>我的持仓 · 推演 <small>只做计算，不会下单</small></h2>
     <form id="pos" onsubmit="return false">
       <label>方向
@@ -481,47 +505,18 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <p class="note">右侧扇形：未来 4 小时价格的 50%（深）和 80%（浅）区间，来自历史同等活跃度时段的实际分布。</p>
   </section>
 
-  <section class="card span" id="journalCard">
-    <h2>交易日志与风控 <small>连接云端后存在私有 GitHub 仓库，可导出备份</small></h2>
-    <div class="jbtns"><button type="button" class="btn cloud-on">连接云端</button><button type="button" class="btn cloud-now cloud-off">立即同步</button><button type="button" class="btn cloud-off">断开云端</button><span class="cloud-st note"></span></div>
-    <details class="slogbox"><summary>同步记录（作战面板和模拟盘）</summary><div class="sync-log"></div></details>
-    <div class="status" id="risk"></div>
-    <div class="verdict" id="riskMsg"></div>
-    <form id="jform" onsubmit="return false">
-      <label for="jbal">账户余额 (U)<input id="jbal" inputmode="decimal"></label>
-      <label for="jrisk">每笔最多亏 (% 余额)<input id="jrisk" inputmode="decimal" value="2"></label>
-      <label>方向
-        <div class="seg" role="group" aria-label="日志方向">
-          <button type="button" class="long" id="j-long" aria-pressed="true">做多</button>
-          <button type="button" class="short" id="j-short" aria-pressed="false">做空</button>
-        </div>
-      </label>
-      <label for="jentry">进场价<input id="jentry" inputmode="decimal"></label>
-      <label for="jstop">止损价<input id="jstop" inputmode="decimal"></label>
-      <label for="jnotional">名义仓位 (U)<input id="jnotional" inputmode="decimal"></label>
-      <label for="jlev">杠杆<input id="jlev" inputmode="decimal" value="10"></label>
-      <label for="jsym">品种<input id="jsym" value="BTCUSDT"></label>
-      <label for="jreason">依据<select id="jreason"><option>规则 A 信号</option><option>规则 B 信号</option><option>张主任判断</option><option>自己判断</option><option>其他</option></select></label>
-      <label for="jhold">预计拿多久（小时）<input id="jhold" inputmode="decimal" placeholder="例如 4"></label>
-      <label for="jwhy" class="wide">为什么现在进，而不是继续等<input id="jwhy" placeholder="例如：5 分钟站上 MA7 且 MA7 拐头，扳机出现"></label>
-      <label for="jinval" class="wide">什么情况算判断错了（失效条件）<input id="jinval" placeholder="例如：1 小时收盘跌回 82,500 下方"></label>
-      <label for="jnote" class="wide">备注<input id="jnote" placeholder="其他想记的"></label>
-    </form>
-    <p class="note">「记一笔开仓」时会同时保存一份不能修改的开仓计划：进场价、止损、仓位、杠杆、最大计划亏损、预计持有时间、失效条件、为什么现在进，以及当时的行情快照（价格、ATR、波动状态、模型概率、此刻结论、下一个事件）。之后加减仓、改止损、撤止损、改持有时间，都通过表格里的按钮操作，逐条追加到变更记录里，平仓后自动做亏损归因。</p>
-    <div class="jbtns">
-      <button type="button" class="btn" id="jsize">按风险算仓位</button>
-      <button type="button" class="btn" id="jfrom">从持仓推演带入</button>
-      <button type="button" class="btn primary" id="jadd">记一笔开仓</button>
-      <button type="button" class="btn" id="jexport">导出日志</button>
-      <label class="btn" for="jimport">导入日志<input type="file" id="jimport" accept="application/json" hidden></label>
+  <section data-grp="4" class="card span" id="askCard">
+    <h2>AI 问盘 <small>点一下才整理 · 复制问题去网页版问 · 不用 Key、不花钱</small></h2>
+    <label for="askQ" class="askl">我的问题（会记在这台设备上）<textarea id="askQ"></textarea></label>
+    <div class="jbtns"><button type="button" class="btn primary" id="askGen">AI 问盘</button><span class="note" id="askMsg"></span></div>
+    <div id="askOut" hidden>
+      <textarea id="askTxt" class="askt" aria-label="生成好的问题（可以改）"></textarea>
+      <div class="jbtns"><button type="button" class="btn primary" data-ask="https://chat.deepseek.com/">复制并打开 DeepSeek</button><button type="button" class="btn" data-ask="https://chatgpt.com/">复制并打开 ChatGPT</button><button type="button" class="btn" data-ask="https://claude.ai/new">复制并打开 Claude</button><button type="button" class="btn" data-ask="">只复制</button></div>
     </div>
-    <div class="tablewrap"><table class="jt" id="jtable"></table></div>
-    <h3 class="sub-h">亏损归因（已平仓的单）</h3>
-    <div class="tablewrap"><table class="ma att" id="jatt"></table></div>
-    <p class="note" id="jattNote">每笔已平仓的单拆成几部分，加起来等于实际盈亏：①按原计划执行的结果（原计划的仓位，原止损如果被碰到就按原止损出场，否则按实际平仓价）；②加减仓（相对计划仓位：每次加仓、减仓按实际成交价和数量重算，减仓的盈亏当场落袋）；③撤止损 / 改止损（原止损被碰到之后还拿着，比按原止损出场多亏或少亏了多少）；④超时持有（超过计划持有时间之后的盈亏）；⑤交易成本（每笔成交按 0.035% 估算的手续费，资金费没计入）；⑥非 BTC 交易（整笔单独列出）。一笔单可以同时有几个标签。这些都是在「原计划」假设下的对比，不代表按计划一定能赚到。没有开仓计划的旧记录只拆手续费。</p>
+    <p class="note">点「AI 问盘」时，面板把此刻的行情整理成数据：各周期涨跌、最近两天的转折点（按 15 分钟 K 线，走过约 1 个 ATR 才算转折）、1 小时和 15 分钟 K 线、均线排列、资金费率、持仓量、多空比、恐惧贪婪指数，再加上你的问题和回答格式（先概括走势，再判断形态和接下来的演变）。点下面的按钮会复制问题并打开网页版，你粘贴（⌘V）发送就行；同一个问题可以分别问 DeepSeek、ChatGPT、Claude 对比着看。网页版不能由面板自动提问。AI 对形态的预判没有经过任何回测，只能当作参考。</p>
   </section>
 
-  <section class="card span" id="callsCard">
+  <section data-grp="5" class="card span" id="callsCard">
     <h2>喊单记录与验证 <small>到期自动按币安行情核对 · 连接云端后存在私有 GitHub 仓库</small></h2>
     <div class="jbtns"><button type="button" class="btn cloud-on">连接云端</button><button type="button" class="btn cloud-now cloud-off">立即同步</button><button type="button" class="btn cloud-off">断开云端</button><span class="cloud-st note"></span></div>
     <details class="slogbox"><summary>同步记录（作战面板和模拟盘）</summary><div class="sync-log"></div></details>
@@ -571,35 +566,50 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <p class="note">进场有两种：「现价进」= 喊单那一刻就算买入；「到价再进」= 价格在规定分钟内碰到进场价才算买入（比如「30 分钟内回踩 82500 再多」），没碰到记「未成交」，也可以点「撤单」。止盈价就是「到这个价卖」。原话里说了投入多少 U、几倍杠杆就一起记下，盈亏会同时显示 U；没说就只看百分比。每条持有中的记录都有「卖出」按钮，按现价记一笔卖出，持仓与卖出、云端同步一起更新。时间精确到秒。核对方法：从喊单时间到验证时间，逐根取币安 BTCUSDT 永续 K 线（24 小时内用 1 分钟，3 天内用 5 分钟，更长用 1 小时）。到期价比参考价朝喊单方向走了 0.1% 以上算「对」，反方向 0.1% 以上算「错」，其余算「平」。目标价和止损价按 K 线最高 / 最低判断谁先到，同一根里两个都碰到按先打止损算。上方的对比表不管每条喊单自己的验证周期，统一看进场后 1 小时、4 小时、24 小时的方向，用来判断方向判断在多长时间内最准、止盈该放多远。「中途最大逆向」是到期前价格朝反方向走的最远距离，用来看「方向对了但拿不住」：止损如果比它小，就会在方向兑现之前被扫掉。喊的价位离当时市价超过 0.15% 时当作挂单：价格碰到这个价才算进场，进场前的波动不计，到期都没碰到记「未成交」，不算对错。「模型·此刻结论」是自动记录的：顶部「此刻结论」每出现一次参考信号（规则 A 或 B），就按当时给出的进场价、止损、止盈和持有时间记一条，同一规则同方向 60 分钟内只记一次。浏览器开着时面板自己记；后台监控程序运行时，浏览器关着也会记，打开面板后自动合并。在「统计范围」里选它，就能看到模型自己的成绩。同一个人在上一条还没到期时喊了反方向，上一条标「改口」，照常核对，单独计数。</p>
   </section>
 
-  <section id="rulerCard" class="card">
-    <h2>预期振幅 <small id="rulerTag">—</small></h2>
-    <div class="row" id="ruler"></div>
-    <p class="note">止损小于 1h 振幅中位数，被正常波动扫掉的概率很高。</p>
+  <section data-grp="5" class="card span" id="journalCard">
+    <h2>交易日志与风控 <small>连接云端后存在私有 GitHub 仓库，可导出备份</small></h2>
+    <div class="jbtns"><button type="button" class="btn cloud-on">连接云端</button><button type="button" class="btn cloud-now cloud-off">立即同步</button><button type="button" class="btn cloud-off">断开云端</button><span class="cloud-st note"></span></div>
+    <details class="slogbox"><summary>同步记录（作战面板和模拟盘）</summary><div class="sync-log"></div></details>
+    <div class="status" id="risk"></div>
+    <div class="verdict" id="riskMsg"></div>
+    <form id="jform" onsubmit="return false">
+      <label for="jbal">账户余额 (U)<input id="jbal" inputmode="decimal"></label>
+      <label for="jrisk">每笔最多亏 (% 余额)<input id="jrisk" inputmode="decimal" value="2"></label>
+      <label>方向
+        <div class="seg" role="group" aria-label="日志方向">
+          <button type="button" class="long" id="j-long" aria-pressed="true">做多</button>
+          <button type="button" class="short" id="j-short" aria-pressed="false">做空</button>
+        </div>
+      </label>
+      <label for="jentry">进场价<input id="jentry" inputmode="decimal"></label>
+      <label for="jstop">止损价<input id="jstop" inputmode="decimal"></label>
+      <label for="jnotional">名义仓位 (U)<input id="jnotional" inputmode="decimal"></label>
+      <label for="jlev">杠杆<input id="jlev" inputmode="decimal" value="10"></label>
+      <label for="jsym">品种<input id="jsym" value="BTCUSDT"></label>
+      <label for="jreason">依据<select id="jreason"><option>规则 A 信号</option><option>规则 B 信号</option><option>张主任判断</option><option>自己判断</option><option>其他</option></select></label>
+      <label for="jhold">预计拿多久（小时）<input id="jhold" inputmode="decimal" placeholder="例如 4"></label>
+      <label for="jwhy" class="wide">为什么现在进，而不是继续等<input id="jwhy" placeholder="例如：5 分钟站上 MA7 且 MA7 拐头，扳机出现"></label>
+      <label for="jinval" class="wide">什么情况算判断错了（失效条件）<input id="jinval" placeholder="例如：1 小时收盘跌回 82,500 下方"></label>
+      <label for="jnote" class="wide">备注<input id="jnote" placeholder="其他想记的"></label>
+    </form>
+    <p class="note">「记一笔开仓」时会同时保存一份不能修改的开仓计划：进场价、止损、仓位、杠杆、最大计划亏损、预计持有时间、失效条件、为什么现在进，以及当时的行情快照（价格、ATR、波动状态、模型概率、此刻结论、下一个事件）。之后加减仓、改止损、撤止损、改持有时间，都通过表格里的按钮操作，逐条追加到变更记录里，平仓后自动做亏损归因。</p>
+    <div class="jbtns">
+      <button type="button" class="btn" id="jsize">按风险算仓位</button>
+      <button type="button" class="btn" id="jfrom">从持仓推演带入</button>
+      <button type="button" class="btn primary" id="jadd">记一笔开仓</button>
+      <button type="button" class="btn" id="jexport">导出日志</button>
+      <label class="btn" for="jimport">导入日志<input type="file" id="jimport" accept="application/json" hidden></label>
+    </div>
+    <div class="tablewrap"><table class="jt" id="jtable"></table></div>
+    <h3 class="sub-h">亏损归因（已平仓的单）</h3>
+    <div class="tablewrap"><table class="ma att" id="jatt"></table></div>
+    <p class="note" id="jattNote">每笔已平仓的单拆成几部分，加起来等于实际盈亏：①按原计划执行的结果（原计划的仓位，原止损如果被碰到就按原止损出场，否则按实际平仓价）；②加减仓（相对计划仓位：每次加仓、减仓按实际成交价和数量重算，减仓的盈亏当场落袋）；③撤止损 / 改止损（原止损被碰到之后还拿着，比按原止损出场多亏或少亏了多少）；④超时持有（超过计划持有时间之后的盈亏）；⑤交易成本（每笔成交按 0.035% 估算的手续费，资金费没计入）；⑥非 BTC 交易（整笔单独列出）。一笔单可以同时有几个标签。这些都是在「原计划」假设下的对比，不代表按计划一定能赚到。没有开仓计划的旧记录只拆手续费。</p>
   </section>
 
-  <section id="newsCard" class="card span">
-    <h2>新闻与异动 <small id="newsUpd">点击标题看原文</small></h2>
-    <ul class="list" id="news"><li><span class="t">—</span><span>正在读取新闻源…</span></li></ul>
-    <p class="note">每条新闻都标利多 / 利空 / 中性：「AI判断」来自 Claude 或 Muse，「规则判断」是 AI 结果回来前的关键词初判。新闻由后台监控程序每分钟更新，事件日志会记录每条新闻之后的实际涨跌，用来检验这些判断。</p>
-  </section>
-
-  <section id="tvCalCard" class="card span">
-    <h2>财经日历 <small>美国 · 中高重要性 · 时间按本机时区</small></h2>
-    <div class="tvw" data-tv="events" style="--tvh:520px"></div>
-    <p class="note">CPI、非农、FOMC 等数据的公布时间、预期值、前值和实际值。此刻结论里「重大数据前 60 分钟禁止开仓」用的是后台监控程序拉的日历，这里是方便自己翻看的版本，两边偶尔可能差几分钟，以先到的为准。时间按这台设备的系统时区显示，不跟随面板的东京 / 北京切换。</p>
-  </section>
-
-  <section id="tvNewsCard" class="card span">
-    <h2>头条新闻 <small>TradingView 编辑部 · 英文 · 看大方向</small></h2>
-    <div class="tvw" data-tv="timeline" style="--tvh:520px"></div>
-    <p class="note">TradingView 自己写的 BTC 行情评论，英文，大约一周一两篇，免费小工具只给这一类，不是快讯（在 TradingView 网站上看到的路透社、CoinDesk 等快讯没法嵌进来）。适合回头看这几周大家在讨论什么（ETF 流入流出、关键价位、宏观数据）；盯盘时的突发消息仍然看上面的「新闻与异动」。没有利多 / 利空标注，也不进事件日志。</p>
-  </section>
-
-  <section class="card span" id="rulesCard">
+  <section data-grp="6" class="card span" id="rulesCard">
     <h2>规则说明 <small>面板上每个结论是怎么来的 · 参数随 rules_spec.json 自动更新</small></h2>
     <div class="rdoc" id="rulesDoc"></div>
   </section>
-
 </div>
 
 <script src="ui.js?v=20261023e"></script>
@@ -2870,7 +2880,17 @@ tzInit();
 // 目录：取每张卡片标题（不含小字说明），点击直接跳到该卡片，滚动时高亮当前卡片
 // 目录 + 卡片顺序：取每张卡片标题（不含小字说明），点击直接跳到该卡片，滚动时高亮当前卡片；
 // 顺序可以在「调整顺序」里拖动或用 ↑ ↓ 改，保存在本机浏览器（每个人可以不一样）
-const LKEY = "btc_layout_v1";
+// v2：2026-10-27 按新手阅读顺序重排了默认顺序并分成 6 步，旧的自定义顺序不再沿用
+const LKEY = "btc_layout_v2";
+// 分组：卡片跟着自己的组走，自定义顺序里组被打散时就多出几条分组标题
+const GRPS = {
+  1: ["先看结论", "每次打开先看这里：现在能不能开仓、有没有急涨急跌、手上的单到没到该卖的时候。"],
+  2: ["看行情", "价格现在在哪、各周期趋势往哪边、接下来涨的概率有多大。"],
+  3: ["看原因", "为什么在动：新闻、数据公布、市场情绪，美股和其他币有没有一起动。"],
+  4: ["准备下单", "真想开仓时再看：进场价、止损止盈放哪、用多大仓位、最多亏多少。"],
+  5: ["记录与复盘", "每一单都记下来，到期自动核对对错，看自己的方法到底准不准。"],
+  6: ["说明", "面板上每个结论是怎么算出来的，看不懂某张卡片时来这里查。"],
+};
 (function buildToc() {
   const wrap = document.querySelector(".wrap"), nav = $("toc"), top = document.querySelector(".top");
   const cardsNow = () => [...wrap.querySelectorAll(":scope > section.card")];
@@ -2885,12 +2905,23 @@ const LKEY = "btc_layout_v1";
   const apply = ids => {
     const order = ids.filter(id => DEFAULT.includes(id));
     DEFAULT.forEach((id, k) => { if (!order.includes(id)) { const prev = DEFAULT.slice(0, k).reverse().find(x => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : 0, 0, id); } });
-    order.forEach(id => wrap.appendChild(document.getElementById(id)));
+    wrap.querySelectorAll(":scope > .grp").forEach(d => d.remove());
+    let prev = null;
+    order.forEach(id => {
+      const c = document.getElementById(id), g = c.dataset.grp;
+      if (g && g !== prev && GRPS[g]) {
+        const d = document.createElement("div");
+        d.className = "grp"; d.innerHTML = `<span class="gn">${g}</span><b>${esc(GRPS[g][0])}</b><span class="gh">${esc(GRPS[g][1])}</span>`;
+        wrap.appendChild(d);
+      }
+      prev = g; wrap.appendChild(c);
+    });
     return order;
   };
   let links = new Map();
   const renderNav = () => {
-    nav.innerHTML = cardsNow().map(c => `<a href="#${c.id}">${esc(title(c.id))}</a>`).join("") + `<button type="button" class="tedit" id="layOpen">⇅ 调整顺序</button>`;
+    let prev = null;
+    nav.innerHTML = cardsNow().map(c => { const g = c.dataset.grp, lab = g !== prev && GRPS[g] ? `<span class="tg">${g} ${esc(GRPS[g][0])}</span>` : ""; prev = g; return lab + `<a href="#${c.id}">${esc(title(c.id))}</a>`; }).join("") + `<button type="button" class="tedit" id="layOpen">⇅ 调整顺序</button>`;
     links = new Map([...nav.querySelectorAll("a")].map(a => [a.getAttribute("href").slice(1), a]));
     mark();
   };
@@ -2920,7 +2951,7 @@ const LKEY = "btc_layout_v1";
   const commit = ids => { save(apply(ids)); renderNav(); renderLay(); };
   const renderLay = () => {
     const ids = cardsNow().map(c => c.id);
-    list.innerHTML = ids.map((id, k) => `<li draggable="true" data-id="${id}"><span class="h" aria-hidden="true">⠿</span><span class="n">${esc(title(id))}</span>
+    list.innerHTML = ids.map((id, k) => `<li draggable="true" data-id="${id}"><span class="h" aria-hidden="true">⠿</span><span class="n">${esc(title(id))}<small class="lg">${esc(GRPS[document.getElementById(id).dataset.grp]?.[0] || "")}</small></span>
       <button type="button" data-mv="-1" aria-label="上移 ${esc(title(id))}"${k === 0 ? " disabled" : ""}>↑</button><button type="button" data-mv="1" aria-label="下移 ${esc(title(id))}"${k === ids.length - 1 ? " disabled" : ""}>↓</button></li>`).join("");
   };
   function openLay() { renderLay(); lay.hidden = false; list.querySelector("button:not([disabled])")?.focus(); }
@@ -2946,8 +2977,7 @@ const LKEY = "btc_layout_v1";
   $("layDone").onclick = closeLay;
   addEventListener("keydown", e => { if (e.key === "Escape" && !lay.hidden) closeLay(); });
 
-  const saved = load();
-  if (saved) apply(saved);
+  apply(load() || DEFAULT);
   renderNav();
 })();
 // TradingView 小工具：官方嵌入脚本 + JSON 配置；进入视野才加载（手机上省流量），系统深浅色变了就重建
