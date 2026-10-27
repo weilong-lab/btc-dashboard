@@ -1,4 +1,4 @@
-/* 三个页面共用：页面切换、设置下拉、第一次打开先选账户、切换账户后提醒同步、检查云端令牌 */
+/* 三个页面共用：页面切换、浅色 / 深色切换、设置下拉、第一次打开先选账户、切换账户后提醒同步、检查云端令牌 */
 "use strict";
 const UI = (() => {
   const page = document.body.dataset.page;
@@ -9,6 +9,33 @@ const UI = (() => {
     n.setAttribute("aria-label", "页面");
     n.innerHTML = PAGES.map(([k, href, l, s]) => `<a href="${href}"${k === page ? ' aria-current="page"' : ""}><span class="l">${l}</span><span class="s">${s}</span></a>`).join("");
   });
+  // ---------- 浅色 / 深色背景：顶栏按钮一键切换，存在本机（三个页面共用）；没选过就跟随系统 ----------
+  const root = document.documentElement, sysDark = matchMedia("(prefers-color-scheme: dark)"), themeFns = [];
+  const isDark = () => root.dataset.theme ? root.dataset.theme === "dark" : sysDark.matches;
+  const SUN = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+  const thBtns = [];
+  const paintTheme = () => thBtns.forEach(b => {
+    const d = isDark();
+    b.innerHTML = (d ? SUN : MOON) + `<span class="tl">${d ? "浅色" : "深色"}</span>`;
+    b.setAttribute("aria-label", d ? "切换到浅色背景" : "切换到深色背景"); b.title = b.getAttribute("aria-label");
+  });
+  const themeChanged = () => { paintTheme(); themeFns.forEach(f => { try { f(isDark()); } catch (e) { /* 某个图表重画失败不影响其他 */ } }); };
+  function setTheme(t) { root.dataset.theme = t; ls.set("btc_theme", t); themeChanged(); }
+  function onTheme(fn) { themeFns.push(fn); }
+  { const t = ls.get("btc_theme"); if (t === "light" || t === "dark") root.dataset.theme = t; }
+  sysDark.addEventListener("change", () => { if (!root.dataset.theme) themeChanged(); });
+  addEventListener("storage", e => { if (e.key === "btc_theme" && (e.newValue === "light" || e.newValue === "dark")) { root.dataset.theme = e.newValue; themeChanged(); } });
+  document.querySelectorAll(".pnav").forEach(n => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "thbtn";
+    b.onclick = () => setTheme(isDark() ? "light" : "dark");
+    // 和页面切换放在一组（手机上同在第一行），不挤第二行的工具和行情数字
+    const g = document.createElement("div"); g.className = "navgrp";
+    n.before(g); g.append(b, n);
+    thBtns.push(b);
+  });
+  paintTheme();
+
   const acct = ls.get("btc_account") === "zhang" ? "zhang" : "main";
   document.querySelectorAll(".prefs .who").forEach(el => { if (!el.textContent) el.textContent = NAMES[acct]; });
   document.addEventListener("click", e => document.querySelectorAll("details.prefs[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; }));
@@ -60,5 +87,5 @@ const UI = (() => {
     if (r.status === 403 || r.status === 404) throw new Error("这个令牌打不开私有仓库 btc-records：要在 weilong-lab 账号下生成细粒度令牌，只勾 btc-records，Contents 选 Read and write");
     if (r.ok) tokOk = { tok: token, at: Date.now() };
   }
-  return { onSync, markSwitched, checkToken, NAMES };
+  return { onSync, markSwitched, checkToken, NAMES, isDark, onTheme };
 })();

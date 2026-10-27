@@ -6,7 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 模拟盘</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css?v=20261023e">
+<script>try{var t=localStorage.getItem("btc_theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="stylesheet" href="ui.css?v=20261027a">
 <style>
 /* 模拟合约交易：布局参照常见的 U 本位合约下单界面（K 线 · 订单簿 · 下单 · 仓位），颜色和面板一致 */
 :root{
@@ -177,9 +178,16 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
   .tw.pos{display:none}.pcards{display:grid;gap:8px;padding:8px}
   /* 手机顶栏两行：价格 + 页面切换 / 标记价资金费 + 工具 */
   .hd{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"main nav" "stats tools";padding:6px 10px;gap:6px 8px}
-  .hd .hmain{grid-area:main;min-width:0}.hd .pnav{grid-area:nav}.hd .stats{grid-area:stats;gap:2px 9px}.hd .htools{grid-area:tools;gap:6px}.hd .sp{display:none}
+  .hd .hmain{grid-area:main;min-width:0}.hd .navgrp{grid-area:nav}.hd .stats{grid-area:stats;gap:2px 9px}.hd .htools{grid-area:tools;gap:6px}.hd .sp{display:none}
   .sym{display:none}.hp .big{font-size:19px}.stats dd{white-space:nowrap;font-size:11px}.stats dt{font-size:10.5px}
   .hd .conn{display:none}.syncbtn .sl{display:none}.hd .lnk{padding:4px 8px;font-size:12.5px}
+}
+/* 窄屏手机（≤400）：顶栏右边两行各占约 170，标记价格和资金费率再收紧一点，免得被截掉 */
+@media(max-width:400px){
+  .hd .stats{gap:2px 6px}.stats dd{font-size:10.5px;letter-spacing:-.2px}.stats dt{font-size:10px}.hd .htools{gap:4px}.hd .lnk{padding-left:7px;padding-right:7px}
+}
+@media(max-width:370px){
+  .stats dd{font-size:10px;letter-spacing:-.3px}
 }
 .pc{border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:6px}
 .pc .h{display:flex;align-items:center;gap:6px}.pc .h b{font-size:14px}.pc .tag{font-size:11px;padding:0 5px;border-radius:3px;background:var(--chip)}
@@ -348,8 +356,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
-<script src="review-core.js?v=20261023e"></script>
-<script src="ui.js?v=20261023e"></script>
+<script src="review-core.js?v=20261027a"></script>
+<script src="ui.js?v=20261027a"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -1493,6 +1501,7 @@ async function fromCall() {
   $("mcSw").onclick = e => { const b = e.target.closest("[data-mc]"); if (!b) return;
     document.documentElement.dataset.marketColors = b.dataset.mc; lsSet("btc_market_colors", b.dataset.mc); apply();
     buildChart(); dirty = true; tblKey = ""; };
+  if (typeof UI !== "undefined") UI.onTheme(() => { buildChart(); dirty = true; tblKey = ""; });
   addEventListener("storage", e => { if (e.key === "btc_market_colors" && e.newValue) { document.documentElement.dataset.marketColors = e.newValue; apply(); buildChart(); dirty = true; tblKey = ""; } });
 })();
 

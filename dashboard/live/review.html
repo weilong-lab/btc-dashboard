@@ -6,7 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>BTC 复盘</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="ui.css?v=20261023e">
+<script>try{var t=localStorage.getItem("btc_theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="stylesheet" href="ui.css?v=20261027a">
 <style>
 /* 复盘：只看模拟盘的单。陈总 / 张主任 / 汇总三个视图，颜色和另外两个页面一致 */
 :root{
@@ -38,7 +39,7 @@ a{color:var(--accent)}
 .hsel{display:flex;gap:8px;align-items:center;flex:1;min-width:0}.hsel #reload{margin-left:auto;flex:none}
 @media(max-width:820px){
   .hd{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"main nav" "sel sel";padding:6px 10px;gap:6px 8px}
-  .hd h1{grid-area:main}.hd .pnav{grid-area:nav}.hd .hsel{grid-area:sel;min-width:0;overflow-x:auto;scrollbar-width:none}.hd .sp{display:none}
+  .hd h1{grid-area:main}.hd .navgrp{grid-area:nav}.hd .hsel{grid-area:sel;min-width:0;overflow-x:auto;scrollbar-width:none}.hd .sp{display:none}
   .hd .hsel::-webkit-scrollbar{display:none}.hd .hsel{gap:6px}.rl{display:none}
   .sw button{padding:4px 7px;font-size:12.5px}.hd .lnk{padding:4px 9px;font-size:12.5px}
 }
@@ -128,8 +129,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 <div class="dlg" id="dlg" hidden><div id="dBox"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
-<script src="review-core.js?v=20261023e"></script>
-<script src="ui.js?v=20261023e"></script>
+<script src="review-core.js?v=20261027a"></script>
+<script src="ui.js?v=20261027a"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -379,6 +380,8 @@ async function openDetail(key) {
   renderSnapTables(so, sc);
   drawDetail();
 }
+// 换浅色 / 深色背景：详情里的 K 线颜色是建图时读的，开着就重画
+if (typeof UI !== "undefined") UI.onTheme(() => { if (DCH) drawDetail(); });
 function closeDetail() { $("dlg").hidden = true; document.body.style.overflow = ""; if (DCH) { DCH.remove(); DCH = null; } DX = null; }
 $("dlg").addEventListener("click", e => { if (e.target === $("dlg")) closeDetail(); });
 addEventListener("keydown", e => { if (e.key === "Escape" && DX) closeDetail(); });
