@@ -72,6 +72,13 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .toc a.on{background:var(--accent);color:#fff}
 .toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .toc button.tedit{flex:none;font:inherit;font-size:12.5px;padding:3px 9px;border-radius:999px;border:1px dashed var(--line);background:none;color:var(--muted);cursor:pointer;white-space:nowrap}
+/* 美国资金 */
+.ufchart svg{display:block;width:100%;height:auto}
+.ufetf{display:grid;gap:8px;font-size:13px}
+.ufetf .bars{display:flex;gap:6px;align-items:flex-end;height:64px}
+.ufetf .bars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;font-size:10.5px;color:var(--muted);height:100%}
+.ufetf .bars i{display:block;width:100%;max-width:46px;border-radius:3px 3px 0 0;min-height:2px}
+.ufetf .funds{display:flex;flex-wrap:wrap;gap:4px 14px;font-family:var(--m);font-size:12.5px}
 /* 全网合约持仓 / 历年月度涨跌 */
 .dv{min-width:720px}.dv tr.tot td{border-top:1px solid var(--line);font-weight:600}
 .ss{width:100%;border-collapse:separate;border-spacing:2px;font-size:12px;min-width:760px;font-family:var(--m)}
@@ -465,6 +472,22 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <div class="tablewrap"><table class="ma" id="us"></table></div>
     <div class="verdict" id="usSum"></div>
     <p class="note">「实时价」是币安的美股永续合约，一周 7 天 24 小时交易，毫秒级推送，盘前、盘中、盘后、夜盘、周末都有价格。夜盘和周末的价格是币圈交易者定的，成交比正股少，开盘时可能和正股有差距。「相对收盘」以美股上一个常规收盘价为基准（后台监控程序在跑时用 Yahoo 的官方收盘价，否则用永续合约在美东 16:00 的价格）。相关性和贝塔用过去约 20 天的 1 小时涨跌计算；贝塔 1.7 表示 BTC 涨跌 1% 时，这只股票通常涨跌 1.7%。「24 小时走势」是币安永续过去 24 小时的 5 分钟收盘价，最右端是实时价，虚线是美股收盘参考价。「相对 BTC」= 这只股票 1 小时涨跌 − 贝塔 × BTC 1 小时涨跌，正数表示比 BTC 强。回测（约 60 天，1 小时和 5 分钟）里这些股票都不领先 BTC，所以它用来判断这波涨跌是大盘带的还是币圈自己的，不用来预测。</p>
+  </section>
+
+  <section data-grp="3" id="usFlowCard" class="card span">
+    <h2>美国资金 <small id="ufUpd">Coinbase 溢价实时 · 未验证，只看方向</small></h2>
+    <div class="status" id="ufChips"></div>
+    <div class="verdict" id="ufSum">正在连接 Coinbase 和币安…</div>
+    <div class="ufchart" id="ufChart" role="img" aria-label="过去 24 小时 Coinbase 溢价走势"></div>
+    <h3 class="sub-h">IBIT 盘中成交（延迟约 15 分钟）</h3>
+    <div class="tvw" data-tv="symbol-info" style="--tvh:240px"></div>
+    <h3 class="sub-h">ETF 实际资金流向（隔天才有，用来对账）</h3>
+    <div id="ufEtf" class="ufetf">读取中…</div>
+    <div class="note">
+      <p><b>Coinbase 溢价是什么：</b>Coinbase 上 BTC 的美元价格，比币安上 BTC 的 USDT 价格贵还是便宜（已按 Coinbase 上的 USDT 美元价换算，去掉 USDT 本身的偏差）。美国现货 ETF 大多把 BTC 托管在 Coinbase，美国机构也主要在 Coinbase 买卖，所以溢价为正，通常说明美国资金买得更积极；为负，说明美国资金在卖。两边都用买一卖一的中间价，每秒更新。</p>
+      <p><b>怎么用：</b>看方向和持续时间，不看一两秒的跳动。溢价持续为正、IBIT 成交又明显放大，大概率是美国资金在大举买入；当晚公布的 ETF 资金流向可以核对这个判断。美股休市（夜里、周末）时美国机构交易少，溢价的参考价值更小。「明显」指超出过去 24 小时 80% 的时间所在的区间。</p>
+      <p><b>注意：</b>三个指标反映的是同一件事（美国资金的动向），一起变正不是三个独立的信号。Coinbase 溢价能不能帮助判断涨跌还没有回测，回测出来之前只当背景看。IBIT 用的是 TradingView 免费小工具，数据延迟约 15 分钟；实时的 IBIT 行情需要注册行情服务的免费密钥。ETF 资金流向来自 <a href="https://www.tftc.io/bitcoin-etf-flows" target="_blank" rel="noopener">The Commoner Bitcoin ETF Tracker by TFTC</a>（CC BY 4.0，整理自 SoSoValue 和 Farside），通常隔天更新，最新一天之后可能修正；某只基金显示 0 可能是还没公布，不一定是没有进出。</p>
+    </div>
   </section>
 
   <section data-grp="3" id="tvHeatCard" class="card span">
@@ -3013,6 +3036,84 @@ const GRPS = {
   apply(load() || DEFAULT);
   renderNav();
 })();
+// ---------------- 美国资金：Coinbase 溢价（实时）+ ETF 实际资金流向（TFTC，隔天） ----------------
+// 溢价 = Coinbase BTC-USD 中间价 ÷（币安现货 BTCUSDT 中间价 × Coinbase USDT-USD 中间价）− 1
+const UF = { cb: NaN, usdt: NaN, bn: NaN, hist: [], t: 0 };
+const ufPrem = (cb, bn, usdt) => (cb / (bn * (isFinite(usdt) ? usdt : 1)) - 1) * 100;
+function connectUF() {
+  const cb = new WebSocket("wss://ws-feed.exchange.coinbase.com");
+  cb.onopen = () => cb.send(JSON.stringify({ type: "subscribe", product_ids: ["BTC-USD", "USDT-USD"], channels: ["ticker"] }));
+  cb.onmessage = ev => { const d = JSON.parse(ev.data); if (d.type !== "ticker") return; const m = (+d.best_bid + +d.best_ask) / 2 || +d.price;
+    if (d.product_id === "BTC-USD") UF.cb = m; else UF.usdt = m; UF.t = Date.now(); };
+  cb.onclose = () => setTimeout(connectUF, 3000);   // 币安那条已经连着，重连只重开 Coinbase
+  cb.onerror = () => cb.close();
+  if (!UF.bnWs) {
+    const open = () => { const ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@bookTicker"); UF.bnWs = ws;
+      ws.onmessage = ev => { const d = JSON.parse(ev.data); UF.bn = (+d.b + +d.a) / 2; };
+      ws.onclose = () => setTimeout(open, 3000); ws.onerror = () => ws.close(); };
+    open();
+  }
+}
+// 过去 25 小时的 5 分钟收盘价算溢价曲线（Coinbase 每次最多 300 根，最新在前；币安最新在后）
+async function pollUFHist() {
+  const [c, u, b] = await Promise.all([
+    jfetch("https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=300"),
+    jfetch("https://api.exchange.coinbase.com/products/USDT-USD/candles?granularity=300"),
+    jfetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=300")]);
+  const um = new Map(u.map(x => [x[0] * 1000, x[4]])), bm = new Map(b.map(x => [+x[0], +x[4]]));
+  UF.hist = c.map(x => [x[0] * 1000, x[4]]).filter(([t]) => bm.has(t)).map(([t, cp]) => [t, ufPrem(cp, bm.get(t), um.get(t))]).sort((a, z) => a[0] - z[0]);
+  renderUF();
+}
+async function pollETF() {
+  try { S.etf = await jfetch("https://www.tftc.io/bitcoin-etf-flows/latest.json"); } catch (e) { S.etf = { err: String(e.message || e) }; }
+  renderETF();
+}
+function renderUF() {
+  if (!$("ufChips")) return;
+  const now = Date.now(), live = isFinite(UF.cb) && isFinite(UF.bn) && now - UF.t < 60e3 ? ufPrem(UF.cb, UF.bn, UF.usdt) : NaN;
+  const h = UF.hist, v = h.map(x => x[1]), avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN;
+  const last1h = avg(h.filter(x => now - x[0] <= 36e5).map(x => x[1])), last24 = avg(h.filter(x => now - x[0] <= 864e5).map(x => x[1]));
+  const srt = [...v].sort((a, b) => a - b), q = p => srt.length ? srt[Math.floor(p * (srt.length - 1))] : NaN, lo = q(0.1), hi = q(0.9);
+  const sess = usSession(now), usd = isFinite(live) ? UF.cb - UF.bn * (isFinite(UF.usdt) ? UF.usdt : 1) : NaN;
+  const cls = x => !isFinite(x) ? "" : x > 0 ? "good" : x < 0 ? "bad" : "";
+  const pp = x => isFinite(x) ? (x >= 0 ? "+" : "") + x.toFixed(3) + "%" : "—";
+  setHTML($("ufChips"), [
+    ["Coinbase 溢价 · 此刻", pp(live), cls(live), isFinite(usd) ? `每个 BTC ${usd >= 0 ? "贵" : "便宜"} ${Math.abs(usd).toFixed(1)} 美元` : "连接中…"],
+    ["过去 1 小时平均", pp(last1h), cls(last1h), "按 5 分钟收盘价"],
+    ["过去 24 小时平均", pp(last24), cls(last24), isFinite(lo) ? `80% 的时间在 ${pp(lo)} ~ ${pp(hi)}` : ""],
+    ["美股时段", sess, sess === "盘中" ? "good" : "mut", sess === "盘中" ? "美国机构在交易，溢价更有参考价值" : "美国机构交易少，溢价参考价值小"],
+  ].map(([k, x, c, sub]) => `<div class="chip"><span>${k}</span><b class="${c}">${x}</b><span>${esc(sub)}</span></div>`).join(""));
+  const ref = isFinite(last1h) ? last1h : live;
+  let sum = !isFinite(ref) ? "正在读取 Coinbase 和币安的价格…"
+    : ref > hi ? "Coinbase 明显比币安贵：美国资金买得比平时积极。" : ref < lo ? "Coinbase 明显比币安便宜：美国资金在卖，比平时明显。"
+    : ref > 0 ? "Coinbase 略贵于币安，美国买盘稍强，在平时的范围内。" : "Coinbase 略便宜于币安，美国卖盘稍强，在平时的范围内。";
+  if (isFinite(ref) && sess !== "盘中") sum += " 现在美股" + sess + "，参考价值较小。";
+  setHTML($("ufSum"), sum + " 未经回测，只看方向。");
+  // 24 小时曲线：零线上方涨色、下方跌色
+  if (h.length > 2) {
+    const W = 720, H = 120, t0 = h[0][0], t1 = now, mx = Math.max(0.02, ...v.map(Math.abs), isFinite(live) ? Math.abs(live) : 0);
+    const X = t => ((t - t0) / (t1 - t0) * (W - 50)).toFixed(1), Y = x => (H / 2 - x / mx * (H / 2 - 8)).toFixed(1);
+    const pts = h.map(([t, x]) => `${X(t)},${Y(x)}`).concat(isFinite(live) ? [`${X(now)},${Y(live)}`] : []).join(" ");
+    const ticks = [-mx * 0.75, 0, mx * 0.75].map(x => `<text x="${W - 46}" y="${+Y(x) + 4}" font-size="11" fill="${css("--muted")}" font-family="IBM Plex Mono,monospace">${pp(x).replace("+0.000%", "0")}</text>`).join("");
+    const hrs = []; for (let k = 1; k <= 24; k++) { const t = Math.floor(now / 36e5) * 36e5 - (k - 1) * 36e5; if (t > t0 && tzHour(t) % 6 === 0) hrs.push(`<line x1="${X(t)}" x2="${X(t)}" y1="4" y2="${H - 16}" stroke="${css("--grid")}"/><text x="${X(t)}" y="${H - 3}" font-size="10.5" text-anchor="middle" fill="${css("--muted")}">${fmtClock(t)}</text>`); }
+    setHTML($("ufChart"), `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><defs><clipPath id="ufUp"><rect x="0" y="0" width="${W}" height="${Y(0)}"/></clipPath><clipPath id="ufDn"><rect x="0" y="${Y(0)}" width="${W}" height="${H}"/></clipPath></defs>${hrs.join("")}
+      <line x1="0" x2="${W - 50}" y1="${Y(0)}" y2="${Y(0)}" stroke="${css("--muted")}" stroke-dasharray="3 3"/>
+      <polyline points="${pts}" fill="none" stroke="${css("--good")}" stroke-width="1.6" clip-path="url(#ufUp)"/><polyline points="${pts}" fill="none" stroke="${css("--bad")}" stroke-width="1.6" clip-path="url(#ufDn)"/>${ticks}</svg>`);
+  }
+  $("ufUpd").textContent = `Coinbase 溢价实时${isFinite(live) ? " · " + fmtClock(UF.t, true) : ""} · 未验证，只看方向`;
+}
+function renderETF() {
+  const E = S.etf; if (!E || !$("ufEtf")) return;
+  if (E.err || !E.latestSession) { setHTML($("ufEtf"), `<p class="note">读取失败（${esc(E.err || "格式不对")}），稍后会自动重试。</p>`); return; }
+  const L = E.latestSession, yi = n => (n >= 0 ? "+" : "−") + (Math.abs(n) / 1e8).toFixed(2) + " 亿", rec = (E.recentSessions || []).slice(0, 5).reverse();
+  const md = d => d.slice(5).replace("-", "/"), mx = Math.max(1, ...rec.map(r => Math.abs(r.netFlowUsd)));
+  const funds = Object.entries(L.perEtfUsd || {}).filter(([, x]) => x).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+  const cls = x => x > 0 ? "good" : x < 0 ? "bad" : "";
+  setHTML($("ufEtf"), `<div>最近一个交易日 <b>${md(L.date)}</b>（美东）全部现货 BTC ETF 合计 <b class="${cls(L.netFlowUsd)}">${L.netFlowUsd >= 0 ? "净流入" : "净流出"} ${yi(L.netFlowUsd).slice(1)}美元</b>${funds.length ? "，其中：" : "。"}</div>`
+    + (funds.length ? `<div class="funds">${funds.map(([k, x]) => `<span>${esc(k)} <b class="${cls(x)}">${yi(x)}</b></span>`).join("")}</div>` : "")
+    + `<div class="bars" aria-label="最近 5 个交易日净流入">${rec.map(r => `<div><span class="${cls(r.netFlowUsd)}">${yi(r.netFlowUsd)}</span><i style="height:${Math.max(2, Math.abs(r.netFlowUsd) / mx * 40).toFixed(0)}px;background:var(${r.netFlowUsd >= 0 ? "--good" : "--bad"})"></i>${md(r.date)}</div>`).join("")}</div>`
+    + `<p class="note">单位：美元。数据更新到 ${esc(E.updatedThrough || L.date)}。来源：The Commoner Bitcoin ETF Tracker by TFTC（tftc.io/bitcoin-etf-flows）。</p>`);
+}
 // ---------------- 全网合约持仓：币安 / OKX / Bybit / Hyperliquid 的 BTC 永续持仓量和资金费率 ----------------
 // 每家返回 { oi: 现在持仓（BTC，单边）, oi24: 24 小时前持仓, fr: 当期资金费率（小数）, hrs: 结算间隔小时, next: 下次结算时间, px: 标记价 }
 const DERIV = [
@@ -3021,10 +3122,10 @@ const DERIV = [
     return { oi: +oi.openInterest, oi24: h.length >= 25 ? +h[0].sumOpenInterest : NaN, fr: +f.lastFundingRate, hrs: 8, next: +f.nextFundingTime, px: +f.markPrice };   // 历史从旧到新
   }],
   ["OKX", async () => {
-    // 持仓历史（rubik 统计接口）不允许网页跨域读取，读不到就只缺 24 小时变化，不影响持仓和资金费率
-    const [oi, h, f] = await Promise.all([jfetch("https://www.okx.com/api/v5/public/open-interest?instId=BTC-USDT-SWAP"), jfetch("https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-history?instId=BTC-USDT-SWAP&period=1H&limit=25").catch(() => null), jfetch("https://www.okx.com/api/v5/public/funding-rate?instId=BTC-USDT-SWAP")]);
-    const o = oi.data[0], r = f.data[0], hd = (h && h.data) || [];   // 历史从新到旧：[时间, 张数, BTC, USD]
-    return { oi: +o.oiCcy, oi24: hd.length >= 25 ? +hd[24][2] : NaN, fr: +r.fundingRate, hrs: (+r.nextFundingTime - +r.fundingTime) / 36e5 || 8, next: +r.fundingTime, px: +o.oiUsd / +o.oiCcy };
+    // 持仓历史只有 rubik 统计接口，它不允许网页跨域读取，所以 OKX 没有 24 小时变化
+    const [oi, f] = await Promise.all([jfetch("https://www.okx.com/api/v5/public/open-interest?instId=BTC-USDT-SWAP"), jfetch("https://www.okx.com/api/v5/public/funding-rate?instId=BTC-USDT-SWAP")]);
+    const o = oi.data[0], r = f.data[0];
+    return { oi: +o.oiCcy, oi24: NaN, fr: +r.fundingRate, hrs: (+r.nextFundingTime - +r.fundingTime) / 36e5 || 8, next: +r.fundingTime, px: +o.oiUsd / +o.oiCcy };
   }],
   ["Bybit", async () => {
     // Bybit 的 openInterest 现在多空两边都算，singleOpenInterest 才和其他三家一样是单边
@@ -3125,6 +3226,7 @@ function renderSeason() {
     "crypto-coins-heatmap": () => ({ dataSource: "Crypto100", blockSize: "market_cap_calc", blockColor: "24h_close_change|5", hasTopBar: true, isDataSetEnabled: false, isZoomEnabled: true, hasSymbolTooltip: true, isMonoSize: false }),
     "events": () => ({ importanceFilter: "0,1", countryFilter: "us" }),
     "timeline": () => ({ feedMode: "market", market: "crypto", displayMode: "regular" }),
+    "symbol-info": () => ({ symbol: "NASDAQ:IBIT" }),
   };
   const build = el => {
     const kind = el.dataset.tv;
@@ -3151,6 +3253,10 @@ setInterval(() => pollFunding().catch(() => {}), 60000);
 setInterval(() => pollStocks(false).catch(() => {}), 60000);
 setInterval(() => pollMood().catch(() => {}), 300000);
 pollDeriv().catch(() => {}); pollSeason().catch(() => {});
+connectUF(); pollUFHist().catch(() => {}); pollETF();
+setInterval(renderUF, 1000);
+setInterval(() => pollUFHist().catch(() => {}), 300000);
+setInterval(pollETF, 3600e3);
 setInterval(() => pollDeriv().catch(() => {}), 60000);
 setInterval(() => { if (S.season) renderSeason(); }, 60000);
 setInterval(() => pollSeason().catch(() => {}), 3600e3);
