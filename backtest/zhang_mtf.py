@@ -126,7 +126,7 @@ def forward(d5, mask, side, gap=12):
 
 
 def trade(d5, idx, side, exit_rule, max_bars=48, stop_atr=None):
-    """逐笔模拟：下一根开盘进场；exit_rule(t) 在第 t 根收盘为真就在下一根开盘走；可选 1 小时 ATR 止损。"""
+    """逐笔模拟：下一根开盘进场；exit_rule(t, e) 在第 t 根收盘为真就在下一根开盘走（e = 进场那根）；可选 1 小时 ATR 止损。"""
     o, h, l = (d5[k].to_numpy() for k in ("open", "high", "low"))
     atr = d5["atr1h"].to_numpy()
     sg = 1 if side == "long" else -1
@@ -142,7 +142,7 @@ def trade(d5, idx, side, exit_rule, max_bars=48, stop_atr=None):
             if stop is not None and ((l[j] <= stop) if sg > 0 else (h[j] >= stop)):
                 x, xj = stop, j
                 break
-            if exit_rule(j):
+            if exit_rule(j, e):
                 x, xj = o[j + 1], j + 1
                 break
         if x is None:
@@ -167,8 +167,8 @@ def show(d5, name, mask, side, exits=True):
     if not exits:
         return
     rsi, j = d5["rsi6"].to_numpy(), d5["j"].to_numpy()
-    opp = (lambda t: rsi[t] > 80 or j[t] > 110) if side == "long" else (lambda t: rsi[t] < 20 or j[t] < -5)
-    for label, rule, st in (("拿 1 小时", lambda t: False, None),
+    opp = (lambda t, e=0: rsi[t] > 80 or j[t] > 110) if side == "long" else (lambda t, e=0: rsi[t] < 20 or j[t] < -5)
+    for label, rule, st in (("拿 1 小时", lambda t, e=0: False, None),
                             ("5 分反向极值就走（最长 4h）", opp, None),
                             ("同上 + 1 ATR 止损", opp, 1.0)):
         mb = 12 if label == "拿 1 小时" else 48
@@ -279,7 +279,7 @@ def main():
     say("\n== 1c. 按年份：5 分 + 15 分 + 4h 同向，拿 1 小时，扣费每笔 ==")
     for side, m in (("short", base_s & (bias < 0)), ("long", base_l & (bias > 0))):
         idx, _ = forward(d5, m, side)
-        tr = trade(d5, idx, side, lambda t: False, 12)
+        tr = trade(d5, idx, side, lambda t, e=0: False, 12)
         s = pd.Series([x[1] for x in tr], index=d5.index[[x[0] for x in tr]])
         g = s.groupby(s.index.year).agg(["count", "mean"])
         say(f"  {side}: " + "  ".join(f"{y}: {int(r['count'])} 笔 {r['mean']:+.3f}%" for y, r in g.iterrows()))
@@ -296,6 +296,47 @@ def main():
                    else (1 - d5["low"].iloc[t + 1:t + 13].min() / px) * 100)
             say(f"  {d5.index[t].tz_convert('Asia/Tokyo'):%m-%d %H:%M} {side} 进场 {px:,.0f}  "
                 f"1 小时后 {r1:+.2f}%  1 小时内最多顺向 {mfe:.2f}%  4h MA99 {'向上' if bias.iat[t] > 0 else '向下'}")
+
+    # ---------- 1e. 按指标卖（MA7 拐头、出现反向信号等） ----------
+    say("\n== 1e. 按指标卖：进场同上（5 分 + 15 分），卖出看盘面信号，最长拿 24 小时 ==")
+    say("（每种卖法都是信号出现那根收盘后、下一根开盘市价卖；扣 0.10% 手续费）")
+    c_ = d5["close"].to_numpy(); m7 = d5["ma7"].to_numpy(); r5a, j5a = r5.to_numpy(), j5.to_numpy()
+    sgS, sgL = base_s.to_numpy(), base_l.to_numpy()
+    div_sa, div_la = div_s.fillna(False).to_numpy(), div_l.fillna(False).to_numpy()
+    def exits(side):
+        lg = side == "long"
+        up = lambda t: m7[t] > m7[t - 1]
+        dn = lambda t: m7[t] < m7[t - 1]
+        against = dn if lg else up
+        favor = up if lg else dn
+        opp5 = (lambda t: r5a[t] > 80 or j5a[t] > 110) if lg else (lambda t: r5a[t] < 20 or j5a[t] < -5)
+        oppsig = (lambda t: sgS[t]) if lg else (lambda t: sgL[t])
+        oppdiv = (lambda t: div_sa[t]) if lg else (lambda t: div_la[t])
+        cross = (lambda t: c_[t] < m7[t]) if lg else (lambda t: c_[t] > m7[t])
+        def turned_back(t, e):        # MA7 先朝有利方向拐过，之后又拐回来
+            return against(t) and any(favor(k) for k in range(e, t))
+        def any_opp(t, e):            # 张主任做空 / 做多条件里出现任意一项：5 分反向超买超卖、量价反向背离、MA7 拐回
+            return opp5(t) or oppdiv(t) or turned_back(t, e)
+        return [
+            ("MA7 一往不利方向拐就卖", lambda t, e: against(t)),
+            ("MA7 先拐向有利、再拐回来就卖", turned_back),
+            ("收盘跌破 / 站上 MA7 就卖", lambda t, e: cross(t)),
+            ("5 分出现反向超买 / 超卖就卖", lambda t, e: opp5(t)),
+            ("出现完整反向信号（5+15 分）就卖", lambda t, e: oppsig(t)),
+            ("反向条件任意一项出现就卖", any_opp),
+            ("先有浮盈，MA7 拐回就卖", lambda t, e: turned_back(t, e) and (c_[t] > c_[e] if lg else c_[t] < c_[e])),
+        ]
+    for side, m in (("short", base_s), ("long", base_l), ("short", base_s & (bias < 0)), ("long", base_l & (bias > 0))):
+        idx, _ = forward(d5, m, side)
+        tag = ("做空" if side == "short" else "做多") + ("（顺 4h MA99）" if len(idx) < 4000 and m is not base_s and m is not base_l else "")
+        say(f"  {tag}：")
+        for label, rule in exits(side):
+            for st in (None, 1.0):
+                tr = trade(d5, idx, side, rule, 288, st)
+                p = np.array([x[1] for x in tr])
+                yr = pd.Series(p, index=d5.index[[x[0] for x in tr]]).groupby(lambda x: x.year).mean()
+                say(f"    {label + ('' if st is None else ' + 1 ATR 止损'):<34} 胜率 {np.mean(p > 0) * 100:3.0f}%  扣费每笔 {p.mean():+.3f}%  "
+                    f"不扣费 {p.mean() + FEE:+.3f}%  持有中位 {np.median([x[2] for x in tr]) * 5:4.0f} 分  年份为正 {int((yr > 0).sum())}/{len(yr)}")
 
     # ---------- 2. 全周期超买 ----------
     say("\n== 2. 5 分到 4 小时全部严重超买 / 超卖（10/28 17:53「全仓梭哈做空」） ==")
