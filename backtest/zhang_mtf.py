@@ -180,6 +180,15 @@ def show(d5, name, mask, side, exits=True):
             f"持有中位 {np.median([x[2] for x in tr]) * 5:.0f} 分  年份为正 {pos}/{len(yr)}")
 
 
+def all_out(d5, short):
+    """5 分、15 分、30 分、1 小时、4 小时每个周期 RSI6 或 J 有一项在区间外（5 分用 80/20、110/-5，其余 70/20、100/0）。"""
+    m = (d5["rsi6"] > 80) | (d5["j"] > 110) if short else (d5["rsi6"] < 20) | (d5["j"] < -5)
+    for tf in ("15min", "30min", "1h", "4h"):
+        r, j = d5[f"rsi_{tf}"], d5[f"j_{tf}"]
+        m &= ((r > 70) | (j > 100)) if short else ((r < 20) | (j < 0))
+    return m
+
+
 def main():
     d1, d5 = build()
     say(f"数据：{d5.index[0]} → {d5.index[-1]}，统计从 {START} 开始；手续费 {FEE}% 往返")
@@ -315,6 +324,21 @@ def main():
     o_ = d5["open"].to_numpy()
     dd = np.array([(1 - lo[t + 1:t + 13].min() / o_[t + 1]) * 100 for t in idx])
     say(f"    进场后 1 小时内先再跌：中位 {np.median(dd):.2f}%，五次里最差一次 {np.percentile(dd, 80):.2f}%，最大 {dd.max():.2f}%")
+
+    # 张主任口径（10/28 晚）：5 分、15 分、30 分、1 小时、4 小时每个周期都在区间外（RSI6 或 J 任一项）
+    say("\n== 2b. 张主任口径：5 分 / 15 分 / 30 分 / 1 小时 / 4 小时全部在区间外（面板「极端」提醒用这组数） ==")
+    o_, h_, l_, c_ = (d5[k].to_numpy() for k in ("open", "high", "low", "close"))
+    for side, m in (("short", all_out(d5, True)), ("long", all_out(d5, False))):
+        idx = np.flatnonzero(dedupe(m.to_numpy() & (d5.index >= START), 288))
+        idx = idx[idx + 289 < len(d5)]
+        sg = 1 if side == "long" else -1
+        r4 = sg * (c_[idx + 48] / o_[idx + 1] - 1) * 100 - FEE
+        adv = np.array([((h_[t + 1:t + 49].max() / o_[t + 1] - 1) if sg < 0 else (1 - l_[t + 1:t + 49].min() / o_[t + 1])) * 100 for t in idx])
+        yr = pd.Series(r4, index=d5.index[idx]).groupby(lambda x: x.year).mean()
+        say(f"  {'全部超买做空' if sg < 0 else '全部超卖做多'}：{len(idx)} 天，4 小时后方向对 {np.mean(r4 + FEE > 0) * 100:.0f}%，扣费均 {r4.mean():+.3f}%，"
+            f"年份为正 {int((yr > 0).sum())}/{len(yr)}")
+        say(f"    4 小时内先反向走：中位 {np.median(adv):.2f}%，五次里有一次超过 {np.percentile(adv, 80):.2f}%，最大 {adv.max():.1f}%；"
+            f"≥1%（100 倍爆仓）{np.mean(adv >= 1) * 100:.0f}%，≥2%（50 倍爆仓）{np.mean(adv >= 2) * 100:.0f}%")
 
     # ---------- 3. 4h MA99 当压力位 ----------
     say("\n== 3. 4 小时 MA99 是不是压力 / 支撑 ==")

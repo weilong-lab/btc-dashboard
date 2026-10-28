@@ -373,9 +373,10 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 
   <section data-grp="1" class="card span" id="zhangCard">
     <h2>张主任多周期信号 <small>先 4 小时 → 再 1 小时 / 30 分 → 最后 15 分 / 5 分 · 指标按盘中实时</small></h2>
+    <div class="verdict bad" id="zhExtreme" hidden></div>
     <div class="verdict" id="zhVerdict">正在读取行情…</div>
     <div class="tablewrap"><table class="jt" id="zhTable"></table></div>
-    <p class="note">规则（张主任 10/28）：① 4 小时 MA99 向上只做多、向下只做空；② 看 1 小时、30 分钟正处在上涨还是下跌阶段（MA7 方向）；③ 5 分钟 RSI6 &gt; 80 或 J &gt; 110 算超买，RSI6 &lt; 20 或 J &lt; -5 算超卖（RSI 优先）；④ 15 分钟放宽：RSI6 &gt; 70 或 J &gt; 100 超买，RSI6 &lt; 20 或 J &lt; 0 超卖；同一个指标要 5 分钟和 15 分钟同时在区间外才提示，只有 5 分钟不报；RSI 优先：两个周期的 RSI 都在区间外就一定提示，KDJ 不用满足，只有 KDJ 两个周期在区间外也提示但标明参考性弱一些；⑤ 同时出现量价顶背离 / 底背离 = 强烈提示；⑥ 最后看 5 分钟 MA7 拐不拐头。另外：两个周期都超买却还在放量创新高，标「反常」，说明有场外资金在推（例如 10/28 17:00 美股盘前那一波），不要逆着做。<br>
+    <p class="note">规则（张主任 10/28）：① 4 小时 MA99 向上只做多、向下只做空；② 看 1 小时、30 分钟正处在上涨还是下跌阶段（MA7 方向）；③ 5 分钟 RSI6 &gt; 80 或 J &gt; 110 算超买，RSI6 &lt; 20 或 J &lt; -5 算超卖（RSI 优先）；④ 15 分钟放宽：RSI6 &gt; 70 或 J &gt; 100 超买，RSI6 &lt; 20 或 J &lt; 0 超卖；同一个指标要 5 分钟和 15 分钟同时在区间外才提示，只有 5 分钟不报；RSI 优先：两个周期的 RSI 都在区间外就一定提示，KDJ 不用满足，只有 KDJ 两个周期在区间外也提示但标明参考性弱一些；⑤ 同时出现量价顶背离 / 底背离 = 强烈提示；⑥ 最后看 5 分钟 MA7 拐不拐头。另外：5 分、15 分、30 分、1 小时、4 小时全部在区间外（每个周期 RSI6 或 J 有一项即可，30 分以上用 15 分的区间），标「极端」，并写出历史上通常先反向走多远、50 倍 / 100 倍先爆仓的比例；两个周期都超买却还在放量创新高，标「反常」，说明有场外资金在推（例如 10/28 17:00 美股盘前那一波），不要逆着做。<br>
     回测（2021–2026 年 1 分钟数据，市价进出扣 0.10% 往返手续费）：按这个口径每年做空约 1200 次、做多约 800 次，之后 15 分钟方向对的比例约 58–59%，但平均只走 0.01%–0.03%，不够付手续费；加 4 小时 MA99 同向、1 小时 / 30 分阶段、量价背离、MA7 拐头，或者再要求 30 分 / 1 小时也超买超卖，扣费后每笔都在 -0.01% 到 -0.12% 之间，6 年里没有一种做法稳定为正。进场后 1 小时内价格通常还会再往不利方向走 0.3% 左右（五次里有一次超过 0.8%），所以「进去就是最高 / 最低点」只在少数时候成立。这张卡片按张主任的要求做提示用，不是赚钱信号；开了浏览器提醒的话，出现新提示会弹通知。</p>
   </section>
 
@@ -2742,6 +2743,8 @@ function zhState() {
   const slope7 = b => { const c = closedB(b), i = c.length - 1; return Math.sign(ma(c, i, 7) - ma(c, i - 1, 7)); };
   const i4 = h4.length - 1, ma99 = ma(h4, i4, 99), dir4 = Math.sign(ma99 - ma(h4, i4 - 3, 99));
   const o5 = osc(b5.slice(-300)), o15 = osc(b15.slice(-300));
+  const big = [o15, osc(live(S.b30).slice(-200)), osc(live(S.b60).slice(-120)), osc(live(S.b240).slice(-120))];
+  const ext = ZH.s5(o5) && big.every(ZH.s15) ? "short" : ZH.l5(o5) && big.every(ZH.l15) ? "long" : null;
   const ph1 = slope7(S.b60), ph30 = slope7(S.b30);
   // 量价背离：最近 6 根（已收盘）创了之前 2 小时的新高 / 新低，但这 6 根里最大的量不到之前 2 小时最大量的 9 成
   const r6 = c5.slice(-6), p24 = c5.slice(-30, -6), mx = (a, f) => Math.max(...a.map(f)), mn = (a, f) => Math.min(...a.map(f));
@@ -2755,7 +2758,7 @@ function zhState() {
   const vNow = cur.v / Math.max(0.2, Math.min(1, el));   // 未走完的这根按已过时间折算成整根的量
   const hot = vNow > 2 * avgV && vNow > c5.at(-1).v;
   const anomS = short && hot && cur.h >= mx(c5.slice(-12), x => x.h), anomL = long && hot && cur.l <= mn(c5.slice(-12), x => x.l);
-  return { dir4, ma99, ph1, ph30, o5, o15, short, long, byS, byL, divS, divL, t7, t7prev, anomS, anomL, bar: cur.t };
+  return { ext, big, dir4, ma99, ph1, ph30, o5, o15, short, long, byS, byL, divS, divL, t7, t7prev, anomS, anomL, bar: cur.t };
 }
 function renderZhang() {
   const z = zhState();
@@ -2787,6 +2790,20 @@ function renderZhang() {
     }
   }
   $("zhVerdict").className = cls; $("zhVerdict").textContent = v;
+  // 极端：5 分 / 15 分 / 30 分 / 1 小时 / 4 小时全部在区间外（数字来自 backtest/zhang_mtf.py 第 2b 节）
+  const EX = { short: [0.65, 1.63, 13, 36, "-0.07%（6 年里只有 1 年为正）"], long: [0.72, 1.88, 19, 39, "+0.12%（6 年里 4 年为正，但 2025、2026 都为负）"] };
+  const exEl = $("zhExtreme");
+  if (z.ext) {
+    const s = z.ext === "short", e = EX[z.ext], ob = s ? "超买" : "超卖";
+    const rs = [z.o5, ...z.big].map(o => o.rsi.toFixed(0)).join(" / ");
+    const msg = `极端：5 分、15 分、30 分、1 小时、4 小时全部${ob}（RSI6 ${rs}）。历史上这之后 4 小时内价格通常还会先往${s ? "上冲" : "下砸"} ${e[0]}%，五次里有一次超过 ${e[1]}%；50 倍杠杆约 ${e[2]}% 的时候会先爆仓，100 倍约 ${e[3]}%。4 小时后平仓扣费每笔 ${e[4]}。方向常常是对的，但要先扛得住反向那一段。`;
+    exEl.hidden = false; exEl.textContent = msg;
+    const key = `zhx:${z.ext}`; S.zhExtAt = S.zhExtAt || {};
+    if (!S.zhExtAt[key] || Date.now() - S.zhExtAt[key] > 4 * 3600e3) {
+      S.zhExtAt[key] = Date.now();
+      try { if ("Notification" in window && Notification.permission === "granted") new Notification(`张主任规则 · 极端：所有周期都${ob}`, { body: msg, tag: key }); } catch (err) { /* 只在页面提示 */ }
+    }
+  } else exEl.hidden = true;
   if (note) {
     const key = `zh:${note[0]}:${z.bar}`; S.zhNotified = S.zhNotified || new Set();
     if (!S.zhNotified.has(key)) {
