@@ -600,6 +600,12 @@ def main():
     except Exception as ex:
         paper = None
         log("模拟盘未启动（需要 pip install -r requirements.txt）:", ex)
+    try:
+        from zhang_alert import ZhangAlert
+        zalert = ZhangAlert(OUT, notifier.send, log)
+    except Exception as ex:
+        zalert = None
+        log("张主任规则提醒未启动:", ex)
     from publish import Publisher
     pub = Publisher(OUT, log)
     spub = StatePublisher(OUT, log)
@@ -614,6 +620,8 @@ def main():
         lab.run()
         if paper:
             paper.step()
+        if zalert:
+            zalert.step()
         cal.poll()
         if time.time() - last_backfill > 600:
             backfill(store)
