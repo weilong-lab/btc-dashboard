@@ -602,7 +602,7 @@ def main():
         log("模拟盘未启动（需要 pip install -r requirements.txt）:", ex)
     try:
         from zhang_alert import ZhangAlert
-        zalert = ZhangAlert(OUT, notifier.send, log)
+        zalert = ZhangAlert(OUT, notifier.send, log, calls=paper.st["model_calls"] if paper else None)
     except Exception as ex:
         zalert = None
         log("张主任规则提醒未启动:", ex)

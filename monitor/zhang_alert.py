@@ -21,6 +21,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "backtest"))
 import zhang  # noqa: E402
 
+ZH_WHO = "张主任多周期信号"
+HOLD_MIN = 240   # 「四小时理论」：进场后拿满 4 小时卖，不设止损止盈
 NOTE = "回测：同类提示之后 15 分钟方向对约 58%，但平均幅度不够付手续费，只作提示。"
 # 极端：5 分 / 15 分 / 30 分 / 1 小时 / 4 小时全部在区间外。数字来自 backtest/zhang_mtf.py 第 2b 节（2021–2026，一天只算一次）
 EXTREME = {
@@ -121,10 +123,27 @@ def describe(z):
     return [("red" if with4 else "yellow", title, body, f"{'strong' if div else 'sig'}-{side}")]
 
 
+def make_call(z, calls):
+    """信号（不含「反常」）记成一条喊单：5 分钟收盘价进场，拿满 4 小时卖。同方向 60 分钟内只记一次。"""
+    side = "short" if z["short"] else "long" if z["long"] else None
+    if not side or (z["anom_s"] if side == "short" else z["anom_l"]):
+        return None
+    t = int(z["t"].timestamp() * 1000)
+    if any(c.get("who") == ZH_WHO and c["side"] == side and t - c["t"] < 3600e3 for c in calls[-50:]):
+        return None
+    s = side == "short"
+    with4 = z["dir4"] < 0 if s else z["dir4"] > 0
+    div = z["div_s"] if s else z["div_l"]
+    return dict(id=f"z-{side}-{t}", t=t, who=ZH_WHO, side=side, ref=round(z["close"], 1), refGiven=False, stop=0, target=0, hz=HOLD_MIN,
+                text=f"{'强烈' if div else ''}提示{'做空' if s else '做多'}：5 分和 15 分 {z['by'] or 'RSI'} 都{'超买' if s else '超卖'}，"
+                     f"{'顺' if with4 else '逆'} 4 小时 MA99；{'所有周期都在区间外（极端）；' if z.get('ext') == side else ''}按「四小时理论」拿满 4 小时卖，不设止损止盈")
+
+
 class ZhangAlert:
-    def __init__(self, out_dir, send, log=print):
+    def __init__(self, out_dir, send, log=print, calls=None):
         self.path = os.path.join(out_dir, "zhang_alert_state.json")
         self.send, self.log = send, log
+        self.calls = calls          # 模拟盘的喊单列表（paper.st["model_calls"]）：信号记进去，卖出和核对跟模型喊单一样
         try:
             self.st = json.load(open(self.path))
         except Exception:
@@ -149,6 +168,11 @@ class ZhangAlert:
         self.st["last_bar"] = bar
         z = evaluate(d5, h4)
         now = z["t"].timestamp()
+        if not first and self.calls is not None:
+            c = make_call(z, self.calls)
+            if c:
+                self.calls.append(c)
+                self.log(f"张主任信号记一单：{'做多' if c['side'] == 'long' else '做空'}，参考价 {c['ref']:,.1f}")
         for level, title, body, key in describe_extreme(z) + describe(z):
             gap = 4 * 3600 if key.startswith("extreme") else 3600   # 极端情况往往持续好几个小时，4 小时内只提醒一次
             if first or now - self.st["sent"].get(key, 0) < gap:

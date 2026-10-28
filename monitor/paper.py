@@ -42,7 +42,7 @@ def cloud_calls():
             doc = json.loads(base64.b64decode(json.load(r)["content"]).decode("utf-8"))
     except Exception:
         return []
-    return [c for c in doc.get("calls", []) if c.get("who") != MODEL_WHO and c.get("ref")]
+    return [c for c in doc.get("calls", []) if c.get("who") not in (MODEL_WHO, "张主任多周期信号") and c.get("ref")]   # 程序记的单自己管卖出
 
 
 def mac_notify(title, body):
@@ -138,7 +138,7 @@ class PaperTrader:
             if now_ms - c["t"] < 15 * 60e3:   # 只提醒刚发生的（重启回放历史时不提醒）
                 self.notify("模型买入提示", f"{'做多' if c['side'] == 'long' else '做空'} 参考价 {c['ref']:,.0f}，止损 {c['stop']:,.0f}" + (f"，止盈 {c['target']:,.0f}" if c["target"] else "") + f"，最长 {c['hz'] // 60} 小时")
         self.update_exits(d)
-        self.watch_positions(d, atr1h[-1], self.st["model_calls"])
+        self.watch_positions(d, atr1h[-1], [c for c in self.st["model_calls"] if c.get("who") == MODEL_WHO])   # 张主任信号单只做验证，不发盘面提醒
         manual = cloud_calls()                # 人工喊单：只提醒（该卖了 / 盘面变化），记录由面板写
         if manual:
             self.notify_manual_exits(d, manual)
@@ -238,9 +238,10 @@ class PaperTrader:
             if ex:
                 ex["pnl"] = round(sgn * (ex["px"] / c["ref"] - 1) * 100, 4)
                 c["exit"] = ex
-                self.log(f"模型喊单卖出：{ex['why']}，{ex['pnl']:+.2f}%")
+                name = "模型" if c.get("who") == MODEL_WHO else c.get("who", "")
+                self.log(f"{name}喊单卖出：{ex['why']}，{ex['pnl']:+.2f}%")
                 if now_ms - ex["t"] < 15 * 60e3:
-                    self.notify("该卖了", f"模型{'多' if sgn > 0 else '空'}单（进场 {c['ref']:,.0f}）{ex['why']}，卖出价 {ex['px']:,.0f}，{ex['pnl']:+.2f}%")
+                    self.notify("该卖了", f"{name}{'多' if sgn > 0 else '空'}单（进场 {c['ref']:,.0f}）{ex['why']}，卖出价 {ex['px']:,.0f}，{ex['pnl']:+.2f}%")
 
     def signals(self, b):
         """这根收盘时规则 A / B 各自是否给出信号（不管模拟盘有没有持仓），口径与面板 ruleSigs 一致。"""
@@ -275,7 +276,6 @@ class PaperTrader:
                                 text=f"规则 B：交易原则完整{'做多' if sgn > 0 else '做空'}信号 + 模型同向 + 不逆 1h 趋势，市价进，止盈 {s['tp_R']}R")
                 ms = int(close_t.timestamp() * 1000)
                 self.st["model_calls"].append(dict(id=f"m-{rule}-{side}-{ms}", t=ms, who=MODEL_WHO, side=side, ref=round(ref, 1), refGiven=False, **call))
-                self.st["model_calls"] = self.st["model_calls"][-500:]
                 self.log(f"模型喊单：规则 {rule} {'做多' if sgn > 0 else '做空'}，参考价 {ref:,.1f}")
             prev[rule] = side
 
@@ -352,6 +352,7 @@ class PaperTrader:
 
     # ---------- 输出 ----------
     def save(self, d):
+        del self.st["model_calls"][:-800]     # 原地裁剪：张主任信号也写进这个列表（zhang_alert.py 拿着同一个列表），不能换成新列表
         json.dump(self.st, open(self.state_path, "w"), ensure_ascii=False, default=str)
         out = {"updated": datetime.now(timezone.utc).isoformat(), "last_bar": self.st["last_bar"], "price": float(d.close.iloc[-1]), "rules": {}}
         for k in ("A", "B"):

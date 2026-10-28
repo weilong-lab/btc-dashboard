@@ -376,6 +376,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <div class="verdict bad" id="zhExtreme" hidden></div>
     <div class="verdict" id="zhVerdict">正在读取行情…</div>
     <div class="tablewrap"><table class="jt" id="zhTable"></table></div>
+    <p class="sum-line" id="zhRec"></p>
     <p class="note">规则（张主任 10/28）：① 4 小时 MA99 向上只做多、向下只做空；② 看 1 小时、30 分钟正处在上涨还是下跌阶段（MA7 方向）；③ 5 分钟 RSI6 &gt; 80 或 J &gt; 110 算超买，RSI6 &lt; 20 或 J &lt; -5 算超卖（RSI 优先）；④ 15 分钟放宽：RSI6 &gt; 70 或 J &gt; 100 超买，RSI6 &lt; 20 或 J &lt; 0 超卖；同一个指标要 5 分钟和 15 分钟同时在区间外才提示，只有 5 分钟不报；RSI 优先：两个周期的 RSI 都在区间外就一定提示，KDJ 不用满足，只有 KDJ 两个周期在区间外也提示但标明参考性弱一些；⑤ 同时出现量价顶背离 / 底背离 = 强烈提示；⑥ 最后看 5 分钟 MA7 拐不拐头。另外：5 分、15 分、30 分、1 小时、4 小时全部在区间外（每个周期 RSI6 或 J 有一项即可，30 分以上用 15 分的区间），标「极端」，并写出历史上通常先反向走多远、50 倍 / 100 倍先爆仓的比例；两个周期都超买却还在放量创新高，标「反常」，说明有场外资金在推（例如 10/28 17:00 美股盘前那一波），不要逆着做。<br>
     回测（2021–2026 年 1 分钟数据，市价进出扣 0.10% 往返手续费）：按这个口径每年做空约 1200 次、做多约 800 次，之后 15 分钟方向对的比例约 58–59%，但平均只走 0.01%–0.03%，不够付手续费；加 4 小时 MA99 同向、1 小时 / 30 分阶段、量价背离、MA7 拐头，或者再要求 30 分 / 1 小时也超买超卖，扣费后每笔都在 -0.01% 到 -0.12% 之间，6 年里没有一种做法稳定为正。进场后 1 小时内价格通常还会再往不利方向走 0.3% 左右（五次里有一次超过 0.8%），所以「进去就是最高 / 最低点」只在少数时候成立。这张卡片按张主任的要求做提示用，不是赚钱信号；开了浏览器提醒的话，出现新提示会弹通知。</p>
   </section>
@@ -2269,7 +2270,7 @@ function renderPositions() {
     open.map(x => { const { c, s } = x; return `<tr class="${s && s.why ? "sell" : ""}"><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${fmt(c.ref)}</td><td>${fmtDTs(c.res.filled)}</td><td class="txt">${esc(c.who)}</td>
       <td>${sizeTxt(c)}<small>名义 ${fmt(sizeOf(c).amt * sizeOf(c).lev)} U</small></td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${c.sim ? "按模拟盘平仓" : `${fmtT(s.exp)}（剩 ${dur(s.exp - now)}）`}</td><td>${moneyCell(c, s.pnl, false)}</td><td>${moneyCell(c, s.pnl, true)}</td>
       <td>${isFinite(s.toStop) ? fmt(s.toStop) : "—"}</td><td>${isFinite(s.toTgt) ? fmt(s.toTgt) : "—"}</td><td class="txt">${s.why ? `<b class="bad">该卖了：${s.why}</b>` : x.w && x.w.length ? x.w.map(a => `<span class="${a.lv}">⚠ ${esc(a.text.split("。")[0])}</span>`).join("<br>") : "持有中 · 盘面正常"}</td>
-      <td class="txt">${c.sim ? `<a class="btn sm" href="sim.html">去模拟盘操作</a>` : `<button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}`}</td></tr>`; }).join("") + "</tbody>" : "");
+      <td class="txt">${c.sim ? `<a class="btn sm" href="sim.html">去模拟盘操作</a>` : `<button type="button" class="btn sm" data-psell="${c.id}">手动卖出</button>${!isBot(c) ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}`}</td></tr>`; }).join("") + "</tbody>" : "");
   // 模拟盘还没成交的挂单（限价 / 条件单）：成交了就变成上面的持仓，撤了就消失
   const pend = ((SIM_DOC && SIM_DOC.orders) || []).filter(o => !o.ro && !o.close), TY = { limit: "限价", stop: "条件市价" }, TN = typeof RV !== "undefined" ? RV.TAG_NAME : {};
   setHTML($("pSimOrd"), pend.length ? `<h3 class="sub-h">模拟盘挂单 · 等成交</h3><div class="tablewrap"><table class="jt"><thead><tr><th>方向</th><th>类型</th><th>价格 / 触发价</th><th>数量</th><th>止盈 / 止损</th><th>下单时间</th><th>理由</th><th></th></tr></thead><tbody>` +
@@ -2370,7 +2371,7 @@ function renderCalls() {
       : `现价 ${c.ref ? fmt(c.ref) : "—"}`;
     const open = r && r.filled && !c.exit, pend = r && !r.filled && !r.done;
     const act = c.sim ? (open ? `<a class="btn sm" href="sim.html">去模拟盘操作</a>` : "")
-      : (open ? `<button type="button" class="btn sm" data-psell="${c.id}">卖出</button>${c.who !== MODEL_WHO ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}` : pend ? `<button type="button" class="btn sm" data-ccancel="${c.id}">撤单</button>` : "") +
+      : (open ? `<button type="button" class="btn sm" data-psell="${c.id}">卖出</button>${!isBot(c) ? `<button type="button" class="btn sm" data-cedit="${c.id}">改止盈止损</button>` : ""}` : pend ? `<button type="button" class="btn sm" data-ccancel="${c.id}">撤单</button>` : "") +
         `<a class="btn sm" href="sim.html?call=${encodeURIComponent(c.id)}">放进模拟盘</a>`;
     return `<tr><td class="${c.side === "long" ? "good" : "bad"}">${c.side === "long" ? "多" : "空"}</td><td>${entryTxt}</td><td>${fmtDTs(c.t)}</td><td class="txt">${esc(c.who)}</td>
       <td class="txt"><div class="clamp" title="${esc(c.text || "")}">${esc(c.text || "—")}</div></td><td>${sizeTxt(c)}</td><td>${c.target ? fmt(c.target) : "—"}</td><td>${c.stop ? fmt(c.stop) : "—"}</td><td>${plCell(expectPL(c).tp)}</td><td>${plCell(expectPL(c).sl)}</td><td>${HZTXT[c.hz] || c.hz + " 分钟"}</td>
@@ -2388,7 +2389,8 @@ function markFlips() {
   cs.forEach(o => { o.flip = cs.find(n => n.who === o.who && n.side !== o.side && n.t > o.t && n.t < o.t + o.hz * 6e4)?.t || null; });
 }
 // 「此刻结论」出现参考信号时自动记一条模型喊单（与后台 monitor/paper.py 同口径、同 id，两边记的会自动合并）
-const MODEL_WHO = "模型·此刻结论";
+const MODEL_WHO = "模型·此刻结论", ZH_WHO = "张主任多周期信号";   // 这两种喊单由程序自动记，不能手动改止盈止损
+const isBot = c => c.who === MODEL_WHO || c.who === ZH_WHO;
 function recordModelCalls(c5, z, F, v) {
   const t = S.closedAt; if (!t || C.sigBar === t || !S.modelPolled) return;   // 先合并后台记录，避免两边重复记
   C.sigBar = t; C.sigPrev = C.sigPrev || {};
@@ -2811,6 +2813,11 @@ function renderZhang() {
     }
   }
   $("zhVerdict").className = cls; $("zhVerdict").textContent = v;
+  // 自动记单：后台每次出信号就记一条「张主任多周期信号」喊单，拿满 4 小时卖（喊单记录里能看到每一单）
+  const zc = C.calls.filter(c => c.who === ZH_WHO), zd = zc.filter(c => c.exit), zo = zc.length - zd.length;
+  const wins = zd.filter(c => c.exit.pnl > 0.1).length, avg = zd.length ? zd.reduce((t, c) => t + c.exit.pnl, 0) / zd.length - 0.1 : NaN;
+  $("zhRec").innerHTML = zc.length ? `自动记单：共 ${zc.length} 单，已卖 ${zd.length} 单${zo ? `、持有中 ${zo} 单` : ""}${zd.length ? `；扣 0.1% 手续费后赚钱 ${wins} 单（${Math.round(wins / zd.length * 100)}%），平均每单 ${pct(avg)}，回测是赚钱 48–50%、每单 -0.06% 到 -0.09%` : ""}。在「喊单记录」里选「${ZH_WHO}」看每一单。`
+    : `自动记单：后台每出一次信号就记一单（5 分钟收盘价进、拿满 4 小时卖、不设止损止盈），喊单记录里名字是「${ZH_WHO}」。还没有记录。`;
   // 极端：5 分 / 15 分 / 30 分 / 1 小时 / 4 小时全部在区间外（数字来自 backtest/zhang_mtf.py 第 2b 节）
   const EX = { short: [0.65, 1.63, 13, 36, "-0.07%（6 年里只有 1 年为正）"], long: [0.72, 1.88, 19, 39, "+0.12%（6 年里 4 年为正，但 2025、2026 都为负）"] };
   const exEl = $("zhExtreme");
