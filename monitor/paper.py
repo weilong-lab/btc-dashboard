@@ -138,7 +138,7 @@ class PaperTrader:
             if now_ms - c["t"] < 15 * 60e3:   # 只提醒刚发生的（重启回放历史时不提醒）
                 self.notify("模型买入提示", f"{'做多' if c['side'] == 'long' else '做空'} 参考价 {c['ref']:,.0f}，止损 {c['stop']:,.0f}" + (f"，止盈 {c['target']:,.0f}" if c["target"] else "") + f"，最长 {c['hz'] // 60} 小时")
         self.update_exits(d)
-        self.watch_positions(d, atr1h[-1], [c for c in self.st["model_calls"] if c.get("who") == MODEL_WHO])   # 张主任信号单只做验证，不发盘面提醒
+        self.watch_positions(d, atr1h[-1], self.st["model_calls"])   # 模型单和张主任信号单持有期间都发盘面提醒
         manual = cloud_calls()                # 人工喊单：只提醒（该卖了 / 盘面变化），记录由面板写
         if manual:
             self.notify_manual_exits(d, manual)

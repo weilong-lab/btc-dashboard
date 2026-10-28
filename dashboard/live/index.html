@@ -2817,7 +2817,7 @@ function renderZhang() {
   const zc = C.calls.filter(c => c.who === ZH_WHO), zd = zc.filter(c => c.exit), zo = zc.length - zd.length;
   const wins = zd.filter(c => c.exit.pnl > 0.1).length, avg = zd.length ? zd.reduce((t, c) => t + c.exit.pnl, 0) / zd.length - 0.1 : NaN;
   $("zhRec").innerHTML = zc.length ? `自动记单：共 ${zc.length} 单，已卖 ${zd.length} 单${zo ? `、持有中 ${zo} 单` : ""}${zd.length ? `；扣 0.1% 手续费后赚钱 ${wins} 单（${Math.round(wins / zd.length * 100)}%），平均每单 ${pct(avg)}，回测是赚钱 48–50%、每单 -0.06% 到 -0.09%` : ""}。在「喊单记录」里选「${ZH_WHO}」看每一单。`
-    : `自动记单：后台每出一次信号就记一单（5 分钟收盘价进、拿满 4 小时卖、不设止损止盈），喊单记录里名字是「${ZH_WHO}」。还没有记录。`;
+    : `自动记单：后台每出一次信号就记一单（5 分钟收盘价进、拿满 4 小时卖、不设止损止盈，持有期间遇到急涨急跌或数据公布照样提醒），喊单记录里名字是「${ZH_WHO}」。还没有记录。`;
   // 极端：5 分 / 15 分 / 30 分 / 1 小时 / 4 小时全部在区间外（数字来自 backtest/zhang_mtf.py 第 2b 节）
   const EX = { short: [0.65, 1.63, 13, 36, "-0.07%（6 年里只有 1 年为正）"], long: [0.72, 1.88, 19, 39, "+0.12%（6 年里 4 年为正，但 2025、2026 都为负）"] };
   const exEl = $("zhExtreme");
