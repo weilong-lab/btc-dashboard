@@ -368,7 +368,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
       <label>名义仓位 · 强平距离<span class="levinfo" id="sinfo">—</span></label>
     </form>
     <div class="sum-sides" id="sumSides"></div>
-    <p class="note">判断顺序：先看硬性禁止（重大数据前 60 分钟、今日亏损超 15%、保证金占用超三分之一），再看规则 A / B 有没有触发，最后看是不是在急涨急跌后逆势进场。规则 A / B 在扣手续费的真实挂单回测里都没有稳定赚钱，所以即使出现信号也只叫「有参考信号」，仅供模拟验证。仓位按上面填的买入金额 × 杠杆算（名义仓位），每一边显示打到止损亏多少、打到止盈赚多少（都扣了约 0.1% 的开平手续费）和强平价；强平价比止损还近会标红，并给出这个止损下建议的最高杠杆（强平距离至少是止损距离的 2 倍，按 1 ÷ 杠杆 − 0.4% 估算）。买入金额和杠杆会同步到云端，也是喊单记录里没写金额时的默认值。</p>
+    <p class="note">判断顺序：先看硬性禁止（重大数据前 60 分钟、今日亏损超 15%、保证金占用超三分之一），再看规则 A / B 和张主任多周期信号（顺 4 小时 MA99 方向的才算）有没有触发，最后看是不是在急涨急跌后逆势进场。规则 A / B 和张主任多周期信号在扣手续费的回测里都没有稳定赚钱，所以即使出现信号也只叫「有参考信号」，仅供模拟验证。仓位按上面填的买入金额 × 杠杆算（名义仓位），每一边显示打到止损亏多少、打到止盈赚多少（都扣了约 0.1% 的开平手续费）和强平价；强平价比止损还近会标红，并给出这个止损下建议的最高杠杆（强平距离至少是止损距离的 2 倍，按 1 ÷ 杠杆 − 0.4% 估算）。买入金额和杠杆会同步到云端，也是喊单记录里没写金额时的默认值。</p>
   </section>
 
   <section data-grp="1" class="card span" id="zhangCard">
@@ -683,7 +683,7 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 </div>
 
 <script src="ui.js?v=20261027a"></script>
-<script src="review-core.js?v=20261027a"></script>
+<script src="review-core.js?v=20261028a"></script>
 <script src="weights.js"></script>
 <script src="context.js"></script>
 <script src="model.js"></script>
@@ -1503,6 +1503,8 @@ function renderSummary(st) {
     const fade = cx && cx.key && (key === "long" ? cx.down : !cx.down);        // 急跌后做多 / 急涨后做空
     const chase = cx && cx.key && !fade;                                          // 急跌后追空 / 急涨后追多
     const against = key === "long" ? F.tr.dn : F.tr.up;
+    const zs = S.zh, zhSig = zs && (key === "long" ? zs.long : zs.short), zhWith = zhSig && (key === "long" ? zs.dir4 > 0 : zs.dir4 < 0);
+    const zhBy = zhSig ? (key === "long" ? zs.byL : zs.byS) : "";
     const cnt = [z.now[key === "long" ? "cold" : "hot"], z.now[key === "long" ? "fadeL" : "fadeS"], z.now[key === "long" ? "volL" : "volS"], z.now[key === "long" ? "below7" : "above7"], z.now[key === "long" ? "trigL" : "trigS"]].filter(Boolean).length;
     let vd, cls, why = [], pl = null;
     if (hard.length) { vd = "不要开"; cls = "bad"; why = hard.slice(); }
@@ -1511,6 +1513,12 @@ function renderSummary(st) {
       why.push(`规则 ${sig[1]}：${sig[2]}`, "回测扣费后没有稳定赚钱，仅供模拟验证，不作为自动买入依据");
       if (sig[1] === "B") pl = { entry: `市价 ≈ ${fmt(P)}`, ref: P, stop: ruleBStop(c5, z, sgn, P), tpR: B.tp_R, hold: `最长 ${B.max_hold_bars * 5 / 60} 小时（到止盈或止损先平）` };
       else pl = { entry: `挂限价 ${fmt(c5.at(-1).c)}，${A.limit_valid_bars * 5} 分钟内不成交就撤`, ref: c5.at(-1).c, stop: VOLSTAT.mae_atr["4 小时"].p80 * v.atr, hold: `${A.hold_bars * 5 / 60} 小时后平仓`, stopNote: "这里给的是方案 A′ = 规则 A + 按 4 小时 P80 逆向放的保险止损。回测和「模型严格执行」验证的都是不设止损的原版规则 A，A′ 本身还没有验证，它的成绩只看喊单记录里「模型·此刻结论」标 A′ 的单" };
+    } else if (zhWith) {
+      vd = "有参考信号"; cls = "warn";
+      why.push(`张主任多周期信号：5 分和 15 分 ${zhBy} 都${key === "long" ? "超卖" : "超买"}，顺 4 小时 MA99 方向${zhBy === "KDJ" ? "（只有 KDJ，参考性弱一些）" : ""}`,
+        "回测拿满 4 小时赚钱的比例 48–50%，扣费每笔 -0.06% 到 -0.09%，仅供模拟验证");
+      pl = { entry: `市价 ≈ ${fmt(P)}`, ref: P, stop: VOLSTAT.mae_atr["4 小时"].p80 * v.atr, tpR: 0, hold: "4 小时后平仓", zh: true,
+        stopNote: "止损按 4 小时 P80 逆向放（约八成样本 4 小时内的最大逆向没超过这个距离）；张主任信号进场时价格通常还会先反向走一段，止损太近容易被扫" };
     } else if (fade && !z.now[key === "long" ? "trigL" : "trigS"]) {
       vd = "不建议"; cls = "bad";
       why.push(`${key === "long" ? "刚急跌（4h " + pct(cx.r4) + "）就抄底" : "刚急涨（4h " + pct(cx.r4) + "）就摸顶"}，历史上 1 小时后${key === "long" ? "反弹" : "回落"}只有 ${cx.stats && cx.stats["1 小时"] ? cx.stats["1 小时"].rev : "≈53"}%，而且通常先再${key === "long" ? "跌" : "涨"}一段`,
@@ -1524,6 +1532,8 @@ function renderSummary(st) {
         `4 小时模型的${key === "long" ? "上涨" : "下跌"}概率 ${(key === "long" ? S.prob["4 小时"] : 100 - S.prob["4 小时"]).toFixed(1)}%，规则 A 要 ≥ ${Math.round((key === "long" ? A.p_long : 1 - A.p_short) * 100)}%`);
       if (chase) why.push(`现在是急${cx.down ? "跌" : "涨"}后，顺势追${key === "long" ? "多" : "空"}要防反抽，止损不能太近`);
     }
+    if (zhSig && !zhWith && !hard.length) why.push(`张主任多周期信号提示${key === "long" ? "做多" : "做空"}，但逆着 4 小时 MA99 方向，不算参考信号`);
+    if (zs && zs.ext === key && !hard.length) why.push(`极端：所有周期都${key === "long" ? "超卖" : "超买"}，历史上 4 小时内通常还会先反向走 ${key === "long" ? "0.72" : "0.65"}%，50 倍约 ${key === "long" ? 19 : 13}% 的时候会先爆仓`);
     const cell = (k, x, cls = "") => `<div><span>${k}</span><b class="${cls}">${x}</b></div>`;
     let body;
     // 两边用同一套格子显示：有信号用信号的方案；没有信号用「如果你还是要做」的方案（现价进、按波动放的止损、所选持有时间、不设止盈）
@@ -1539,7 +1549,7 @@ function renderSummary(st) {
     // 按现价开仓用的方案：有信号用信号的止损 / 止盈 / 持有时间；没有信号用「如果你还是要做」的止损和所选持有时间
     const HZM = { "1 小时": 60, "4 小时": 240, "24 小时": 1440 };
     S.sumPlan = S.sumPlan || {};
-    S.sumPlan[key] = pl ? { stop: pl.stop, tp: pl.tpR ? pl.tpR * pl.stop : 0, hz: sig[1] === "B" ? B.max_hold_bars * 5 : A.hold_bars * 5, vd, why: `规则 ${sig[1]}` }
+    S.sumPlan[key] = pl ? { stop: pl.stop, tp: pl.tpR ? pl.tpR * pl.stop : 0, hz: pl.zh ? 240 : sig[1] === "B" ? B.max_hold_bars * 5 : A.hold_bars * 5, vd, why: pl.zh ? "张主任多周期信号" : `规则 ${sig[1]}` }
       : { stop: volStop, tp: 0, hz: HZM[hold] || 240, vd, why: vd };
     body += `<div class="jbtns sum-open"><button type="button" class="btn ${vd === "有参考信号" ? "primary" : ""}" data-sumopen="${key}">按现价${key === "long" ? "开多" : "开空"}</button><span class="note">记进喊单记录（「我」），按上面的止损${pl && pl.tpR ? "、止盈" : ""}和持有时间自动核对；不会真的下单</span></div>`;
     return { key, vd, cls, html: `<div class="sum-side ${key}"><div class="hd"><h3 class="${key === "long" ? "good" : "bad"}">${key === "long" ? "做多" : "做空"}</h3><span class="vd ${cls}">${vd}</span></div><ul>${why.map(x => `<li>${esc(x)}</li>`).join("")}</ul>${body}</div>` };
@@ -1551,7 +1561,7 @@ function renderSummary(st) {
     ["市场状态", `4 小时 ${pct(mv4)} · 波动${v.state}`, "", `${S.maRel || "均线读取中"}${cx && cx.key ? "；刚" + (cx.down ? "急跌超卖" : "急涨超买") : ""}`],
   ].map(([a, b, c, d]) => `<div class="chip"><span>${a}</span><b class="${c}">${esc(b)}</b><span>${esc(d)}</span></div>`).join("");
   // 策略状态：一行小字，提醒参考信号还没被验证过
-  $("sumStrat").textContent = `策略状态：参考，未通过验证——规则 A / B 扣费回测都没有稳定赚钱${pr ? `；模型严格执行 A ${pr.A.n} 笔累计 ${pct(pr.A.cum || 0)}、B ${pr.B.n} 笔累计 ${pct(pr.B.cum || 0)}` : ""}${mine.length ? `；模型自动记单已卖 ${mine.length} 笔，${uTxt(mineU)}（按默认金额）` : ""}。仅作模拟验证；模型输出不是已验证的赚钱概率。`;
+  $("sumStrat").textContent = `策略状态：参考，未通过验证——规则 A / B 和张主任多周期信号扣费回测都没有稳定赚钱${pr ? `；模型严格执行 A ${pr.A.n} 笔累计 ${pct(pr.A.cum || 0)}、B ${pr.B.n} 笔累计 ${pct(pr.B.cum || 0)}` : ""}${mine.length ? `；模型自动记单已卖 ${mine.length} 笔，${uTxt(mineU)}（按默认金额）` : ""}。仅作模拟验证；模型输出不是已验证的赚钱概率。`;
   { const amt = J.defAmt || 100, lev = J.defLev || 10; $("sinfo").textContent = `${fmt(amt * lev)} U · 反向 ${(Math.max(0, 1 / lev - 0.004) * 100).toFixed(2)}% 强平`; }
   const L = side("long"), Sh = side("short");
   $("sumSides").innerHTML = L.html + Sh.html + (S.sumMsg && Date.now() - S.sumMsg.t < 15e3 ? `<p class="sum-line good" style="grid-column:1/-1">${S.sumMsg.html}</p>` : "");
@@ -2600,7 +2610,7 @@ function renderRulesDoc() {
     sec("总原则", [
       "面板只给信息和计算，<b>不会下单</b>，也不构成投资建议。",
       "所有判断规则都先用 2021–2026 年币安 BTCUSDT 永续合约数据回测，回测、模型严格执行、面板用同一份参数（rules_spec.json）。",
-      `手续费按挂单 ${f.maker_pct}%、市价 ${f.taker_pct}% 计算。<b>规则 A、B 扣费后都没有稳定赚钱</b>，所以出现信号也只叫「参考信号」，建议小仓位。`,
+      `手续费按挂单 ${f.maker_pct}%、市价 ${f.taker_pct}% 计算。<b>规则 A、B 和张主任多周期信号扣费后都没有稳定赚钱</b>，所以出现信号也只叫「参考信号」，建议小仓位（参考：200U 账户每单保证金约 30U、20 倍、止损 0.5%）。`,
       `重大数据公布和美股开盘前 ${SPEC.event_block_min} 分钟不开新仓。`,
     ], true),
     sec("数据、计划与复盘", [
@@ -2611,7 +2621,7 @@ function renderRulesDoc() {
     ], true),
     sec("此刻结论：做多 / 做空怎么判", [
       `<b>不要开</b>：重大数据或美股开盘前 ${SPEC.event_block_min} 分钟、今天已亏 15% 以上、保证金占用超过余额三分之一，满足任一条。`,
-      "<b>有参考信号</b>：规则 A 或规则 B 触发（见下面两条）。给出进场价、止损、止盈、拿多久、仓位和杠杆。",
+      "<b>有参考信号</b>：规则 A、规则 B 或张主任多周期信号（顺 4 小时 MA99 方向）触发（见下面几条）。给出进场价、止损、止盈、拿多久、仓位和杠杆。张主任信号逆着 4 小时 MA99 时不算参考信号，只在理由里提一句。",
       "<b>不建议</b>：刚急跌（4 小时跌 ≥1.5% 且 RSI6 ≤20）就抄底、刚急涨就摸顶，且还没出现扳机；或者逆着 1 小时趋势。",
       "<b>等待</b>：以上都不是，会写出还差哪个条件。",
       "仓位 = 买入金额（保证金）× 杠杆。打到止损亏 = 名义仓位 × 止损幅度 + 手续费；强平距离按 1 ÷ 杠杆 − 0.4% 估算，比止损近时会先爆仓、亏掉全部保证金。",
@@ -2629,6 +2639,16 @@ function renderRulesDoc() {
       "过滤：15 分钟和 1 小时方向模型的平均概率同方向；不逆 1 小时趋势（1 小时收盘价相对 MA25 的位置和 MA25 方向）；非周末、非低量（成交量不低于 24 小时中位数的一半）；事件前不开。",
       `进场：下一根 5 分钟 K 线开盘市价进。止损 = 近 12 根的低点（做空用高点）再往外 ${B.stop_atr} 个 5 分钟 ATR；止盈 = ${B.tp_R} 倍止损距离；最长 ${B.max_hold_bars * 5 / 60} 小时。持有时间由价格先碰到哪个决定，本来就随波动变。`,
       `<span class="bt">回测：${esc(B.backtest)}</span>`,
+    ]),
+    sec("张主任多周期信号（10/28）", [
+      "顺序：先看 4 小时 MA99 方向定多空（向上只做多、向下只做空）→ 再看 1 小时、30 分钟正处于上涨段还是下跌段（MA7 方向）→ 最后看 5 分钟、15 分钟的 RSI6 和 KDJ 的 J。",
+      "区间：5 分钟 RSI6 > 80 或 J > 110 算超买，RSI6 < 20 或 J < -5 算超卖；15 分钟放宽到 RSI6 > 70 或 J > 100 超买，RSI6 < 20 或 J < 0 超卖。",
+      "触发：<b>同一个指标</b>要 5 分钟和 15 分钟同时在区间外。RSI 优先：两个周期的 RSI 都在区间外就一定提示，KDJ 不用满足；只有 KDJ 两个周期都在区间外也提示，但标「参考性弱一些」；5 分钟只有 KDJ、15 分钟只有 RSI 这种交叉情况不提示。只有 5 分钟在区间外不提示。",
+      "加强：同时出现量价顶背离 / 底背离 = 强烈提示；之后看 5 分钟 MA7 有没有拐头。",
+      "反常：两个周期都超买（超卖）却还在放量创新高（新低），说明有场外资金在推（例如 10/28 17:00 美股盘前那波），提示先别反着做。",
+      "极端：5 分、15 分、30 分、1 小时、4 小时全部在区间外。历史上之后 4 小时内价格通常还会先反向走 0.65%（做空）/ 0.72%（做多），五次里有一次超过 1.6% / 1.9%；50 倍杠杆约 13% / 19% 的时候会先爆仓，100 倍约 36% / 39%。不提示加大仓位。",
+      "在哪里看：第 1 步「张主任多周期信号」卡片逐项显示；后台每根 5 分钟收盘检查一次，顺大方向的提示、反常、极端发红色提醒，逆大方向的发黄色；此刻结论里顺 4 小时 MA99 的信号算「有参考信号」，按「拿满 4 小时」给方案。",
+      '<span class="bt">回测（2021–2026，市价进出扣 0.10%）：每年做空约 1200 次、做多约 800 次。15 分钟后方向对约 58%，但平均只走 0.01%–0.03%。按交易算：拿满 4 小时赚钱的比例 48–50%（随便挑时间买只有 42–44%），扣费每笔 -0.06% 到 -0.09%，4 小时不比 3、5、6 小时特别；5 分钟反向超买超卖就卖，胜率 57–60%，每笔 -0.02% 到 -0.09%；MA7 一拐头就卖，胜率约 30%（超买时 MA7 多半还在往上，进场下一根就被卖掉）；做多拿到出现完整做空信号才卖最好，胜率 65%，扣费刚好打平。加 4 小时 MA99、1 小时 / 30 分阶段、量价背离、MA7 拐头、1 ATR 止损都没有变成稳定赚钱。4 小时 MA99 本身没有额外的压力 / 支撑作用。</span>',
     ]),
     sec("方向判断（模型）", [
       "逻辑回归模型，20 个特征：过去 1 / 3 / 12 / 48 / 288 根涨跌、离 MA7 / MA25 / MA99 多远、RSI6、KDJ 的 J、MACD 柱、成交量、主动买入占比、24 小时高低位置和振幅、是否周末、是否美股时段、4 小时趋势。",
@@ -2762,6 +2782,7 @@ function zhState() {
 }
 function renderZhang() {
   const z = zhState();
+  S.zh = z;
   if (!z) return;
   const dirTxt = s => s > 0 ? '<span class="good">↑ 向上</span>' : s < 0 ? '<span class="bad">↓ 向下</span>' : '<span class="mut">→ 走平</span>';
   const ob = (o, s, l) => s(o) ? '<span class="bad">超买</span>' : l(o) ? '<span class="good">超卖</span>' : '<span class="mut">区间内</span>';
