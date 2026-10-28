@@ -3,7 +3,8 @@
 每根 5 分钟 K 线收盘检查一次：
   ① 4 小时 MA99 方向（已收盘 K 线，和 3 根前比）定大方向；② 1 小时、30 分 MA7 方向看所处阶段；
   ③ 5 分：RSI6 > 80 或 J > 110 超买，RSI6 < 20 或 J < -5 超卖；④ 15 分（含当前未走完那根）：RSI6 > 70 或 J > 100 超买，
-  RSI6 < 20 或 J < 0 超卖。5 分和 15 分同时在区间外才提醒；⑤ 再有量价背离 = 强烈；⑥ 附上 5 分 MA7 是否拐头。
+  RSI6 < 20 或 J < 0 超卖。同一个指标要 5 分和 15 分同时在区间外才提醒（RSI 优先：两个周期 RSI 都在区间外一定报，
+  KDJ 不用满足；只有 KDJ 两个周期在区间外也报，但写明参考性弱一些）；⑤ 再有量价背离 = 强烈；⑥ 附上 5 分 MA7 是否拐头。
   另外：两个周期都超买（超卖）却还在放量创新高（新低）→「反常」提醒。
 同一种提醒同方向 60 分钟内只发一次。顺 4 小时大方向的发红色（马上推），逆大方向的发黄色（合并推）。
 回测见 backtest/README.md「张主任多周期规则」：方向对的比例约 58%，但扣手续费后每笔为负，所以提醒正文会写明只是提示。
@@ -53,12 +54,13 @@ def evaluate(d5, h4):
     div_l = l.iloc[-6:].min() <= l.iloc[-30:-6].min() and vol_lo
     m7 = d5["close"].rolling(7).mean()
     t7, t7p = np.sign(m7.iloc[-1] - m7.iloc[-2]), np.sign(m7.iloc[-2] - m7.iloc[-3])
-    short = (r5 > 80 or j5 > 110) and (r15 > 70 or j15 > 100)
-    long = (r5 < 20 or j5 < -5) and (r15 < 20 or j15 < 0)
+    by_s = "+".join(n for n, ok in (("RSI", r5 > 80 and r15 > 70), ("KDJ", j5 > 110 and j15 > 100)) if ok)
+    by_l = "+".join(n for n, ok in (("RSI", r5 < 20 and r15 < 20), ("KDJ", j5 < -5 and j15 < 0)) if ok)
+    short, long = bool(by_s), not by_s and bool(by_l)
     hot = v.iloc[-1] > 2 * v.iloc[-25:-1].mean() and v.iloc[-1] > v.iloc[-2]
     return dict(t=end, close=float(d5["close"].iloc[-1]), dir4=dir4, ma99=float(ma99.iloc[-1]),
                 ph1=phase("1h"), ph30=phase("30min"), r5=r5, j5=j5, r15=r15, j15=j15,
-                short=short, long=long, div_s=bool(div_s), div_l=bool(div_l), t7=int(t7), turned=bool(t7 != t7p),
+                short=short, long=long, by=by_s if short else by_l, div_s=bool(div_s), div_l=bool(div_l), t7=int(t7), turned=bool(t7 != t7p),
                 anom_s=bool(short and hot and h.iloc[-1] >= h.iloc[-12:].max()),
                 anom_l=bool(long and hot and l.iloc[-1] <= l.iloc[-12:].min()))
 
@@ -73,15 +75,17 @@ def describe(z):
     with4 = z["dir4"] < 0 if s else z["dir4"] > 0
     div = z["div_s"] if s else z["div_l"]
     turned_ok = z["t7"] < 0 if s else z["t7"] > 0
+    by = {"RSI+KDJ": "RSI 和 KDJ", "KDJ": "KDJ"}.get(z["by"], "RSI")
+    byt = f"{by} 两个周期都{ob}" + ("（RSI 没到，参考性弱一些）" if by == "KDJ" else "")
     arrow = lambda x: "向上" if x > 0 else "向下" if x < 0 else "走平"
     facts = (f"现价 {z['close']:,.0f}。4 小时 MA99 {z['ma99']:,.0f} {arrow(z['dir4'])}；1 小时 {arrow(z['ph1'])}、30 分 {arrow(z['ph30'])}；"
              f"5 分 RSI6 {z['r5']:.1f} / J {z['j5']:.1f}，15 分 RSI6 {z['r15']:.1f} / J {z['j15']:.1f}；"
              f"5 分 MA7 {arrow(z['t7'])}{'（刚拐头）' if z['turned'] else ''}。")
     if z["anom_s"] if s else z["anom_l"]:
         return [("red", f"张主任规则 · 反常异动：{ob}还在放量{'冲高' if s else '下杀'}",
-                 f"5 分和 15 分都{ob}，但这根量是之前 2 小时均量的 2 倍以上，还在创{'新高' if s else '新低'}，可能有场外资金在推，先别{word}。" + facts, f"anom-{side}")]
+                 f"5 分和 15 分 {byt}，但这根量是之前 2 小时均量的 2 倍以上，还在创{'新高' if s else '新低'}，可能有场外资金在推，先别{word}。" + facts, f"anom-{side}")]
     title = f"张主任规则 · {'强烈' if div else ''}提示{word}" + ("" if with4 else "（逆 4 小时大方向）")
-    body = (f"5 分和 15 分同时{ob}" + (f"，并且量价{'顶' if s else '底'}背离" if div else "") + "；"
+    body = (f"5 分和 15 分 {byt}" + (f"，并且量价{'顶' if s else '底'}背离" if div else "") + "；"
             + ("顺 4 小时 MA99 方向。" if with4 else "但逆着 4 小时 MA99 方向，要更小心。")
             + ("MA7 已拐头。" if turned_ok else "MA7 还没拐头，可以再等等。") + facts + NOTE)
     return [("red" if with4 else "yellow", title, body, f"{'strong' if div else 'sig'}-{side}")]

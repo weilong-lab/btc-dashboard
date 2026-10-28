@@ -3,6 +3,7 @@
 规则原文（10/28 21:56 起）：
   先看 4 小时 MA99 方向定多空 → 再看 1 小时、30 分现在处于上涨还是下跌阶段 → 最后看 5 分、15 分的 RSI 和 KDJ（RSI 优先）。
   5 分：J > 110 或 < -5，和/或 RSI6 > 80 或 < 20；15 分放宽：J > 100 或 < 0，和/或 RSI6 > 70 或 < 20。
+  同一个指标要在 5 分和 15 分同时在区间外（RSI 优先：两个周期 RSI 都在区间外就报，KDJ 不用满足；只有 KDJ 两周期在区间外也报）。
   只有 5 分在区间外不报，必须 15 分也在区间外。再出现量价顶 / 底背离 → 强提示。顺序：先指标、后量、再看 MA7 拐不拐头。
 
 指标都按「此刻」算：15 分、30 分、1 小时、4 小时的 RSI / KDJ 用到当前这根还没走完的 K 线
@@ -193,7 +194,10 @@ def main():
     l5 = (j5 < -5) | (r5 < 20)
     s15 = (j15 > 100) | (r15 > 70)
     l15 = (j15 < 0) | (r15 < 20)
-    base_s, base_l = s5 & s15, l5 & l15
+    # 10/28 补充：同一个指标在 5 分和 15 分同时在区间外才算（RSI 优先：两个周期 RSI 都在区间外一定报，KDJ 不用满足）
+    rsi_s, rsi_l = (r5 > 80) & (r15 > 70), (r5 < 20) & (r15 < 20)
+    kdj_s, kdj_l = (j5 > 110) & (j15 > 100), (j5 < -5) & (j15 < 0)
+    base_s, base_l = rsi_s | kdj_s, rsi_l | kdj_l
     # 量价背离：最近 6 根创了 2 小时新高（新低），但这 6 根里最大的量还不到之前 2 小时最大量的 9 成
     v = d5["volume"]
     nh = d5["high"].rolling(6).max() >= d5["high"].shift(6).rolling(24).max()
@@ -209,6 +213,12 @@ def main():
     show(d5, "只看 5 分（对照）", l5, "long", False)
     show(d5, "5 分 + 15 分", base_s, "short")
     show(d5, "5 分 + 15 分", base_l, "long")
+    show(d5, "  其中 RSI 两周期都在区间外", rsi_s, "short")
+    show(d5, "  其中 RSI 两周期都在区间外", rsi_l, "long")
+    show(d5, "  只有 KDJ 两周期在区间外", kdj_s & ~rsi_s, "short")
+    show(d5, "  只有 KDJ 两周期在区间外", kdj_l & ~rsi_l, "long")
+    show(d5, "  旧口径（两周期各有一项即可）", s5 & s15, "short", False)
+    show(d5, "  旧口径（两周期各有一项即可）", l5 & l15, "long", False)
     show(d5, "+ 4h MA99 同向", base_s & (bias < 0), "short")
     show(d5, "+ 4h MA99 同向", base_l & (bias > 0), "long")
     show(d5, "+ 4h 同向 + 1h/30m 正在反弹", base_s & (bias < 0) & up_ph, "short")

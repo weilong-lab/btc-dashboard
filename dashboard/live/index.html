@@ -375,8 +375,8 @@ textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
     <h2>张主任多周期信号 <small>先 4 小时 → 再 1 小时 / 30 分 → 最后 15 分 / 5 分 · 指标按盘中实时</small></h2>
     <div class="verdict" id="zhVerdict">正在读取行情…</div>
     <div class="tablewrap"><table class="jt" id="zhTable"></table></div>
-    <p class="note">规则（张主任 10/28）：① 4 小时 MA99 向上只做多、向下只做空；② 看 1 小时、30 分钟正处在上涨还是下跌阶段（MA7 方向）；③ 5 分钟 RSI6 &gt; 80 或 J &gt; 110 算超买，RSI6 &lt; 20 或 J &lt; -5 算超卖（RSI 优先）；④ 15 分钟放宽：RSI6 &gt; 70 或 J &gt; 100 超买，RSI6 &lt; 20 或 J &lt; 0 超卖；只有 5 分钟在区间外不报，15 分钟也在区间外才提示；⑤ 同时出现量价顶背离 / 底背离 = 强烈提示；⑥ 最后看 5 分钟 MA7 拐不拐头。另外：两个周期都超买却还在放量创新高，标「反常」，说明有场外资金在推（例如 10/28 17:00 美股盘前那一波），不要逆着做。<br>
-    回测（2021–2026 年 1 分钟数据，市价进出扣 0.10% 往返手续费）：5 分 + 15 分同时在区间外时，之后 15 分钟方向对的比例约 58–59%，但平均只走 0.01%–0.03%，不够付手续费；加 4 小时 MA99 同向、1 小时 / 30 分阶段、量价背离、MA7 拐头，或者再要求 30 分 / 1 小时也超买超卖，扣费后每笔都在 -0.01% 到 -0.12% 之间，6 年里没有一种做法稳定为正。进场后 1 小时内价格通常还会再往不利方向走 0.3% 左右（五次里有一次超过 0.8%），所以「进去就是最高 / 最低点」只在少数时候成立。这张卡片按张主任的要求做提示用，不是赚钱信号；开了浏览器提醒的话，出现新提示会弹通知。</p>
+    <p class="note">规则（张主任 10/28）：① 4 小时 MA99 向上只做多、向下只做空；② 看 1 小时、30 分钟正处在上涨还是下跌阶段（MA7 方向）；③ 5 分钟 RSI6 &gt; 80 或 J &gt; 110 算超买，RSI6 &lt; 20 或 J &lt; -5 算超卖（RSI 优先）；④ 15 分钟放宽：RSI6 &gt; 70 或 J &gt; 100 超买，RSI6 &lt; 20 或 J &lt; 0 超卖；同一个指标要 5 分钟和 15 分钟同时在区间外才提示，只有 5 分钟不报；RSI 优先：两个周期的 RSI 都在区间外就一定提示，KDJ 不用满足，只有 KDJ 两个周期在区间外也提示但标明参考性弱一些；⑤ 同时出现量价顶背离 / 底背离 = 强烈提示；⑥ 最后看 5 分钟 MA7 拐不拐头。另外：两个周期都超买却还在放量创新高，标「反常」，说明有场外资金在推（例如 10/28 17:00 美股盘前那一波），不要逆着做。<br>
+    回测（2021–2026 年 1 分钟数据，市价进出扣 0.10% 往返手续费）：按这个口径每年做空约 1200 次、做多约 800 次，之后 15 分钟方向对的比例约 58–59%，但平均只走 0.01%–0.03%，不够付手续费；加 4 小时 MA99 同向、1 小时 / 30 分阶段、量价背离、MA7 拐头，或者再要求 30 分 / 1 小时也超买超卖，扣费后每笔都在 -0.01% 到 -0.12% 之间，6 年里没有一种做法稳定为正。进场后 1 小时内价格通常还会再往不利方向走 0.3% 左右（五次里有一次超过 0.8%），所以「进去就是最高 / 最低点」只在少数时候成立。这张卡片按张主任的要求做提示用，不是赚钱信号；开了浏览器提醒的话，出现新提示会弹通知。</p>
   </section>
 
   <section data-grp="1" class="card span" id="fastCard">
@@ -2728,6 +2728,12 @@ const ZH = {
   s5: o => o.rsi > 80 || o.j > 110, l5: o => o.rsi < 20 || o.j < -5,
   s15: o => o.rsi > 70 || o.j > 100, l15: o => o.rsi < 20 || o.j < 0,
 };
+// 同一个指标在 5 分和 15 分同时在区间外才算；RSI 优先：两个周期 RSI 都在区间外一定报，KDJ 不用满足
+function zhPair(o5, o15, s) {
+  const rsi = s ? o5.rsi > 80 && o15.rsi > 70 : o5.rsi < 20 && o15.rsi < 20;
+  const kdj = s ? o5.j > 110 && o15.j > 100 : o5.j < -5 && o15.j < 0;
+  return rsi && kdj ? "RSI 和 KDJ" : rsi ? "RSI" : kdj ? "KDJ" : "";
+}
 function zhState() {
   const closedB = b => (b || []).slice(0, -1);
   const b5 = live(S.b5 || []), b15 = live(S.b15 || []), c5 = closedB(S.b5), h4 = closedB(S.b240);
@@ -2743,13 +2749,13 @@ function zhState() {
   const divS = mx(r6, x => x.h) >= mx(p24, x => x.h) && volLo, divL = mn(r6, x => x.l) <= mn(p24, x => x.l) && volLo;
   const n = c5.length - 1, m7 = ma(c5, n, 7), m7p = ma(c5, n - 1, 7), m7pp = ma(c5, n - 2, 7);
   const t7 = Math.sign(m7 - m7p), t7prev = Math.sign(m7p - m7pp);
-  const short = ZH.s5(o5) && ZH.s15(o15), long = ZH.l5(o5) && ZH.l15(o15);
+  const byS = zhPair(o5, o15, true), byL = zhPair(o5, o15, false), short = !!byS, long = !byS && !!byL;
   // 反常：两个周期都超买（超卖）还在放量创新高（新低）
   const cur = b5.at(-1), avgV = c5.slice(-24).reduce((t, x) => t + x.v, 0) / 24, el = (Date.now() - cur.t) / 300e3;
   const vNow = cur.v / Math.max(0.2, Math.min(1, el));   // 未走完的这根按已过时间折算成整根的量
   const hot = vNow > 2 * avgV && vNow > c5.at(-1).v;
   const anomS = short && hot && cur.h >= mx(c5.slice(-12), x => x.h), anomL = long && hot && cur.l <= mn(c5.slice(-12), x => x.l);
-  return { dir4, ma99, ph1, ph30, o5, o15, short, long, divS, divL, t7, t7prev, anomS, anomL, bar: cur.t };
+  return { dir4, ma99, ph1, ph30, o5, o15, short, long, byS, byL, divS, divL, t7, t7prev, anomS, anomL, bar: cur.t };
 }
 function renderZhang() {
   const z = zhState();
@@ -2766,16 +2772,17 @@ function renderZhang() {
     ["⑥ 5 分 MA7", dirTxt(z.t7), z.t7 !== z.t7prev ? "刚拐头" : "没拐头"],
   ];
   $("zhTable").innerHTML = `<tbody>${rows.map(r => `<tr><td class="t">${r[0]}</td><td class="t">${r[1]}</td><td class="t">${r[2]}</td></tr>`).join("")}</tbody>`;
-  let v = "没有信号：5 分和 15 分没有同时超买或超卖，按兵不动。", cls = "verdict", note = null;
+  let v = "没有信号：5 分和 15 分的 RSI（或 KDJ）没有同时在区间外，按兵不动。", cls = "verdict", note = null;
   const side = z.short ? "short" : z.long ? "long" : null;
   if (side) {
     const s = side === "short", word = s ? "做空" : "做多", with4 = s ? z.dir4 < 0 : z.dir4 > 0;
     const div = s ? z.divS : z.divL, turned = s ? z.t7 < 0 : z.t7 > 0, anom = s ? z.anomS : z.anomL;
+    const by = s ? z.byS : z.byL, byTxt = by === "KDJ" ? "KDJ 两个周期都" + (s ? "超买" : "超卖") + "（RSI 没到，参考性弱一些）" : `${by} 两个周期都${s ? "超买" : "超卖"}`;
     if (anom) {
-      v = `反常：5 分和 15 分都${s ? "超买" : "超卖"}，但还在放量${s ? "创新高" : "创新低"}，可能有场外资金在推。先别${word}，等量缩下来、MA7 拐头再说。`;
+      v = `反常：5 分和 15 分${byTxt}，但还在放量${s ? "创新高" : "创新低"}，可能有场外资金在推。先别${word}，等量缩下来、MA7 拐头再说。`;
       cls = "verdict bad"; note = ["反常异动", v];
     } else {
-      v = `${div ? "强烈" : ""}提示${word}：5 分和 15 分都${s ? "超买" : "超卖"}${div ? `，还出现量价${s ? "顶" : "底"}背离` : ""}；${with4 ? "顺着 4 小时 MA99 大方向" : "但逆着 4 小时 MA99 大方向，要更小心"}；5 分 MA7 ${turned ? "已经拐头" : "还没拐头，可以再等等"}。盘中值，以这根 5 分钟收盘为准。`;
+      v = `${div ? "强烈" : ""}提示${word}：5 分和 15 分 ${byTxt}${div ? `，还出现量价${s ? "顶" : "底"}背离` : ""}；${with4 ? "顺着 4 小时 MA99 大方向" : "但逆着 4 小时 MA99 大方向，要更小心"}；5 分 MA7 ${turned ? "已经拐头" : "还没拐头，可以再等等"}。盘中值，以这根 5 分钟收盘为准。`;
       cls = "verdict " + (with4 ? (div ? "goodv" : "") : "bad"); note = [`${div ? "强烈" : ""}提示${word}`, v];
     }
   }
