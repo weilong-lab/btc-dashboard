@@ -27,6 +27,13 @@
   .prefs .gear{display:none}
   .navgrp{gap:6px}.thbtn{padding:4px 7px}.thbtn .tl{display:none}
 }
+/* 手机点按：按下立刻变暗缩一点，知道点到了；换页时顶上走一条进度线 */
+button,a[href],summary,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.uipress{opacity:.6;transform:scale(.96);transition:none!important}
+button:active,a[href]:active,summary:active{opacity:.75}
+.pnav a.uigo{background:var(--accent);color:#fff;opacity:.7}
+html.uiload::before{content:"";position:fixed;left:0;top:0;height:3px;width:100%;z-index:200;background:var(--accent);transform-origin:left;animation:uiload 1.2s ease-out infinite}
+@keyframes uiload{0%{transform:scaleX(0)}70%{transform:scaleX(.85)}100%{transform:scaleX(1);opacity:.3}}
 /* 选账户 / 切换后同步提醒 */
 .uimodal{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}
 .uimodal>div{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:18px;width:min(400px,100%);display:grid;gap:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}

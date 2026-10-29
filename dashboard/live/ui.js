@@ -1,4 +1,4 @@
-/* 三个页面共用：页面切换、浅色 / 深色切换、设置下拉、第一次打开先选账户、切换账户后提醒同步、检查云端令牌 */
+/* 三个页面共用：页面切换、手机点按反馈、浅色 / 深色切换、设置下拉、第一次打开先选账户、切换账户后提醒同步、检查云端令牌 */
 "use strict";
 const UI = (() => {
   const page = document.body.dataset.page;
@@ -40,6 +40,78 @@ const UI = (() => {
   document.querySelectorAll(".prefs .who").forEach(el => { if (!el.textContent) el.textContent = NAMES[acct]; });
   document.addEventListener("click", e => document.querySelectorAll("details.prefs[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; }));
   document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll("details.prefs[open]").forEach(d => { d.open = false; }); });
+
+  // ---------- 手机点按：按下立刻变色 + 震动，松手直接触发 ----------
+  // 页面一直在刷新（价格、订单簿），iPhone 的 Safari 会把这种时候的点按当成「悬停」吞掉，要点好几下才有反应；
+  // 所以按钮、链接不等 Safari 的 click，松手时自己触发。手指滑动了算滚动，不触发；输入框、勾选框照常交给系统
+  const TAP = 'button,a[href],summary,[role="button"],.brow';
+  const NOFAST = 'input,textarea,select,label,[contenteditable]';
+  let tp = null, scrollAt = 0, hx = null;
+  addEventListener("scroll", () => { scrollAt = Date.now(); }, { capture: true, passive: true });
+  function buzz() {
+    if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) { /* 不支持 */ } return; }
+    // iPhone 不支持 vibrate：点一下隐藏的系统开关（iOS 18 起会有一下轻震）
+    if (!hx) {
+      hx = document.createElement("label"); hx.setAttribute("aria-hidden", "true");
+      hx.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none";
+      hx.innerHTML = '<input type="checkbox" switch tabindex="-1">';
+      hx.addEventListener("click", e => e.stopPropagation());
+      hx.firstChild.addEventListener("change", e => e.stopPropagation());
+      document.body.appendChild(hx);
+    }
+    try { hx.click(); } catch (e) { /* 没震也不影响 */ }
+  }
+  const unpress = el => setTimeout(() => el.classList.remove("uipress"), 120);
+  // 松手、滑动的事件挂在按下的那个元素上：它被重画掉以后，事件到不了 document，只有挂在它自己身上才收得到
+  function track(tgt) {
+    const off = () => { tgt.removeEventListener("touchmove", onMove); tgt.removeEventListener("touchend", onEnd); tgt.removeEventListener("touchcancel", onCancel); };
+    const onMove = e => {
+      if (!tp) return off();
+      const t = e.touches[0];
+      if (Math.abs(t.clientX - tp.x) > 10 || Math.abs(t.clientY - tp.y) > 10) { tp.el.classList.remove("uipress"); tp = null; off(); }
+    };
+    const onCancel = () => { if (tp) tp.el.classList.remove("uipress"); tp = null; off(); };
+    const onEnd = e => { off(); fire(e); };
+    tgt.addEventListener("touchmove", onMove, { passive: true });
+    tgt.addEventListener("touchend", onEnd, { passive: false });
+    tgt.addEventListener("touchcancel", onCancel);
+  }
+  document.addEventListener("touchstart", e => {
+    tp = null;
+    if (e.touches.length !== 1 || Date.now() - scrollAt < 150) return;
+    const el = e.target.closest && e.target.closest(TAP);
+    if (!el || el.closest(NOFAST) || el.disabled) return;
+    const t = e.touches[0];
+    tp = { el, x: t.clientX, y: t.clientY, at: Date.now() };
+    el.classList.add("uipress");
+    track(e.target);
+  }, { capture: true, passive: true });
+  function fire(e) {
+    const p = tp; tp = null;
+    if (!p) return;
+    unpress(p.el);
+    if (Date.now() - p.at > 700) return;   // 长按交给系统
+    // 按下后这一块被重画了（订单簿、仓位卡片），就点手指下面现在那个
+    let el = p.el;
+    if (!el.isConnected) { const u = document.elementFromPoint(p.x, p.y); el = u && u.closest(TAP); }
+    if (!el || el.disabled) return;
+    e.preventDefault();                    // 不要 Safari 自己再补一个 click
+    const ae = document.activeElement;
+    if (ae && ae !== el && ae.matches && ae.matches("input,textarea")) ae.blur();
+    buzz();
+    el.click();
+  }
+
+  // 换页：点了马上标出来（页面还在加载时不会以为没点到）
+  document.addEventListener("click", e => {
+    const a = e.target.closest(".pnav a");
+    if (!a || a.getAttribute("aria-current") || e.metaKey || e.ctrlKey) return;
+    a.classList.add("uigo"); document.documentElement.classList.add("uiload");
+  });
+  addEventListener("pageshow", () => {
+    document.documentElement.classList.remove("uiload");
+    document.querySelectorAll(".pnav a.uigo").forEach(a => a.classList.remove("uigo"));
+  });
 
   // ---------- 弹窗 ----------
   function modal(html) {
@@ -87,5 +159,5 @@ const UI = (() => {
     if (r.status === 403 || r.status === 404) throw new Error("这个令牌打不开私有仓库 btc-records：要在 weilong-lab 账号下生成细粒度令牌，只勾 btc-records，Contents 选 Read and write");
     if (r.ok) tokOk = { tok: token, at: Date.now() };
   }
-  return { onSync, markSwitched, checkToken, NAMES, isDark, onTheme };
+  return { onSync, markSwitched, checkToken, NAMES, isDark, onTheme, buzz };
 })();
