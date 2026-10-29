@@ -85,6 +85,21 @@ a{color:var(--accent)}
 .chartbox.full .tf{display:flex!important}
 .chartbox.full #chart{height:100%!important}
 html.chartfull{overflow:hidden}
+/* 全屏时顶上一行实时报价 */
+.fullhd{display:none;align-items:baseline;gap:6px 14px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.chartbox.full .fullhd{display:flex}
+.fullhd b{color:var(--fg);font-size:13px}
+.fullhd #fLast{font-size:22px;font-weight:600;font-family:var(--m)}
+.fullhd .num{font-family:var(--m)}.fullhd span.v{color:var(--fg);font-family:var(--m)}
+/* 自定义周期 */
+#tf [data-cus]{color:var(--accent)}
+.cusq{display:flex;flex-wrap:wrap;gap:6px}
+.cusq button{border:1px solid var(--line);background:none;border-radius:14px;padding:4px 11px;cursor:pointer;font-size:12.5px;color:var(--fg)}
+.cusq button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.cusrow{display:flex;gap:8px;align-items:center;font-size:13px}
+.cusrow input{width:80px;background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;color:var(--fg)}
+.cusrow select{background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;color:var(--fg)}
+.cuspin{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
 
 /* 订单簿 */
 .bcols,.brow{display:grid;grid-template-columns:1fr 1fr 1fr;padding:0 10px;font-family:var(--m);font-size:12px}
@@ -153,7 +168,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
 .toast.on{opacity:.95}
 
 /* 弹窗 */
-.dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px))}
 .dlg[hidden]{display:none}
 .dlg>div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;width:min(380px,100%);display:grid;gap:10px}
 .dlg h3{margin:0;font-size:15px}
@@ -171,7 +186,11 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
 .cfbox .row #cfOk.buy{background:var(--rise-green);border-color:var(--rise-green)}.cfbox .row #cfOk.sell{background:var(--fall-red);border-color:var(--fall-red)}
 :root[data-market-colors="red-up"] .cfbox .row #cfOk.buy{background:var(--fall-red);border-color:var(--fall-red)}:root[data-market-colors="red-up"] .cfbox .row #cfOk.sell{background:var(--rise-green);border-color:var(--rise-green)}
 /* 开单 / 平仓理由（成交后再填） */
-.dlg>div.rsnbox{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto}
+.dlg>div.rsnbox{width:min(560px,100%);max-height:calc(100vh - 32px);max-height:100%;overflow:auto;overscroll-behavior:contain;padding-bottom:0}
+/* 手机上弹窗按可见高度算（以前按整屏高度，底下两个按钮会落到 Safari 工具栏下面，要点好几次）；按钮钉在弹窗底部，一直看得见 */
+.rsnft{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);margin:0 -16px;padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));display:grid;gap:6px}
+.rsnft .row button{flex:1;padding:12px 0;font-size:15px;font-weight:600}
+.rsnft .hint:empty{display:none}
 .rg{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.rg>span{color:var(--muted);font-size:12px;width:100%;margin-top:2px}
 .rg button{border:1px solid var(--line);background:none;border-radius:14px;padding:4px 11px;cursor:pointer;font-size:12.5px}
 .rg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:#fff}
@@ -240,6 +259,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
 
 <main class="grid">
   <section class="chartbox" id="chartbox">
+    <div class="fullhd" aria-live="off"><b>BTCUSDT 永续</b><span class="num" id="fLast">—</span><span class="num" id="fChg">—</span>
+      <span>标记 <span class="v" id="fMark">—</span></span><span>24h 高 <span class="v" id="fHi">—</span></span><span>24h 低 <span class="v" id="fLo">—</span></span><span>资金费率 <span class="v" id="fFund">—</span></span></div>
     <div class="tfrow tf"><div class="tabs tf" id="tf" role="tablist" aria-label="K 线周期"></div><button type="button" id="fullBtn" aria-pressed="false"></button></div>
     <div class="indbar tf" id="indbar" aria-label="技术指标"></div>
     <div class="indbar tf" id="drawbar" aria-label="画线工具"></div>
@@ -351,6 +372,17 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
   <div class="row"><button type="button" data-close>取消</button><button type="button" class="pri" id="tpOk">保存</button></div>
 </div></div>
 
+<div class="dlg" id="cusDlg" hidden><div>
+  <h3>自定义周期</h3>
+  <p class="hint">每根 K 线多长。币安没有的周期（比如 2 月、45 分）用更小的 K 线拼出来。</p>
+  <div class="cusq" id="cusQuick"></div>
+  <div class="cusrow"><span>每根</span><input id="cusN" inputmode="numeric" autocomplete="off" placeholder="数字"><select id="cusU"><option value="m">分钟</option><option value="h">小时</option><option value="d">日</option><option value="w">周</option><option value="M">月</option></select></div>
+  <label class="cuspin"><input type="checkbox" id="cusPin" checked>固定到周期栏</label>
+  <div id="cusPins" class="cusq"></div>
+  <p class="hint bad" id="cusMsg"></p>
+  <div class="row"><button type="button" data-close>取消</button><button type="button" class="pri" id="cusOk">看这个周期</button></div>
+</div></div>
+
 <div class="dlg" id="cfDlg" data-own hidden><div class="cfbox">
   <h3 id="cfT">确认下单</h3>
   <p class="cfinfo" id="cfInfo"></p>
@@ -371,8 +403,8 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
     <div class="rg" id="rsnWhy"></div>
     <input class="note" id="rsnCNote" placeholder="上面没有合适的就直接写；选了的话可不填">
   </div>
-  <p class="hint bad" id="rsnMsg"></p>
-  <div class="row"><button type="button" id="rsnNo">不填了</button><button type="button" class="pri" id="rsnOk">保存理由</button></div>
+  <div class="rsnft"><p class="hint bad" id="rsnMsg" aria-live="polite"></p>
+  <div class="row"><button type="button" id="rsnNo">不填了</button><button type="button" class="pri" id="rsnOk">保存理由</button></div></div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -768,7 +800,7 @@ $("rsnDlg").addEventListener("click", e => {
     $("rsnMsg").textContent = ""; rsnRender(); }
 });
 const rsnEnd = v => { const r = RSN; RSN = null; $("rsnDlg").hidden = true; if (r) r.res(v); };
-$("rsnNo").onclick = () => rsnEnd(null);
+$("rsnNo").onclick = () => { const c = RSN && RSN.cfg; rsnEnd(null); if (c && c.ok === "保存理由") toast("没填理由，单照样下了"); };
 $("rsnOk").onclick = () => {
   const c = RSN && RSN.cfg; if (!c) return;
   // 上面的选项没有合适的，直接手写理由也行；两样都没有就提示（单已经下了，点「不填了」直接关）
@@ -776,6 +808,7 @@ $("rsnOk").onclick = () => {
   if (c.open && !RSN.tags.size && !note) { $("rsnMsg").textContent = "选一个理由，或者在下面写一句；不想填就点「不填了」"; $("rsnNote").focus(); return; }
   if (c.close && !RSN.why && !cnote) { $("rsnMsg").textContent = "选一个平仓理由，或者写一句为什么平；不想填就点「不填了」"; $("rsnCNote").focus(); return; }
   rsnEnd({ o: c.open ? { kind: c.open, tags: [...RSN.tags], conf: RSN.conf, note } : null, c: c.close ? { why: RSN.why || "other", note: cnote } : null });
+  toast("✓ 理由已保存");
 };
 addEventListener("keydown", e => { if (e.key === "Escape") { if (CF) cfEnd(false); else if (RSN) rsnEnd(null); } });
 
@@ -807,8 +840,10 @@ async function snapStart(id, kind, t) {
   const live = Date.now() - t < 120e3;
   const ctx = { id, acct: ACCT, kind, t, px: kind === "open" ? tr0.entry : add0 ? add0.px : tr0.exit.px, side: tr0.side, qty: add0 ? add0.qty : tr0.qty, lev: tr0.lev, mode: tr0.mode, token: CLOUD.token,
     mark: live ? M.mark : NaN, fund: live ? M.fund : NaN, book: live ? bookSnap() : null,
-    view: { tf: TF, ind: { main: [...IND.main], sub: [...IND.sub] }, draws: JSON.parse(JSON.stringify(A.draws || [])) }, shot: live ? shot() : null };
+    view: { tf: TF, ind: { main: [...IND.main], sub: [...IND.sub] }, draws: JSON.parse(JSON.stringify(A.draws || [])) }, shot: null };
   try {
+    // 截图和拉数据比较费力，晚 1 秒再做：成交后理由弹窗先出来、先能点（盘口和标记价格上面已经按成交那一刻记下了）
+    if (live) { await new Promise(r => setTimeout(r, 1000)); ctx.shot = shot(); }
     const snap = await RV.capture(ctx);
     const tr = A.trades.find(x => x.id === id); if (!tr) return;
     summarize(tr, kind, snap);
@@ -857,8 +892,41 @@ async function snapSweep() {
 }
 
 // ---------------- 行情 · K 线和技术指标 ----------------
-let chart, cs, TF = lsGet("btc_sim_tf") || "15m", lines = [], BARS = [], SER = [], RES = {};
-const TFS = [["1m", "1分"], ["5m", "5分"], ["15m", "15分"], ["1h", "1小时"], ["4h", "4小时"], ["1d", "1日"]];
+// 周期：分时（1 分钟收盘价连成线，实时走）+ 固定几个 + 自定义（数字 + 分 / 小时 / 日 / 周 / 月），自定义的可以固定到周期栏
+const TFS = [["line", "分时"], ["1m", "1分"], ["5m", "5分"], ["15m", "15分"], ["1h", "1小时"], ["4h", "4小时"], ["1d", "1日"]];
+const UNIT_MS = { m: 6e4, h: 36e5, d: 864e5, w: 6048e5 }, UNIT_N = { m: "分", h: "小时", d: "日", w: "周", M: "月" }, UNIT_MAX = { m: 720, h: 168, d: 180, w: 26, M: 24 };
+// 币安有的周期（大到小）；自定义的从能整除它的最大那个拼。周线从周一开始，只拿来拼整周
+const NATIVE = [["1w", 6048e5], ["1d", 864e5], ["12h", 432e5], ["8h", 288e5], ["6h", 216e5], ["4h", 144e5], ["2h", 72e5], ["1h", 36e5], ["30m", 18e5], ["15m", 9e5], ["5m", 3e5], ["3m", 18e4], ["1m", 6e4]];
+const STREAMED = new Set(["1m", "5m", "15m", "1h", "4h", "1d"]);   // 行情推送里有的 K 线；其他周期用逐笔成交自己更新最后一根
+const parseTf = tf => { const m = /^(\d+)([mhdwM])$/.exec(tf || ""); return m && +m[1] >= 1 && +m[1] <= UNIT_MAX[m[2]] ? { n: +m[1], u: m[2] } : null; };
+const tfLabel = tf => tf === "line" ? "分时" : (p => p ? p.n + UNIT_N[p.u] : tf)(parseTf(tf));
+// base：向币安要哪种 K 线；k：几根拼一根；月线按自然月拼
+function tfSpec(tf) {
+  if (tf === "line") return { base: "1m", k: 1, ms: 6e4, anchor: 0 };
+  const p = parseTf(tf) || { n: 15, u: "m" };
+  if (p.u === "M") return { base: "1M", k: p.n, mon: p.n, ms: p.n * 2629746e3 };
+  const ms = p.n * UNIT_MS[p.u], wk = ms % 6048e5 === 0, [base, bms] = NATIVE.find(([b, x]) => ms % x === 0 && (b !== "1w" || wk));
+  return { base, k: ms / bms, ms, anchor: wk ? 4 * 864e5 : 0 };
+}
+const pushed = sp => sp.k === 1 && !sp.mon && STREAMED.has(sp.base);
+function bucketT(t, sp) {
+  if (sp.mon) { const d = new Date(t), m = d.getUTCFullYear() * 12 + d.getUTCMonth(), b = m - m % sp.mon; return Date.UTC(Math.floor(b / 12), b % 12, 1); }
+  return Math.floor((t - sp.anchor) / sp.ms) * sp.ms + sp.anchor;
+}
+// 小 K 线拼成大 K 线；最前面那根不完整（拉数据时从中间开始）就不要
+function aggBars(bars, sp) {
+  const out = [];
+  for (const b of bars) {
+    const t = bucketT(b.t, sp), o = out.at(-1);
+    if (o && o.t === t) { o.h = Math.max(o.h, b.h); o.l = Math.min(o.l, b.l); o.c = b.c; o.v += b.v; o.q += b.q; }
+    else out.push({ ...b, t, first: b.t === t });
+  }
+  if (out.length > 1 && !out[0].first) out.shift();
+  return out.map(({ first, ...b }) => b);
+}
+let PINS = (() => { try { const x = JSON.parse(lsGet("btc_sim_tfpin")); return Array.isArray(x) ? x.filter(parseTf) : []; } catch (e) { return []; } })();
+let chart, cs, lineS = null, TF = lsGet("btc_sim_tf") || "15m", lines = [], BARS = [], SER = [], RES = {};
+if (TF !== "line" && !parseTf(TF)) TF = "15m";
 const sh = ms => Math.floor(ms / 1000) + TZOFF * 60;     // 图表横轴按所选时区显示
 function cssv(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 // 指标：主图叠在 K 线上，副图各占一格；选择记在本机
@@ -943,6 +1011,13 @@ function buildChart() {
     timeScale: { borderColor: cssv("--line"), timeVisible: true, secondsVisible: false }, crosshair: { mode: 0 }, handleScroll: SCROLL_OPT(), handleScale: SCALE_OPT() });
   const up = cssv("--good"), dn = cssv("--bad");
   cs = chart.addSeries(LC.CandlestickSeries, { upColor: up, downColor: dn, wickUpColor: up, wickDownColor: dn, borderVisible: false, priceFormat: { type: "price", precision: 1, minMove: 0.1 } }, 0);
+  // 分时：K 线照样在（画线、仓位线、现价标签都挂在它上面），只是透明，上面画一条收盘价折线
+  lineS = null;
+  if (TF === "line") {
+    const ac = cssv("--accent"), clear = "rgba(0,0,0,0)";
+    cs.applyOptions({ upColor: clear, downColor: clear, wickUpColor: clear, wickDownColor: clear });
+    lineS = chart.addSeries(LC.AreaSeries, { lineColor: ac, topColor: ac + "40", bottomColor: ac + "05", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, priceFormat: { type: "price", precision: 1, minMove: 0.1 } }, 0);
+  }
   SER = []; lines = []; lineKey = "";
   const add = (k, pane) => defsOf(k).forEach(([key, name, color, kind]) => {
     const s = kind === "vol" || kind === "hist" ? chart.addSeries(LC.HistogramSeries, { priceFormat: kind === "vol" ? { type: "volume" } : { type: "price", precision: 2, minMove: 0.01 }, lastValueVisible: false, priceLineVisible: false }, pane)
@@ -971,13 +1046,14 @@ function setAll() {
   if (!chart || !BARS.length) return;
   RES = calc();
   cs.setData(BARS.map(candle));
+  if (lineS) lineS.setData(BARS.map(b => ({ time: sh(b.t), value: b.c })));
   SER.forEach(d => d.s.setData(BARS.map((_, i) => pt(d, i))));
   legend(null); drawCanvas();
 }
 function updLast() {
   if (!chart || !BARS.length) return;
   RES = calc(); const i = BARS.length - 1;
-  try { cs.update(candle(BARS[i])); SER.forEach(d => d.s.update(pt(d, i))); } catch (e) { setAll(); }
+  try { cs.update(candle(BARS[i])); if (lineS) lineS.update({ time: sh(BARS[i].t), value: BARS[i].c }); SER.forEach(d => d.s.update(pt(d, i))); } catch (e) { setAll(); }
   if (!legend.hover) legend(null);
   drawCanvas();
 }
@@ -1002,9 +1078,9 @@ function renderIndBar() {
 // 历史 K 线拉不下来（有的网络连得上币安推送、连不上接口）：图上说清楚，过几秒再试；这期间先用推送来的最新几根画
 async function loadKl() {
   clearTimeout(loadKl.t);
-  const tf = TF, n = loadKl.n = (loadKl.n || 0) + 1;
+  const tf = TF, sp = tfSpec(tf), n = loadKl.n = (loadKl.n || 0) + 1;
   let k = null, err = "";
-  try { k = await jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=${tf}&limit=600`); } catch (e) { err = e.message || String(e); }
+  try { k = await jfetch(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=${sp.base}&limit=${sp.k > 1 ? 1500 : 600}`); } catch (e) { err = e.message || String(e); }
   if (n !== loadKl.n || tf !== TF) return;   // 中途换了周期，这次结果不要了
   if (!Array.isArray(k) || !k.length) {
     loadKl.fail = (loadKl.fail || 0) + 1;
@@ -1015,8 +1091,9 @@ async function loadKl() {
     return;
   }
   loadKl.fail = 0; $("klMsg").hidden = true;
-  const live = BARS.filter(b => b.t > +k.at(-1)[0]);   // 等待期间推送来的更新的 K 线接在后面
-  BARS = [...k.map(x => ({ t: +x[0], o: +x[1], h: +x[2], l: +x[3], c: +x[4], v: +x[5], q: +x[7] })), ...live];
+  const got = aggBars(k.map(x => ({ t: +x[0], o: +x[1], h: +x[2], l: +x[3], c: +x[4], v: +x[5], q: +x[7] })), sp);
+  const live = BARS.filter(b => b.t > got.at(-1).t);   // 等待期间推送来的更新的 K 线接在后面
+  BARS = [...got, ...live];
   setAll();
 }
 // ---------------- 单根 K 线信息框：鼠标移到 / 手指点到哪根，就显示那根的开高低收、涨跌、振幅、成交量 ----------------
@@ -1036,15 +1113,15 @@ function barBox(i, x) {
 }
 
 // ---------------- 画线工具：趋势线 / 射线 / 水平线 / 矩形 / 斐波那契回撤；锚点按「时间 + 价格」存，换周期也在原位置 ----------------
-const TFMS = { "1m": 6e4, "5m": 3e5, "15m": 9e5, "1h": 36e5, "4h": 144e5, "1d": 864e5 };
+const tfMs = () => tfSpec(TF).ms;
 const TOOLS = [["ptr", "↖ 指针"], ["trend", "╱ 趋势线"], ["ray", "→ 射线"], ["hline", "─ 水平线"], ["rect", "▭ 矩形"], ["fib", "斐波那契"]];
 const FIBS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
 const DR = { tool: "ptr", pend: null, hover: null, sel: null, magnet: lsGet("btc_sim_magnet") !== "0" };
 A.draws = A.draws || [];
-const tToL = t => { const n = BARS.length, f = TFMS[TF]; if (!n) return NaN; if (t <= BARS[0].t) return (t - BARS[0].t) / f;
+const tToL = t => { const n = BARS.length, f = tfMs(); if (!n) return NaN; if (t <= BARS[0].t) return (t - BARS[0].t) / f;
   if (t >= BARS[n - 1].t) return n - 1 + (t - BARS[n - 1].t) / f;
   let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (BARS[m].t <= t) lo = m; else hi = m; } return lo + (t - BARS[lo].t) / f; };
-const lToT = l => { const n = BARS.length, f = TFMS[TF], i = Math.max(0, Math.min(n - 1, Math.floor(l))); return BARS[i].t + (l - i) * f; };
+const lToT = l => { const n = BARS.length, f = tfMs(), i = Math.max(0, Math.min(n - 1, Math.floor(l))); return BARS[i].t + (l - i) * f; };
 const xy = a => { if (!chart || !cs) return null; const x = chart.timeScale().logicalToCoordinate(tToL(a.t)), y = cs.priceToCoordinate(a.p); return x == null || y == null ? null : { x, y }; };
 // 点击位置 → 锚点；开了磁吸就吸到最近那根 K 线的开高低收
 function anchorAt(pt, logical) {
@@ -1175,8 +1252,8 @@ addEventListener("keydown", e => {
   if (e.key === "Escape" && DR.tool !== "ptr") setTool("ptr");
 });
 function initChart() {
-  $("tf").innerHTML = TFS.map(([k, n]) => `<button type="button" data-tf="${k}" aria-selected="${k === TF}">${n}</button>`).join("");
-  $("tf").onclick = e => { const b = e.target.closest("[data-tf]"); if (!b) return; TF = b.dataset.tf; lsSet("btc_sim_tf", TF); [...$("tf").children].forEach(x => x.setAttribute("aria-selected", x === b)); BARS = []; loadKl.fail = 0; $("klMsg").hidden = true; loadKl(); };
+  renderTf();
+  $("tf").onclick = e => { if (e.target.closest("[data-cus]")) return cusOpen(); const b = e.target.closest("[data-tf]"); if (b) setTf(b.dataset.tf); };
   renderIndBar();
   $("indbar").onclick = e => { const b = e.target.closest("[data-ind]"); if (!b) return;
     const g = IND[b.dataset.grp], k = b.dataset.ind; IND[b.dataset.grp] = g.includes(k) ? g.filter(x => x !== k) : [...g, k];
@@ -1186,12 +1263,55 @@ function initChart() {
   loadKl();
 }
 function onKline(k) {
-  if (k.i !== TF) return;
+  const sp = tfSpec(TF); if (!pushed(sp) || k.i !== sp.base) return;
   const b = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.v, q: +k.q }, last = BARS.at(-1);
   if (!last) { if (loadKl.fail) { BARS = [b]; setAll(); } return; }
   if (b.t === last.t) BARS[BARS.length - 1] = b; else if (b.t > last.t) { BARS.push(b); if (BARS.length > 1000) BARS.shift(); } else return;
   updLast();
 }
+// 推送里没有的周期（自定义、周线、月线）：用逐笔成交更新最后一根，到点开新的一根；最多每 0.25 秒重画一次
+function liveTick(px, qty, t) {
+  const sp = tfSpec(TF), last = BARS.at(-1);
+  if (pushed(sp) || !last || !Number.isFinite(px)) return;
+  const bt = bucketT(t, sp);
+  if (bt === last.t) { last.h = Math.max(last.h, px); last.l = Math.min(last.l, px); last.c = px; last.v += qty; last.q = (last.q || 0) + px * qty; }
+  else if (bt > last.t) { BARS.push({ t: bt, o: px, h: px, l: px, c: px, v: qty, q: px * qty }); if (BARS.length > 1500) BARS.shift(); }
+  else return;
+  if (!liveTick.t) liveTick.t = setTimeout(() => { liveTick.t = 0; updLast(); }, 250);
+}
+// ---------------- 周期栏：固定的 + 你固定上去的自定义周期 + 「自定义」 ----------------
+function renderTf() {
+  const list = [...TFS.map(x => x[0]), ...PINS.filter(k => !TFS.some(x => x[0] === k))];
+  if (!list.includes(TF)) list.push(TF);
+  $("tf").innerHTML = list.map(k => `<button type="button" data-tf="${k}" aria-selected="${k === TF}">${tfLabel(k)}</button>`).join("") + `<button type="button" data-cus>＋ 自定义</button>`;
+}
+function setTf(k) {
+  const rebuild = (TF === "line") !== (k === "line");
+  TF = k; lsSet("btc_sim_tf", TF); renderTf();
+  BARS = []; loadKl.fail = 0; $("klMsg").hidden = true;
+  if (rebuild) buildChart();
+  loadKl();
+}
+const CUS_QUICK = ["3m", "30m", "2h", "6h", "12h", "3d", "1w", "2w", "1M", "2M", "3M"];
+function cusOpen() {
+  const p = parseTf(TF) || { n: "", u: "d" };
+  $("cusN").value = TF === "line" ? "" : p.n; $("cusU").value = p.u; $("cusMsg").textContent = "";
+  $("cusQuick").innerHTML = CUS_QUICK.map(k => `<button type="button" data-q="${k}" aria-pressed="${k === TF}">${tfLabel(k)}</button>`).join("");
+  cusPins(); $("cusDlg").hidden = false;
+}
+function cusPins() {
+  $("cusPins").innerHTML = PINS.length ? `<span class="hint" style="width:100%">已固定（点 × 从周期栏拿掉）</span>` + PINS.map(k => `<button type="button" data-unpin="${k}">${tfLabel(k)} ×</button>`).join("") : "";
+}
+function cusApply(k) {
+  if (k !== "line" && !parseTf(k)) { const u = $("cusU").value; $("cusMsg").textContent = `填 1 到 ${UNIT_MAX[u]} 之间的整数`; return; }
+  if ($("cusPin").checked && !TFS.some(x => x[0] === k) && !PINS.includes(k)) { PINS.push(k); lsSet("btc_sim_tfpin", JSON.stringify(PINS)); }
+  $("cusDlg").hidden = true; setTf(k);
+}
+$("cusQuick").onclick = e => { const b = e.target.closest("[data-q]"); if (b) cusApply(b.dataset.q); };
+$("cusPins").onclick = e => { const b = e.target.closest("[data-unpin]"); if (!b) return; PINS = PINS.filter(k => k !== b.dataset.unpin); lsSet("btc_sim_tfpin", JSON.stringify(PINS)); cusPins(); renderTf(); };
+$("cusOk").onclick = () => cusApply(`${+$("cusN").value.trim()}${$("cusU").value}`);
+$("cusN").addEventListener("keydown", e => { if (e.key === "Enter") $("cusOk").click(); });
+
 let lineKey = "";
 function drawLines(force) {
   if (!cs) return;
@@ -1221,6 +1341,7 @@ function connMkt() {
       M.trades.unshift([+d.p, +d.q, d.T, d.m]); M.trades.length = Math.min(M.trades.length, 40);
       A.lastT = d.T;
       if (M.ready) onPrice(M.last, d.T);
+      liveTick(+d.p, +d.q, d.T);
       dirty = true;
     } else if (stream.includes("@markPrice")) {
       M.mark = +d.p; M.fund = +d.r; M.fundT = +d.T;
@@ -1284,6 +1405,10 @@ function renderTop() {
   const left = M.fundT - Date.now(), hh = Math.max(0, Math.floor(left / 36e5)), mm = Math.max(0, Math.floor(left % 36e5 / 6e4)), ss = Math.max(0, Math.floor(left % 6e4 / 1e3));
   setTxt("hFund", Number.isFinite(M.fund) ? `${(M.fund * 100).toFixed(4)}% / ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : "—");
   document.title = `${p1(M.last)} BTC 模拟盘 · ${ACCT_NAME}`;
+  if (isFull()) {
+    setTxt("fLast", p1(M.last), "num " + $("hLast").className.replace("big num ", "")); setTxt("fChg", $("hChg").textContent, $("hChg").className);
+    setTxt("fMark", p1(M.mark)); setTxt("fHi", p1(M.tk.hi)); setTxt("fLo", p1(M.tk.lo)); setTxt("fFund", $("hFund").textContent);
+  }
 }
 const MOB = matchMedia("(max-width:820px)");
 function renderBook() {
@@ -1371,7 +1496,8 @@ let tblKey = "", HOLD = 0;
 document.addEventListener("pointerdown", e => { if (e.target.closest(".bottom,.bookbox")) HOLD = Date.now() + 1200; }, true);
 function render() {
   if (!dirty) return; dirty = false;
-  const held = Date.now() < HOLD;
+  // 手指按着仓位 / 订单簿，或者开着弹窗时：后面的订单簿、仓位先不重画，手机把力气留给点按
+  const held = Date.now() < HOLD || !!document.querySelector(".dlg:not([hidden])");
   // 每一块单独画：某一块出错只影响它自己，价格、订单簿等其他部分照常刷新
   const safe = f => { try { f(); } catch (e) { if (!safe.seen) { safe.seen = true; console.error(e); $("fMsg").className = "msg bad"; $("fMsg").textContent = "页面有一块显示出错（已跳过，其余照常刷新）：" + (e.message || e); } } };
   safe(renderTop); if (!held) { safe(renderBook); safe(renderPos); } safe(renderForm); safe(renderAcct); safe(drawLines);
