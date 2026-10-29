@@ -75,6 +75,16 @@ a{color:var(--accent)}
 .indbar button{background:none;border:1px solid transparent;border-radius:4px;padding:1px 7px;font-size:12px;color:var(--muted);cursor:pointer}
 .indbar button[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
 .chartbox .tabs{border-bottom:1px solid var(--line)}
+.tfrow{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.tfrow .tabs{flex:1;min-width:0;border-bottom:0}
+#fullBtn{flex:none;background:none;border:0;border-left:1px solid var(--line);padding:0 12px;cursor:pointer;color:var(--fg2);font-size:12.5px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+#fullBtn:hover{color:var(--fg)}
+/* K 线全屏：盖满整个窗口（电脑上同时进浏览器全屏），Esc 或再点一次退出 */
+.chartbox.full{position:fixed;inset:0;z-index:70;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);background:var(--card)}
+.chartbox.full .chartwrap{flex:1;min-height:0;display:block!important}
+.chartbox.full .tf{display:flex!important}
+.chartbox.full #chart{height:100%!important}
+html.chartfull{overflow:hidden}
 
 /* 订单簿 */
 .bcols,.brow{display:grid;grid-template-columns:1fr 1fr 1fr;padding:0 10px;font-family:var(--m);font-size:12px}
@@ -230,7 +240,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12px}
 
 <main class="grid">
   <section class="chartbox" id="chartbox">
-    <div class="tabs tf" id="tf" role="tablist" aria-label="K 线周期"></div>
+    <div class="tfrow tf"><div class="tabs tf" id="tf" role="tablist" aria-label="K 线周期"></div><button type="button" id="fullBtn" aria-pressed="false"></button></div>
     <div class="indbar tf" id="indbar" aria-label="技术指标"></div>
     <div class="indbar tf" id="drawbar" aria-label="画线工具"></div>
     <div class="chartwrap"><div id="chart"></div><canvas id="drawCv"></canvas><div id="lgd"></div><div id="barBox" hidden></div><p id="klMsg" hidden></p></div>
@@ -1485,6 +1495,24 @@ $("oOk").onclick = () => {
 
 $("resetBtn").onclick = () => { const v = prompt("重置模拟账户：清空仓位、委托和全部记录。初始资金（USDT）：", "10000"); if (v === null) return;
   const bal = Math.max(10, +v || 10000), keepDraws = A.draws; A = norm(blank(bal)); A.draws = keepDraws || []; touch(); dirty = true; tblKey = ""; toast(`已重置，初始资金 ${p2(bal)} USDT`); };
+// K 线全屏：整块（周期、指标、画线、图）铺满窗口；电脑上同时进浏览器全屏，手机（iPhone 不支持网页全屏）就铺满页面
+const FULL_IC = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+const EXIT_IC = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+const isFull = () => $("chartbox").classList.contains("full");
+function paintFull() { const f = isFull(); $("fullBtn").innerHTML = (f ? EXIT_IC : FULL_IC) + (f ? "退出全屏" : "全屏"); $("fullBtn").setAttribute("aria-pressed", f); }
+function setFull(on) {
+  if (on === isFull()) return;
+  $("chartbox").classList.toggle("full", on); document.documentElement.classList.toggle("chartfull", on);
+  if (on && !chart) buildChart();
+  const box = $("chartbox");
+  if (on && box.requestFullscreen && !isMob()) box.requestFullscreen().catch(() => { /* 不让就只铺满窗口 */ });
+  if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  paintFull(); drawCanvas();
+}
+$("fullBtn").onclick = () => setFull(!isFull());
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && isFull()) setFull(false); });
+addEventListener("keydown", e => { if (e.key === "Escape" && isFull() && !CF && !RSN) setFull(false); });
+paintFull();
 $("chartTog").onclick = () => { const f = $("chartbox").classList.toggle("fold"); lsSet("btc_sim_fold", f ? "1" : "0"); if (!f) buildChart(); };
 // 手机默认收起 K 线（先看下单和订单簿），点「K 线」展开；记住上次的选择
 { const f = lsGet("btc_sim_fold"); if (f === "1" || (f === null && matchMedia("(max-width:820px)").matches)) $("chartbox").classList.add("fold"); }
