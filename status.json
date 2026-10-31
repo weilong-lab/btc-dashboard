@@ -1,0 +1,909 @@
+{
+ "updated": "11-01 05:39",
+ "tz": "Asia/Tokyo",
+ "price": 77604.46,
+ "market": {
+  "price": 77604.46,
+  "range5": 0.02121422709070513,
+  "base5": 0.0667062491191815,
+  "move15": -0.0006185173263451027,
+  "prev24": 1.51961172044422,
+  "vol_ratio": 0.7806733592121152,
+  "oi": 34221.7863000002,
+  "oi_chg15": -0.022784675621567718,
+  "funding": 0.01,
+  "ls": 2.62,
+  "ls_chg15": 0.0,
+  "cross": {
+   "美元指数": null,
+   "美债10年收益率": null,
+   "纳指期货": null,
+   "原油期货": null,
+   "黄金期货": null,
+   "美元兑日元": null
+  },
+  "stocks": {
+   "updated_ms": 1793479147949,
+   "data": {
+    "QQQ": {
+     "regular": 690.49,
+     "regular_at_ms": 1793390401000,
+     "prev_close": 715.34,
+     "ext": {
+      "price": 692.74,
+      "at_ms": 1793404795000,
+      "session": "盘后"
+     },
+     "fullday": 690.49
+    },
+    "SPY": {
+     "regular": 755.72,
+     "regular_at_ms": 1793390400000,
+     "prev_close": 769.36,
+     "ext": {
+      "price": 757.12,
+      "at_ms": 1793404799000,
+      "session": "盘后"
+     },
+     "fullday": 755.72
+    },
+    "IWM": {
+     "regular": 279.33,
+     "regular_at_ms": 1793390400000,
+     "prev_close": 284.01,
+     "ext": {
+      "price": 279.82,
+      "at_ms": 1793404631000,
+      "session": "盘后"
+     },
+     "fullday": 279.33
+    },
+    "NVDA": {
+     "regular": 204.64,
+     "regular_at_ms": 1793390401000,
+     "prev_close": 213.66,
+     "ext": {
+      "price": 205.2499,
+      "at_ms": 1793404797000,
+      "session": "盘后"
+     },
+     "fullday": 204.64
+    },
+    "MSTR": {
+     "regular": 130.51,
+     "regular_at_ms": 1793390400000,
+     "prev_close": 141.62,
+     "ext": {
+      "price": 132.1,
+      "at_ms": 1793404759000,
+      "session": "盘后"
+     },
+     "fullday": 130.51
+    },
+    "COIN": {
+     "regular": 143.54,
+     "regular_at_ms": 1793390401000,
+     "prev_close": 160.59,
+     "ext": {
+      "price": 145.25,
+      "at_ms": 1793404783000,
+      "session": "盘后"
+     },
+     "fullday": 143.54
+    },
+    "BMNR": {
+     "regular": 20.18,
+     "regular_at_ms": 1793390402000,
+     "prev_close": 21.66,
+     "ext": {
+      "price": 20.14,
+      "at_ms": 1793404782000,
+      "session": "盘后"
+     },
+     "fullday": 20.18
+    },
+    "CRCL": {
+     "regular": 72.54,
+     "regular_at_ms": 1793390403000,
+     "prev_close": 79.99,
+     "ext": {
+      "price": 72.96,
+      "at_ms": 1793404750000,
+      "session": "盘后"
+     },
+     "fullday": 72.54
+    },
+    "HOOD": {
+     "regular": 84.99,
+     "regular_at_ms": 1793390401000,
+     "prev_close": 91.59,
+     "ext": {
+      "price": 85.41,
+      "at_ms": 1793404776000,
+      "session": "盘后"
+     },
+     "fullday": 84.99
+    },
+    "MARA": {
+     "regular": 6.77,
+     "regular_at_ms": 1793390401000,
+     "prev_close": 7.165,
+     "ext": {
+      "price": 6.78,
+      "at_ms": 1793404779000,
+      "session": "盘后"
+     },
+     "fullday": 6.77
+    },
+    "IREN": {
+     "regular": 23.95,
+     "regular_at_ms": 1793390401000,
+     "prev_close": 26.25,
+     "ext": {
+      "price": 24.16,
+      "at_ms": 1793404783000,
+      "session": "盘后"
+     },
+     "fullday": 23.95
+    },
+    "BITO": {
+     "regular": 10.23,
+     "regular_at_ms": 1793390401000,
+     "prev_close": 10.77,
+     "ext": {
+      "price": 10.32,
+      "at_ms": 1793403879000,
+      "session": "盘后"
+     },
+     "fullday": 10.23
+    }
+   }
+  }
+ },
+ "ruler": {
+  "session": "周末",
+  "activity": "平静",
+  "h1_median_pct": 0.28,
+  "h4_p80_pct": 1.14,
+  "h1_median_pts": 217,
+  "h4_p80_pts": 885
+ },
+ "upcoming": [
+  {
+   "title": "美股开盘",
+   "at": "11-02 23:30",
+   "at_ms": 1793629800000,
+   "in_min": 2511
+  },
+  {
+   "title": "美国 CPI（10 月）",
+   "at": "11-10 22:30",
+   "at_ms": 1794317400000,
+   "in_min": 13971
+  }
+ ],
+ "alerts": [
+  {
+   "time": "2026-10-31T20:37:07.866208+00:00",
+   "time_local": "11-01 05:37",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance $6B hack fuels Washington debate on crypto regulation before election - Crypto Bri",
+   "body": "直接相关 利空 · 来源：Crypto Briefing · 发布 11-01 05:37\nBinance $6B hack fuels Washington debate on crypto regulation before election - Crypto Briefing\n\nhttps://news.google.com/rss/articles/CBMipwFBVV95cUxQcHpyQnEzdzdBa2hDUmRHLWlxVllOWndraHlMNDgxZnZTenkxc1NCSklmVWFpVS1PcFRzNjdLTnVJbWI2UXZDSXNGX0w0S01IQzRzamJLbnVSSXgzNF9XUGt2c3M5c205YVVGUDJKNGh0cWRfS1dMcVFHQmhPVjNQZUgyOXhHYlB3bk5pM0wySEt0Y2FSYWx6YXBMVmFjZnNnYlZOY2MxRQ?oc=5\nBTC 当时 77,589"
+  },
+  {
+   "time": "2026-10-31T20:29:09.533530+00:00",
+   "time_local": "11-01 05:29",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Stolen Bitcoin from Binance Hack Exceeds Tesla’s BTC Holdings, Nears SpaceX’s, and More Th",
+   "body": "直接相关 利空 · 来源：Crowdfund Insider · 发布 11-01 05:29\nStolen Bitcoin from Binance Hack Exceeds Tesla’s BTC Holdings, Nears SpaceX’s, and More Than Doubles El Salvador’s Reserve - Crowdfund Insider\n\nhttps://news.google.com/rss/articles/CBMi-gFBVV95cUxQNmFwQWxfSXc2N1MxenE4U1I3SGVVQ2pzaGtpSlVrYnhtRXZDbEdEWUxnU3o0eVhHOUZrc1dxVVRTR0c1TWd2LXVjS0lWUU5zQ2hLa3Q0UmE1OS04NTBzbWRMU2lVU05rRXBEdjlvTnZ6RkFCUU1FZGVPeDc3N0RISXBvX0xMOUZJM2swWlEtcUtBMlpfS0lrTzRhRFhfZkxta3FveE0ybmc0eVh6M3Fsd0pYUHZid0hXVllMYjFlWS1IaHdHVHVLZHFYODRfdFRPU2V4QWNBRVpNNDlhSUI5Wk9rRGtPMHhMbElPQmx4N1RFUjEteTBWUXBn?oc=5\nBTC 当时 77,592"
+  },
+  {
+   "time": "2026-10-31T20:24:07.698878+00:00",
+   "time_local": "11-01 05:24",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Bitcoin holds up better than Ethereum, XRP, and BNB after Binance hack triggers crypto mar",
+   "body": "直接相关 利空 · 来源：Pluang · 发布 11-01 05:24\nBitcoin holds up better than Ethereum, XRP, and BNB after Binance hack triggers crypto market volatility. - Pluang\n\nhttps://news.google.com/rss/articles/CBMilAFBVV95cUxNZWlmWXJOdXZ0WjNRcWNIQmxYWV9VR3lzb2JxbGZwYk9CRGF4cW92WkZEOVFEeS1kTThVV25scnF6d1FkMkRYckY2NTk0RXd3eTRtQVlaSEpCaEZQQnFhamltNnFfZ0V0d1RvYkE1SGt5Qm5PbVpSYTRaNE1tTF9vYWQzOFJJTEFsS2FVUk9kTk9fS3hQ?oc=5\nBTC 当时 77,605"
+  },
+  {
+   "time": "2026-10-31T20:21:10.434902+00:00",
+   "time_local": "11-01 05:21",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·中文] 比特币白皮书18周年：长期安全模型引热议，价格跌破8万美元、Binance 63亿美元黑客案震动市场 - 区块周刊BlockWeeks",
+   "body": "直接相关 中性 · 来源：区块周刊BlockWeeks · 发布 11-01 05:21\n比特币白皮书18周年：长期安全模型引热议，价格跌破8万美元、Binance 63亿美元黑客案震动市场 - 区块周刊BlockWeeks\n\nhttps://news.google.com/rss/articles/CBMiSkFVX3lxTFBjOG1DYmkzSHNIUDRjZjdDa1FIV3l2QjM0MWpMS01mZzhmWFdGQ3ZwSTNlemxzVlBWSVpXaXVLa1ZicC1RVnJEUEFn?oc=5\nBTC 当时 77,634"
+  },
+  {
+   "time": "2026-10-31T20:18:08.983699+00:00",
+   "time_local": "11-01 05:18",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] THORChain Pause Delays Binance Hack Laundering, Chainalysis Says - The Crypto Times",
+   "body": "直接相关 利空 · 来源：The Crypto Times · 发布 11-01 05:18\nTHORChain Pause Delays Binance Hack Laundering, Chainalysis Says - The Crypto Times\n\nhttps://news.google.com/rss/articles/CBMipAFBVV95cUxORGtLMGszRXJ6dEtjWUJRTHJXVUMxTTRuQlpEaUpnd0ZQdnZTTy1Wc0k2QTJ2ZjFaemZpUldYMzloOTk5dTlsZlA5QnFPNjUzZmsxV29JTEw0eXE5X3l6SWVvU01JaUhwM2xqV29UUGZzLUhGdTljUE5xaTMtdHNUYjB5T2FUVXJkZmt0MDBhU21UVDFROHZ5ZnFvaVF5X2J3c0s5YQ?oc=5\nBTC 当时 77,634"
+  },
+  {
+   "time": "2026-10-31T20:16:08.244348+00:00",
+   "time_local": "11-01 05:16",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Bitcoin ETFs Lose $643M After Binance Hack Ends 4-Day Inflow Run - Bitcoin News",
+   "body": "直接相关 中性 · 来源：Bitcoin News · 发布 11-01 05:16\nBitcoin ETFs Lose $643M After Binance Hack Ends 4-Day Inflow Run - Bitcoin News\n\nhttps://news.google.com/rss/articles/CBMipwFBVV95cUxQbEFlWkEyckttODY2c1UzTHZieXdCbmIxbWwzUDF5MFprWUFacFZXeHBQOEZPaVNzdS1wQng5RXdoaEs4czAybWMzMU1JVnBWeThmQjdHbF9PX0MyWE1JQ0VzSEpMVFdFRzExWTltUXJ2NFNOeU1Wb1UyR2U1RWE1eEx4dlRia2xINHhUUFlQbEQxbWN1RWc2WU1oQzd6TFJXVGpSeU14Yw?oc=5\nBTC 当时 77,608"
+  },
+  {
+   "time": "2026-10-31T20:13:07.954306+00:00",
+   "time_local": "11-01 05:13",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Crypto ETF News: Bitcoin ETFs Lost $643 Million in a Day and Ethereum ETFs Have Bled for 1",
+   "body": "直接相关 利多 · 来源：24/7 Wall St. · 发布 11-01 05:13\nCrypto ETF News: Bitcoin ETFs Lost $643 Million in a Day and Ethereum ETFs Have Bled for 11 Straight Days. How Much of October's Inflows Are Gone? - 24/7 Wall St.\n\nhttps://news.google.com/rss/articles/CBMi1gJBVV95cUxQRW5Lc1dSR2l5M0IxdElBTmJDZEZSa1lJS1NNSFRLcDVhN0hYYXBTSEp6eld6RzdyTW15US1RWGtBM3dBaEpUUkN3cTRfYmxFVVRQWjRaYUJOVmJndFZFQzFBZjRBMXZrYUlZQUdvM3JGVTBfMFhydG1ubzJQTXFtaWNUNHhpWmdHd01BVUNkY3JxZi03amlPUEprYkYyMWt2MzB4czlqTFRFN3dSSUszeXpaYUgyNEFWaVNMbTVhc3U4M3NjOWp6X3dGN2pZS1Q4S2k0UkFQZUdLdlo5c0UyUTc0MU12eXRuNGhRbHh5cndJNDlyZy1ldWplcnJHMkpCX2VRQjhsS3pMUWJaa0FZUTcxN3U2UTZ0Tkh5Tjg0RVpCNjlJZ2FsbTIzQUNOTUF1ejlvZ3hLQ1hJM0EtMjJBdnRndUtodEJOWFBZOW1xVi00TjZIaHc?oc=5\nBTC 当时 77,631"
+  },
+  {
+   "time": "2026-10-31T20:10:09.558340+00:00",
+   "time_local": "11-01 05:10",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] The Binance Hacker's $60 Million Aave Loan Is Close to Liquidation. What Would a Forced Sa",
+   "body": "直接相关 利空 · 来源：24/7 Wall St. · 发布 11-01 05:10\nThe Binance Hacker's $60 Million Aave Loan Is Close to Liquidation. What Would a Forced Sale Do to Ethereum? - 24/7 Wall St.\n\nhttps://news.google.com/rss/articles/CBMi9gFBVV95cUxOM2JvUFpfN25kS0t5eWZJbDF5UjRhek1BWHc4RWZ4VEFYVnVyd01KaXg5QllVX0MzSDJHYkYzeHFBRWowWExhOVh0S3ZZR1VmNTF6Q0N1TDR0dEFWS25TRHctbEpCMHkwZm00bFZFd1hVM0NBNkhOdjhpQnNuMzdzbGFOTFAtaElBSUFiTDI2VW1tZTh3UFc3b21fcFk4dzgxdkpqWG5BRE9KQUpLLWdXSTEyV2RHWXpRcWRXMVh3UnYxb01wSU53ZGRoSUtmbWN6d0dyUDAyZEh2QVFmRHNMeGsxV05GUmpsdUtoNlczTWZVNENIT1E?oc=5\nBTC 当时 77,648"
+  },
+  {
+   "time": "2026-10-31T20:05:07.792133+00:00",
+   "time_local": "11-01 05:05",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance Hack: 158.2M TRX Funds Shifted to New Wallet - Coinfomania",
+   "body": "直接相关 利空 · 来源：Coinfomania · 发布 11-01 05:05\nBinance Hack: 158.2M TRX Funds Shifted to New Wallet - Coinfomania\n\nhttps://news.google.com/rss/articles/CBMiggFBVV95cUxNWW5VZ0YzYlowci1ONWVDa2d3anZjNlVpd3FUWHNHMVpKVEx5LXB3al9mclV2RmJCY2VZUnBKSUZ6aUo0RGtSSm5xQnBjeHBzYTU4WUlYWENyX3JEWFZqczhPNVA0dFk5THpMbVhDM2k0MVNhbzVxS082d0dKdlF0cVl3?oc=5\nBTC 当时 77,626"
+  },
+  {
+   "time": "2026-10-31T19:59:08.602523+00:00",
+   "time_local": "11-01 04:59",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·中文] CFTC与美国议员就币安63亿美元黑客事件给出不同回应 - Bitcoin News",
+   "body": "直接相关 中性 · 来源：Bitcoin News · 发布 11-01 04:59\nCFTC与美国议员就币安63亿美元黑客事件给出不同回应 - Bitcoin News\n\nhttps://news.google.com/rss/articles/CBMiygFBVV95cUxOcHI4VERISXR2dWxhSkZLRnV3V1hjVV9LM0Y1cVB5OEZzRzBQNjBXZGZrMXZTVTAtUEV2NHRxOFBfN3VuUTBvdkRmNVRNQUVHLTVneGg4QVZDQ2cydnM0OHc5VTBKRjljSmZtdnNWakIwNms2ellITjdacjdGUFZ6TGF5UGFKREJHbzJKaWhtdDFscnVVb0hmcjkySkFXRVpPZ3c5WUp1ZVdDeWc1MzRrTW1WcTgwOUtCNHc0dnZTdW5CRHBLenBCSWt3?oc=5\nBTC 当时 77,574"
+  },
+  {
+   "time": "2026-10-31T19:59:08.349188+00:00",
+   "time_local": "11-01 04:59",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·地缘] Sowore Demands Sanctions Over Ikogosi Marathon Exclusion - Nigerian Bulletin",
+   "body": "间接相关 利空（弱） · 来源：Nigerian Bulletin、forefrontng.com · 发布 11-01 04:59（2 家来源报道）\nSowore Demands Sanctions Over Ikogosi Marathon Exclusion - Nigerian Bulletin\n\nhttps://news.google.com/rss/articles/CBMiogFBVV95cUxQc0RjbHJhN0xkeWNXYS1HOGJSM21kTHd1TWtTTU1zRUN2WU1PUGw1dnNwTjF4cDFsLUNBSHdvUGZFLW5QQVQzb2N3bmpRSmpIWVB1RDdCeF81R0dZTDg3Wk8zLVNWWWlVTHdYYXE5S0FLTkZkcVM1RjdlM1JLdDNXODRlZjFMMFFfbUZ4Y3dZbEN1cTZXeVdvS3NwRE5KZUtwaHc?oc=5\nBTC 当时 77,574"
+  },
+  {
+   "time": "2026-10-31T19:58:09.529313+00:00",
+   "time_local": "11-01 04:58",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance Needs to Buy Back Billions in Stolen Coins. Could Its Buying Lift Bitcoin? - 24/7 ",
+   "body": "直接相关 利多 · 来源：24/7 Wall St. · 发布 11-01 04:58\nBinance Needs to Buy Back Billions in Stolen Coins. Could Its Buying Lift Bitcoin? - 24/7 Wall St.\n\nhttps://news.google.com/rss/articles/CBMi1gFBVV95cUxNc2M3dzBTaVF6eTVzZHpoNzRRd0ZqSlY4VXJqWlc4SXNTMWNISnpBYkdBWDZ6bzdRNGtSVmN6MFNad0FUWXlmdVRaUnhhNmtvM3pGMTJwV1Mwc0JEeVh1MXc1eTRVS0RoX2FEVUlEOW9HTzVUYXc0OTBGZEoySmtyZzRyT3pyQnl2Y3VhNDlOdkFZUFNicktaQlBNV1BmZ1J1Mkx2RlV4aGlkeW02TG4tT1dhRjk5ZG4zekxjS1MyRVFqZlZhNWtzeDhWQ0NDYzgtZ0V3MjVn?oc=5\nBTC 当时 77,574"
+  },
+  {
+   "time": "2026-10-31T19:48:07.407428+00:00",
+   "time_local": "11-01 04:48",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Strive CEO Matt Cole Says $6.3B Binance Hack Doesn't Break Bitcoin, Warns Recovery May Tak",
+   "body": "直接相关 利空 · 来源：BigGo Finance · 发布 11-01 04:48\nStrive CEO Matt Cole Says $6.3B Binance Hack Doesn't Break Bitcoin, Warns Recovery May Take 6-9 Months - BigGo Finance\n\nhttps://news.google.com/rss/articles/CBMidkFVX3lxTE5mR0hmaTRFRVVSOWZhbXBRaFBEaU9YQ3dMaUV4TWdRREE4SHlMX2RIOTRsNjV1MjNndzJ5V0NHcEhVNi0tbTJ3eTRCUXNXblR0em9lRWp5N1laOEdFTHFQek9TZGowM1BibHFKN21NRl94S05MLWc?oc=5\nBTC 当时 77,574"
+  },
+  {
+   "time": "2026-10-31T19:25:06.805246+00:00",
+   "time_local": "11-01 04:25",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Bitcoin and Ethereum Price Outlook: Can BTC Hold USD 76K as ETF Outflows Rise? - Analytics",
+   "body": "直接相关 利空 · 来源：Analytics Insight · 发布 11-01 04:25\nBitcoin and Ethereum Price Outlook: Can BTC Hold USD 76K as ETF Outflows Rise? - Analytics Insight\n\nhttps://news.google.com/rss/articles/CBMiwgFBVV95cUxQMnBfcEFIeldSekYwSTVKWHhWUklQb3pyUUdPR2ZnV05LS3hseUpkWlllU2pjRUlCbnZBWndSUXhCdTRFVUVMcjR4czI2VzNjRU1WTUNJODZLS09fSUlRbndIYTlrRUtJUGswNGQzcGtzcDRwQlB0NmloalBPWVZNdjBjaUxXdGpnQ3Y4VW5tVHoxLWhPWkxiRUN6NUxSbng0NzI2YkU0eENKY0hkbkViLWVaUVBHOVZBeHlNcmFsQlpXQdIBwgFBVV95cUxQMnBfcEFIeldSekYwSTVKWHhWUklQb3pyUUdPR2ZnV05LS3hseUpkWlllU2pjRUlCbnZBWndSUXhCdTRFVUVMcjR4czI2VzNjRU1WTUNJODZLS09fSUlRbndIYTlrRUtJUGswNGQzcGtzcDRwQlB0NmloalBPWVZNdjBjaUxXdGpnQ3Y4VW5tVHoxLWhPWkxiRUN6NUxSbng0NzI2YkU0eENKY0hkbkViLWVaUVBHOVZBeHlNcmFsQlpXQQ?oc=5\nBTC 当时 77,591"
+  },
+  {
+   "time": "2026-10-31T19:10:09.213194+00:00",
+   "time_local": "11-01 04:10",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] CFTC and US Lawmaker Offer Two Different Answers to Binance’s $6.3B Hack - Bitcoin News",
+   "body": "直接相关 利空 · 来源：Bitcoin News · 发布 11-01 04:10\nCFTC and US Lawmaker Offer Two Different Answers to Binance’s $6.3B Hack - Bitcoin News\n\nhttps://news.google.com/rss/articles/CBMiuAFBVV95cUxQRUhSUElTUWR1eE1lUDZtRVRXTTY4dGFYd2g1NFNWMUZIbjZUSXlZTThrYzlVTlpaLUVPbHNndVN1S203WGx5ZUhSOEdTZHYtb000cDl2dUZmU2pDNV9TaXNSY0doeGdWNXNmZTRmY1lGVmt4LTROejh2R3AxVjl5bGhRenktek9lWHJkZkhfdktyY2JWSGRCSmtXc2xuMFRvVFBobDJGX2JTUW9BMVZNY3d4Sk9KTXRQ?oc=5\nBTC 当时 77,662"
+  },
+  {
+   "time": "2026-10-31T18:45:45.714413+00:00",
+   "time_local": "11-01 03:45",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] TRON Price Prediction: TRX Drops 6% as $628 Million Binance Hack Fallout Reverses Rally - ",
+   "body": "直接相关 中性 · 来源：CryptoRank · 发布 11-01 03:45\nTRON Price Prediction: TRX Drops 6% as $628 Million Binance Hack Fallout Reverses Rally - CryptoRank\n\nhttps://news.google.com/rss/articles/CBMivwFBVV95cUxQRTdaX0ktRFdzamtVbWQ5eGFOdjdpbllXVzJMTGVGS2g0RUdyMFBoY1Z2QVJ6WFlOT2NpRklQSU1KY3M5ajdDRjlPWUk0Z01RS19NNDVkNFdrSG9WMUdjRzQ4QUk1VkdHckJLM1lwcURDN05pT2FRZFBGUUpFME9hMFhsQ2QyODB3X3pvMVdvR1d1VHFVYVh0dGNCeWJsYk1GVi1sZTc4aGZGZWJuTnNQNGRKeTg1UkpPYkdqRGE0Zw?oc=5\nBTC 当时 77,712"
+  },
+  {
+   "time": "2026-10-31T18:45:45.711089+00:00",
+   "time_local": "11-01 03:45",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance’s $6.3 Billion Hack: How Crypto insurance works - Asia Insurance Post",
+   "body": "直接相关 利空 · 来源：Asia Insurance Post · 发布 11-01 03:45\nBinance’s $6.3 Billion Hack: How Crypto insurance works - Asia Insurance Post\n\nhttps://news.google.com/rss/articles/CBMiV0FVX3lxTE9rWWZHQWgtV2ZJbFBWWlpXSXYzdXRmNmxENnFlQ25NbFc0Q1dGU19EUVVxblFHUjBCaFcwelgwS2NmbmNTd2paSlpFV2ZBdmVFZDdpSWNKaw?oc=5\nBTC 当时 77,712"
+  },
+  {
+   "time": "2026-10-31T18:42:45.155563+00:00",
+   "time_local": "11-01 03:42",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance Says It Has Replaced 90% of Stolen Crypto After $6.3 Billion Hack - Coinpaper",
+   "body": "直接相关 利空 · 来源：Coinpaper · 发布 11-01 03:42\nBinance Says It Has Replaced 90% of Stolen Crypto After $6.3 Billion Hack - Coinpaper\n\nhttps://news.google.com/rss/articles/CBMioAFBVV95cUxOZF9TVjREZ1o0Mzl3UnFfTnpNMGp0eHVMaUE2NGNrRVp6TzhjTHFiVjlOTk1jTWlkd2JvVU12U2s2S1ctNURETzdkbHhEcElCUE5Ma0pOUWRYdjRhX2ZvbHU3QUVnX0JvdTdkR1ZUQmZPd2hJd0dyaWFJZEZrTTlFVjNFS0x1cnZTS195XzN2cXRueGRjbjJyQUhBeGo1N2dL?oc=5\nBTC 当时 77,716"
+  },
+  {
+   "time": "2026-10-31T18:36:45.726436+00:00",
+   "time_local": "11-01 03:36",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Bitcoin Holds Firm After Binance Hack as Investors Eye Regulated Crypto Stocks - Simply Wa",
+   "body": "直接相关 利空 · 来源：Simply Wall St · 发布 11-01 03:36\nBitcoin Holds Firm After Binance Hack as Investors Eye Regulated Crypto Stocks - Simply Wall St\n\nhttps://news.google.com/rss/articles/CBMi1gFBVV95cUxNQk95YXQ0QnpaSnFfTWltR2VydmxqbUVDX3Z2YmNCdHBwSXdBMmtiWnVjbENJZUk3NnhPYV9heVNORVhrUUJ4MmZBVEx5RmlycnVUR0NRd1lSek93Q1RMOVE0X0RaV1h1SF9BRWJDZklDbk5oSmJTd2lzRFlHQUQ0SzFjbS1LRHRrNGxpa1d5bmVSeXF6aWt3LVZGMFpZRVhhVE04YUJjU1dfV0t3Xzd4TTlGSkRHWlhPV2tXNE1uamRiUGwzVHcwZ2U5NlJORDQ2Rm9TeVVB0gHbAUFVX3lxTFBhWkpuWTBVbk1LUkJ0SmlFcGhfdk1XVFUtTXVReDBQSmhjMlBSQnNGRHp5ZVpQc0NxemotZWlIdFpTMU1hSkdnTUdYZUF3SHFFRVUxeUdQa0FOS2kyMHo3T1ZZTlBhTXFEVVp5ak90ZFpGM2l4ZXM0NjFvWUQwWjBYTVgxY1V3RThMb2p3TUZUaUtTeEozS1lyZERTTVIxSVdqb2VtTGEwczZMeDdNTU92eUthclRlSDJ3VC12X21jcEhiX1FpMnFUY183OFBGWldCdmx2MGc0dVhBZw?oc=5\nBTC 当时 77,744"
+  },
+  {
+   "time": "2026-10-31T18:34:45.007574+00:00",
+   "time_local": "11-01 03:34",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance replaces 90% of stolen crypto after record $6.3 billion hack, pledges to cover rem",
+   "body": "直接相关 利空 · 来源：IndiaIPO · 发布 11-01 03:34\nBinance replaces 90% of stolen crypto after record $6.3 billion hack, pledges to cover remaining losses - IndiaIPO\n\nhttps://news.google.com/rss/articles/CBMi0AFBVV95cUxPUHhQbzJBRjFqWWdxRG5VMDJwdU1lWXI4VkRqN2Q4UlEtMjlGTHpBRERhX3V5c3dNU25DVFZMbEdtaEo5cHJfUlNyZDBsc2QxT3lKWUFVQVBleTA2b0RPdmlRYkVhWEhYSERRbnBPdU5MbFFPREFpMzdaUnNsSEZJekg2STIybFVaYl9KUGhaUTFTdTliYUhGX0RjczFKZ1RIdkxxREs2WWl4cGVvRnpNOGxkODNGV2xFbnJRVW5BUTl4U3RVTjJBdkpXTUJrRDg1?oc=5\nBTC 当时 77,722"
+  },
+  {
+   "time": "2026-10-31T18:34:45.005428+00:00",
+   "time_local": "11-01 03:34",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance Restores 90% of $6.3B Hack Losses, Eyes Sunday Reopen - The Tech Buzz",
+   "body": "直接相关 利空 · 来源：The Tech Buzz · 发布 11-01 03:34\nBinance Restores 90% of $6.3B Hack Losses, Eyes Sunday Reopen - The Tech Buzz\n\nhttps://news.google.com/rss/articles/CBMilgFBVV95cUxPVGs1LXlXaUR1ZTBTSkxWRVFOeEFZSHVhZldSa1FXNnFERGlnZkdnQ2Q1MzBoTV9oOGVHNktjS1pUZUl4NmRPMXBBUThzaENFMTlyZF9yOGk4dGVuaHVuVldyalQyYnVOaVNNVXNxOFlWQUFfaEFBZFgtOUxmZWdSbXVLZElXVWpmX0tWRy1PRXB3QVFtVkE?oc=5\nBTC 当时 77,722"
+  },
+  {
+   "time": "2026-10-31T18:25:46.069244+00:00",
+   "time_local": "11-01 03:25",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Odaily快讯] THORChain暂停意外延缓币安被盗资金洗钱进程",
+   "body": "直接相关 利空 · 来源：Odaily快讯 · 发布 11-01 03:25\nTHORChain暂停意外延缓币安被盗资金洗钱进程\n\nhttps://www.odaily.news/zh-CN/newsflash/529507\nBTC 当时 77,738"
+  },
+  {
+   "time": "2026-10-31T18:22:44.983209+00:00",
+   "time_local": "11-01 03:22",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] SlowMist Links $783K zkLink Exploit to Transient Storage Reuse - The Crypto Times",
+   "body": "直接相关 中性 · 来源：The Crypto Times · 发布 11-01 03:22\nSlowMist Links $783K zkLink Exploit to Transient Storage Reuse - The Crypto Times\n\nhttps://news.google.com/rss/articles/CBMiogFBVV95cUxPa0F1ODljbFQwLWFwTFlRdV9FUzZ2SkZ6OWY1ZGVJdjJQWmlka1lTdUxsc0QybnRES01jbWFHcG9xd203enF4S1BFUXhPMUJvcnV6SnlDQjNYLWFZRzBRemQxOFZWQjZjV1U0Q2NMYmh2RzNWTEpHRHBtVm1OR3ZQd0NRM25yb3cyeG8wa29JYXJiRTY0WkZzQUNGM1N6UzB0NGc?oc=5\nBTC 当时 77,763"
+  },
+  {
+   "time": "2026-10-31T18:19:47.157253+00:00",
+   "time_local": "11-01 03:19",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] A simple explainer of the massive $6.3 billion crypto heist at Binance - NPR",
+   "body": "直接相关 中性 · 来源：NPR、Northern Public Radio、WLIW · 发布 11-01 03:19（3 家来源报道）\nA simple explainer of the massive $6.3 billion crypto heist at Binance - NPR\n\nhttps://news.google.com/rss/articles/CBMimAFBVV95cUxOMnR5TTFvMkN1Z0ZLOVdZSGZkRUYyMkhNNldJU19Yb2ZXV2NqT2YxUUFuN2RyNWdjUEwwVzJSbVpxbXFzbC12OGdYdzk5RDVnaE8zTGNaN01PakU2VW5vUzVFblBmRlI1VVlyaWZjcmFwZjdYZW1ScTM2cktHc0FPeXhYSXE1ZTdhOWtfR01ucjJpQVA0Nl9HMQ?oc=5\nBTC 当时 77,744"
+  },
+  {
+   "time": "2026-10-31T18:13:47.367079+00:00",
+   "time_local": "11-01 03:13",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·地缘] ​North Korea Steals Over ₹64,000 Crore in Cryptocurrency to Evade Global Sanctions - The 4",
+   "body": "直接相关 利空 · 来源：The 420.in · 发布 11-01 03:13\n​North Korea Steals Over ₹64,000 Crore in Cryptocurrency to Evade Global Sanctions - The 420.in\n\nhttps://news.google.com/rss/articles/CBMiuAFBVV95cUxPcXpoOEJhQTRVMEhFWlpmZlN5RkZKRF94NVFGNThXMm9NRE1TaE9sWVVoaVQxaEpRcjJ3LXpIdjNIWXlpN0lZYWY4LXFySWR3X3MtcmNIenpuVlZzalZ4R1hOdUNrNXR5M0ZTRTVuUU1PelduVEpOak9ZVjdGS09sTFBFZWd5U21ZUFpsajZYVVdDYWxyZEkwc1dHWFlHN2RxU1hLc0N5bC1XVjhCR0d5cEVEbmZ3dkJ6?oc=5\nBTC 当时 77,720"
+  },
+  {
+   "time": "2026-10-31T18:13:46.753001+00:00",
+   "time_local": "11-01 03:13",
+   "level": "red",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance Hack Exposes Crypto Centralization Paradox as $3 Billion in Assets Are Frozen - Ho",
+   "body": "直接相关 利空 · 来源：Hokanews · 发布 11-01 03:13\nBinance Hack Exposes Crypto Centralization Paradox as $3 Billion in Assets Are Frozen - Hokanews\n\nhttps://news.google.com/rss/articles/CBMic0FVX3lxTE9KeG1vRHh5WVRma1pITlBmblpsTkFBNV9McEhkWExhVkNteHYxNzlzTm9ZVks3cHNsYnRDWDhIck9Nd1VjRlVTcF9HZTRPN0Z4cFlFNzdzaGdEV3F4X1psM1lEdGV0NjJwYjdUVC0yLVF1d2c?oc=5\nBTC 当时 77,720"
+  },
+  {
+   "time": "2026-10-31T18:10:45.018782+00:00",
+   "time_local": "11-01 03:10",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance Says 90% of Stolen Crypto Assets Are Now Recovered | Dawn News English - Dawn",
+   "body": "直接相关 中性 · 来源：Dawn · 发布 11-01 03:10\nBinance Says 90% of Stolen Crypto Assets Are Now Recovered | Dawn News English - Dawn\n\nhttps://news.google.com/rss/articles/CBMirgFBVV95cUxOUjBIU2xMZ1gwcnpxTzkyT00tclFHU2tPNXJJa1kycldsbTJuMTZFQ2hVLUZaOVU0U1VsSjRhMkdNR1RxUWQ0ZHBVZm9uTVF0UkNCMHhNNFNwOFJHM0xuWUlrLTdPSWVXenBlTE9XLW5XN2EwZXAwUDFXQ0ZpZ0V3MHNIeGplczZNdnd5Z25LNk9pVjdoUEQxejJFb3BWQ0Jpc3ZvRUxpUm1hdms3M1E?oc=5\nBTC 当时 77,720"
+  },
+  {
+   "time": "2026-10-31T18:05:46.971381+00:00",
+   "time_local": "11-01 03:05",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Ethereum Price Risks $2,000 as ETFs Record $1.61B in Outflows - The Market Periodical",
+   "body": "直接相关 利空 · 来源：The Market Periodical · 发布 11-01 03:05\nEthereum Price Risks $2,000 as ETFs Record $1.61B in Outflows - The Market Periodical\n\nhttps://news.google.com/rss/articles/CBMieEFVX3lxTE9COFJMTVJaUjRnZDl5UEZjYW80TmExMDRFVi1Sb1VhaWFGQmVVNDlYN0hhT1ByUEpTallMVHJlTkJTMnBmWlpXM2sxM2U0SzFuaVV6Y3RBZWctalU5RFZKc19wYTYwSnNxQWZ0aWtUbktUclVDOGhPbQ?oc=5\nBTC 当时 77,709"
+  },
+  {
+   "time": "2026-10-31T18:05:46.956741+00:00",
+   "time_local": "11-01 03:05",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance Recovers 90% of Stolen Crypto Assets; What This Means fo - GuruFocus",
+   "body": "直接相关 中性 · 来源：GuruFocus · 发布 11-01 03:05\nBinance Recovers 90% of Stolen Crypto Assets; What This Means fo - GuruFocus\n\nhttps://news.google.com/rss/articles/CBMitwFBVV95cUxOTF9wbzhQQkJRVVB5ZDRTVEVSUTNBMnktUXRObTJ3X3VZVVhjT281bWRtU1paQmk1bnVidm5XbEZhYXFsMzA3dy0xWkk5R2VaTDFjalNkNzV0ZHRUY21seFRBQV9jQTJBSU9nYkNJOHVOQ2NwT1RCTXJBdm5SOWJsc1FFSFFZQUxReFlqZEJVNXBkSk00U2pRc3g4RUtxSFI5SmRKRWdMQTVxbTdtZUZUb0lpaENhbHc?oc=5\nBTC 当时 77,709"
+  },
+  {
+   "time": "2026-10-31T17:53:33.177916+00:00",
+   "time_local": "11-01 02:53",
+   "level": "yellow",
+   "kind": "新闻",
+   "title": "[Google新闻·比特币] Binance Says BTC, ETH, XRP and 7 Other Cryptos Fully Backed After Hack - Bitcoin News",
+   "body": "直接相关 利空 · 来源：Bitcoin News · 发布 11-01 02:53\nBinance Says BTC, ETH, XRP and 7 Other Cryptos Fully Backed After Hack - Bitcoin News\n\nhttps://news.google.com/rss/articles/CBMipgFBVV95cUxQblZGYWZ4ZFNqRWhzdnd5SFdmazA4ZDRGRlJvZTFOUzRaTUtORHpWTWZZMERSbnE0XzlNblZpNVU2WW13cEtPaTRHYXI0YlJLSEM3QVdkbVBFUDB6c1I3WldQdzNvbUhldUhuVUd5QWhfQ2NaVXJvT1doVE5wQkpaYUpVUzltWWhUNDBWNTlHNzRMRFVqS3FaUjlDUDlxZzRIelFXS3pn?oc=5\nBTC 当时 77,755"
+  }
+ ],
+ "news": [
+  {
+   "time": "11-01 05:37",
+   "source": "Google新闻·比特币",
+   "title": "OpenAI to merge ChatGPT and Codex token allowances in December 2026 - Crypto Briefing",
+   "link": "https://news.google.com/rss/articles/CBMifEFVX3lxTE80YmE0b1FSWnJpYlVKSFc5Ulk1VjJFbEM2Z2c1VmxMa2R3NUk3S1FVV21NdFhUQ0s5OGZrSjBwWDBNYzM1WV9jNWdjb0ZhYTlYaXJvYWI2TFhCYnNtby1YRG9ESnp4UUlaalQ5UzhrWUhoRmRpV3RHWkRTTFU?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:37",
+   "source": "Google新闻·比特币",
+   "title": "Binance $6B hack fuels Washington debate on crypto regulation before election - Crypto Briefing",
+   "link": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQcHpyQnEzdzdBa2hDUmRHLWlxVllOWndraHlMNDgxZnZTenkxc1NCSklmVWFpVS1PcFRzNjdLTnVJbWI2UXZDSXNGX0w0S01IQzRzamJLbnVSSXgzNF9XUGt2c3M5c205YVVGUDJKNGh0cWRfS1dMcVFHQmhPVjNQZUgyOXhHYlB3bk5pM0wySEt0Y2FSYWx6YXBMVmFjZnNnYlZOY2MxRQ?oc=5",
+   "level": "red",
+   "relevance": "直接",
+   "lean": "利空",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:37",
+   "source": "Google新闻·比特币",
+   "title": "Tighter financial conditions challenge Bitcoin's inflation-hedge role amid rising global inflation forecasts. - Pluang",
+   "link": "https://news.google.com/rss/articles/CBMilwFBVV95cUxPaGxiSjEyYXpoRk1wVG1IUk0tRGZZVkZPSVZ5aUdCRHI0b0ZjdVNYaHB0MmJfTEpXNmZwbGtaeURubFpQRGtWR1pDOWlPeEZBVTJMR29ocl9rRGFTeE5ONFVXS2JjckZzTnFUSnNmdnZMemgwUnJnMkVXckFMeHJVLVlmbmYxaE81VDkwSjl1UjlCLUVIeldz?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:37",
+   "source": "Google新闻·比特币",
+   "title": "ETH price on Nov 1, 2026 at 5pm EST Crypto Prediction Market - Robinhood",
+   "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxONUJXVWJOMk5XTEViT1lVSU9tc0RMQTdtX0FrcUdRa0E1M2NCVzBteW1XZzQyS3FwX2VLME8zQ1FiRElzQlhyMUZoMEl5Uk1teDd0WXdFNWF4T0RPbUhkTkFSSHpma0NmMm1pbm9xMmpBcHdjM0VpUnAxNjZxSkVKbWlPb1d6eHd1WXJiLXluOXlFcXlJTHB6c1lPUzZTUTV3dUdEYWYzQUZoR0U5?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:36",
+   "source": "Google新闻·地缘",
+   "title": "South Korea latest news, pictures, updates, military drills and missile tests - Daily Express",
+   "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE11YjdEVDhQMXZEYXoxc3UtNHhleEJTMnZqM3VZaXJsdDBXeGVpSEhpWFAyUmRtdmM3X3F0d3N1YWxUYWhFSUhMejhVZzFjeTRJb3Y1LTJtUFVnOWhLSzkwcDB4Q3EwZ0lkcHl3?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:36",
+   "source": "Google新闻·地缘",
+   "title": "Russia Ukraine War - Goshen News",
+   "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPYk1OMjBEOXJmSTdwYlA5RFZId0lGUXJoaEpYN29EWkltSWxCV0ZtSlQ3aDFfVDdQSXhsbGwwNkZFS0dtYVUzLW15R3Z5Wm05WlNQZkVWR1BJSlNOX1JtbExSTXNPdWIyZk51ZnpFalppbzZBZk5neEM0VzU5N3RjZ3cxS3p5U2JVWU1ET2l6NWN5VDhZNUh3UVcxbldsRnpVZ1pLQmxOM2sydGdBRElnTmV3?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:36",
+   "source": "Google新闻·地缘",
+   "title": "Venezuela-Russia Energy Agreements Remain Intact Despite US Sanctions, Deputy Jesús Faría Says - Orinoco Tribune",
+   "link": "https://news.google.com/rss/articles/CBMivgFBVV95cUxPSnY0cXZ4NXVTVF9NbmFPSENQSEJIa0JTOUI1WjNRUEc1THAyc1hYVm1DZjBnUmFHOVVMZUczT3NuTGFpYW50elhLV1NjVE43V2FNVEFNcDg3WkRkY2h5NDZ4RmtLQ0FzODlpYzF2dFQwOURQcXFiYXJ5U0c2UUNDdGc1cHNYenlzOG9ybGNsaGdUUzZOVWtNMUhvZG5UbDY1a05oWE40YVA1bEI4NDV4cGZsc1FuV3R6RW9BbWZB?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:32",
+   "source": "Google新闻·中文",
+   "title": "比特币一年耗电113.89 TWh该不该被骂？Galaxy硬核拆解：只占全球发电量0.43%，远低于黄金和银行体系 - 区块周刊BlockWeeks",
+   "link": "https://news.google.com/rss/articles/CBMiTkFVX3lxTFBOUkx6YXR1Q253Z29nREJRaGJfTlVJbDZhNFpCSTl3bHZCbEJwbVB3TVc0SGpxY2FJYXVWX0ItNTR5MTZST1lHanBaSWNSdw?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:32",
+   "source": "Google新闻·地缘",
+   "title": "The War Behind The War: Trump Helping Putin Stop the EU and Carney's Plot to Carve Up Russia - Todayville",
+   "link": "https://news.google.com/rss/articles/CBMiugFBVV95cUxPbmItV0pwNlBmMHRIZ1FfOVlXd3VxZWVKcEtBUURDWEhBd1lkbGlZaHMwdGw2V3hVR2V5ZjhNZWZnSFVoeW5ON3FfWWM4MjFYOWMzZWFmdUNXQzJ6dVJuTW9sQmV5WHBMeDN1UG53d0p4SkFaajZfcVBXZXZEcy1QendJekhWY1ZmLUNmZW1vTlFCSjA4M3pLdU1pa19MZ1lCeEJ6MHdvN1lKTjRrYnFOZnVrZTZGWXllRUE?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:32",
+   "source": "Google新闻·比特币",
+   "title": "The SEC Chair Says Most Crypto Assets Are Not Securities. What Does That Mean for XRP After Its 5-Year Fight? - 24/7 Wall St.",
+   "link": "https://news.google.com/rss/articles/CBMi-gFBVV95cUxQZnVDcmlwTTRyQy0yOTR1SlRnSUF6VlJVQVhON2NybGZNYkc1MFZIUFlPTmZyMmprRWlrelhLYzl2RGhLdUphTEo5dmlGaUNHenV6NjluVzR2VTVuWEZNeWk3R1RXLUVzQkJwNE5ENGIyZ2tPcFNqNDczbkZfeUN0Q0hFTzlTTmZFMTFEY1FRMUNtQ0tDRUpJbV9udHl3UEM5UG1XSlNQUGJRWmJZMWVUeVhONllRNTFTc0FrNklhM2lTY0YyY3dWS0JyU0Z5VFRBR0JFSnNRN29EbkdtMWtYTU52NTJjNW0yOGtWU2FzVWdmYzEzVnJfTF9R?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:29",
+   "source": "Google新闻·地缘",
+   "title": "Poppy trail is created to remember South Oxford war heroes - Yahoo News UK",
+   "link": "https://news.google.com/rss/articles/CBMigAFBVV95cUxQUl9IbUg5WDBMRVlxNjFaVnloc1YxZVpWc1ZSYS1jX0pDNDZHSTczSlpyeDNsSmFFYmtPVk1yOEUxbUhpcjZsUkFpemFkN2xzWm51SVRXaXZiTkFMamxUdE92eFNYVVJRLUNEUFBjM3B3VVBQU1ZqMGdYYnVQa2p6Ng?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:29",
+   "source": "Google新闻·比特币",
+   "title": "India’s ED Arrests Korvio Coin Associate, Seizes ₹72 Lakh in Cash - The Crypto Times",
+   "link": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxONnRtYldtYkloWjRCSXhGMmgwcVdxRU84NENrRTRTa2stVjZtWFRHczJreTVTVV9wak9udUZUc09icmJyaFNsOFlIQXcyWnM5bjRTckJqdlNZdmtuX2lRc3hPaDRGQXgxQ2ZUTTZzRVlLYm50WmRWckFHaWZ0dkkza3FoT3VGczVnZ3ZxTGFjUHhsSUwwc1F4RGk5akJJdDlETWlCYjdQN2I?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:29",
+   "source": "Google新闻·比特币",
+   "title": "Bitcoin ETFs lost $643M in one day; Ethereum ET... - Pluang",
+   "link": "https://news.google.com/rss/articles/CBMijgFBVV95cUxPbzFRR0cwYkdoT0xjeDltQlZZLVVYWDl0aHJ5YXdpdU5KRTJHek9uMjVwY2wxQVNfYUhRVnFyeEx2S1FEV0J0ODlKNXFjLVBsZ3RiRzBIYUhhZTRYOERVR0xYS0VwOXZQbEhPdk55VHhLZER3blVhNnNoTWlkbkJSa1V0Si1RV01SQkhENENB?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:29",
+   "source": "Google新闻·比特币",
+   "title": "Stolen Bitcoin from Binance Hack Exceeds Tesla’s BTC Holdings, Nears SpaceX’s, and More Than Doubles El Salvador’s Reserve - Crowdfund Insider",
+   "link": "https://news.google.com/rss/articles/CBMi-gFBVV95cUxQNmFwQWxfSXc2N1MxenE4U1I3SGVVQ2pzaGtpSlVrYnhtRXZDbEdEWUxnU3o0eVhHOUZrc1dxVVRTR0c1TWd2LXVjS0lWUU5zQ2hLa3Q0UmE1OS04NTBzbWRMU2lVU05rRXBEdjlvTnZ6RkFCUU1FZGVPeDc3N0RISXBvX0xMOUZJM2swWlEtcUtBMlpfS0lrTzRhRFhfZkxta3FveE0ybmc0eVh6M3Fsd0pYUHZid0hXVllMYjFlWS1IaHdHVHVLZHFYODRfdFRPU2V4QWNBRVpNNDlhSUI5Wk9rRGtPMHhMbElPQmx4N1RFUjEteTBWUXBn?oc=5",
+   "level": "yellow",
+   "relevance": "直接",
+   "lean": "利空",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:25",
+   "source": "Google新闻·地缘",
+   "title": "SpaceX AI Will Watermark Grok Text by Default for EU AI Act - FourWeekMBA",
+   "link": "https://news.google.com/rss/articles/CBMikAFBVV95cUxNcjk3U09keUVnRkpqNGEzVFFidUVzbkR6NndwcHU2T0NSLVpYaWRvbEtpZzNtTWZWRUZQai05MmFpZ25uRnhnQ1pnSHFBRGtvbVhUZk5tM2lQWEoyay1ram9TSmMyVlpLTVlrRmVZbFVqTGVFcHdZSV8zUXFYRWhFdFdHS3dBMWZfS2t6V3hxYmg?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:24",
+   "source": "Google新闻·比特币",
+   "title": "Bitcoin at 18: From a Whitepaper to a Global Financial Experiment - The Crypto Times",
+   "link": "https://news.google.com/rss/articles/CBMiogFBVV95cUxNdno2YmoxeUR6WlltR0ctNlpZc3JXM0NITmtIRnNtSC0taDBaMDkwU3J2S3Y1TUlmRTktZWpOSS1IYklXbDJfclpCVXBxYnd5dmhTeWZ6VkZ1RmptWlZ0T29PMGoxQi0xbVNFUGVHMm5tdkFNNGRpUXJaTUVjY0ZFTDR3ei1IWG9pbzVFTVpQVG1RS2FMTTBDNWViZDU3Ql9zdlE?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:24",
+   "source": "Google新闻·比特币",
+   "title": "OneKey Founder Flags BootROM Risks for Crypto Seeds on Older iPhones - The Crypto Times",
+   "link": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxPU1RGaUF6dVpzR1pCdzhNQS1qUUlESENlcUV2eWFKU21mcGFFOGxyblN0OUE1c2xNTWpCYUpfaFF3Znc4N1ZMbmV4WDJ4SEVxZGVUYl9ubWhQT016VGNWZ3BNTnAwRVlON0U4OGVsWnREbHhUQUxCUDNYamRYTDJ3Y08tcGZLVUl2d3JybmRLQjdUT0RYdjFpaFBsWV8zdWhzdWNxSnFoUnRBemM?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:24",
+   "source": "Google新闻·比特币",
+   "title": "Bitcoin holds up better than Ethereum, XRP, and BNB after Binance hack triggers crypto market volatility. - Pluang",
+   "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxNZWlmWXJOdXZ0WjNRcWNIQmxYWV9VR3lzb2JxbGZwYk9CRGF4cW92WkZEOVFEeS1kTThVV25scnF6d1FkMkRYckY2NTk0RXd3eTRtQVlaSEpCaEZQQnFhamltNnFfZ0V0d1RvYkE1SGt5Qm5PbVpSYTRaNE1tTF9vYWQzOFJJTEFsS2FVUk9kTk9fS3hQ?oc=5",
+   "level": "yellow",
+   "relevance": "直接",
+   "lean": "利空",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:24",
+   "source": "Google新闻·比特币",
+   "title": "Himachal crypto scam mastermind’s accomplice lands in ED net - The Tribune",
+   "link": "https://news.google.com/rss/articles/CBMipgFBVV95cUxPRnAzQUQ3aHdZalJpUk1OcDUtRUg5UGp1TUFpTGV4aFNsTUlZMzB1WTVBRy1VcTdhTGw4eXZPQzVKQXQ1TUlYcThCR2g1MlNZcS02bGdkQ29TcG5IYWpCd0dka045M1oyMVU1MUpBWUhJY3VuRmpjSzloRnRROW9RQWRVOHg4QWNuaHR1bk9IQkpJSWxCbC1OeW9FNVlUTjktS3JGOGln0gGqAUFVX3lxTFBLM1pHMy00TnJsZmNYWHQ2ZDJTcTFpclhNeGtkTGVfb1VCdmVrV0VCMFRhMjJYQm90bnJFZ1p4MjNuZmE1aVdTR2hEbGtWZkhibDVLRnprcV9waDlXNDZFWU5BNE9DOEMzTEh1RW9oUk9EVGhyWnRJUHJ4S2N2LW1qTVRJMHZzS2hWM2RtZHF4MG1lS2VuRmpKcUQ3amhOczlNZlpLcHFSZXpR?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:21",
+   "source": "Google新闻·中文",
+   "title": "比特币白皮书18周年：长期安全模型引热议，价格跌破8万美元、Binance 63亿美元黑客案震动市场 - 区块周刊BlockWeeks",
+   "link": "https://news.google.com/rss/articles/CBMiSkFVX3lxTFBjOG1DYmkzSHNIUDRjZjdDa1FIV3l2QjM0MWpMS01mZzhmWFdGQ3ZwSTNlemxzVlBWSVpXaXVLa1ZicC1RVnJEUEFn?oc=5",
+   "level": "red",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:21",
+   "source": "Google新闻·地缘",
+   "title": "Iran and Qatar hold talks in Doha on ending the war — Asharq Al-Awsat - UA.NEWS",
+   "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNX0JWNWg1ZmRYS3puRXhYMXV0SWI2XzRHNWItaGIwd2Vja1pwSURxek5BLTMyeklPVkl2QmttTWxSWjRPZ29aQkJESldkWUZNWmo0cEwtX1NXbFFiSzI1TlF2aWpwRUQyNThQaHhQTG9vU0d0NU1jR1hJTGZGNElHV1BaQm1jVFhMNTBsWHJBaTR4NWpuVG5zaXNDazVscVZJSGJEVTlKMHNsTFl4VVJsbjFhOA?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:21",
+   "source": "Google新闻·地缘",
+   "title": "Short Film Review: Backstage: A Gripping Drama On The Tug-of-War Between Authority & Subordination - Indie Shorts Mag",
+   "link": "https://news.google.com/rss/articles/CBMiwgFBVV95cUxQcVBvZnFrUVJNY0FOLTVfTFQ1TjVnSzVrbV9VNUE4TEFLOTJmN2M3Vm0zZFNrbUtLSGR6XzB5dVFTRENkUUNxM0lTWFVwMUljS1ktejB3aDFGM2xRUmhENG1ZSFl0LWN2UW1qU1JkTm4yX1JaWTdlSUVMQnJQckl1TjA3enduX0NvQlNpNWR3QTdQc2t0WWRWMVdYakhDRW9EckRoMXk1N2Q0NkJkdWR4TXYzR1BoZGh6Q0xtOVFJUHJYZw?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:18",
+   "source": "Google新闻·比特币",
+   "title": "THORChain Pause Delays Binance Hack Laundering, Chainalysis Says - The Crypto Times",
+   "link": "https://news.google.com/rss/articles/CBMipAFBVV95cUxORGtLMGszRXJ6dEtjWUJRTHJXVUMxTTRuQlpEaUpnd0ZQdnZTTy1Wc0k2QTJ2ZjFaemZpUldYMzloOTk5dTlsZlA5QnFPNjUzZmsxV29JTEw0eXE5X3l6SWVvU01JaUhwM2xqV29UUGZzLUhGdTljUE5xaTMtdHNUYjB5T2FUVXJkZmt0MDBhU21UVDFROHZ5ZnFvaVF5X2J3c0s5YQ?oc=5",
+   "level": "yellow",
+   "relevance": "直接",
+   "lean": "利空",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:18",
+   "source": "Google新闻·比特币",
+   "title": "Arena Competition Protocol (aof.global) Price Today | Live ACP Price, Chart & Market Data - Binance",
+   "link": "https://news.google.com/rss/articles/CBMib0FVX3lxTE9RR0I4SFctWlJjZ25rb2ItTWxURTJwWVgxcXBhWk56WEo4eU54SVBlRFZucmhMaE1RNGNGYmpYV3ZSRy1Ra2phbG85VXV5QXFkSnVJdTVvNDlWSEhaT3NOV0QzcHllal9vaTQweFdXRQ?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:17",
+   "source": "Google新闻·中文",
+   "title": "比特币白皮书18周年重磅回顾：法币体系隐忧再成焦点 - 区块周刊BlockWeeks",
+   "link": "https://news.google.com/rss/articles/CBMiSkFVX3lxTE5FTFZJWi1JZFVRUkcyODQ2SDJTZTU3ak9WMEV2OGpJdDMwRmZya2xGTUFKTUFTRkNiQ1RLY0E5OUkzd2p6ODNfTHd3?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:16",
+   "source": "Google新闻·比特币",
+   "title": "Name.com restores hijacked domains after attack hit at least 12 DeFi front ends - Crypto Briefing",
+   "link": "https://news.google.com/rss/articles/CBMidkFVX3lxTFBwbW1DTVhCcVl1cklTa015VUZVOUlwTExjR1dUTWJkeF9iZ29LX2FhcE1FWFJsaFhEQm91UUlMT3dXWGpaaWJIc1pPQWRIQnAwUWxlMmc4ZmQxdEdjYmtMRWRMdWtxNTM1RDhxRFlTVVpxMjhmN1E?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:16",
+   "source": "Google新闻·比特币",
+   "title": "Bitcoin ETFs Lose $643M After Binance Hack Ends 4-Day Inflow Run - Bitcoin News",
+   "link": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQbEFlWkEyckttODY2c1UzTHZieXdCbmIxbWwzUDF5MFprWUFacFZXeHBQOEZPaVNzdS1wQng5RXdoaEs4czAybWMzMU1JVnBWeThmQjdHbF9PX0MyWE1JQ0VzSEpMVFdFRzExWTltUXJ2NFNOeU1Wb1UyR2U1RWE1eEx4dlRia2xINHhUUFlQbEQxbWN1RWc2WU1oQzd6TFJXVGpSeU14Yw?oc=5",
+   "level": "red",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:16",
+   "source": "Google新闻·比特币",
+   "title": "Crypto ETF News: Bitcoin ETFs Lost $643 Million in a Day and Ethereum ETFs Have Bled for 11 Straight Days. How Much of October's Inflows Are Gone? - 24/7 Wall St.",
+   "link": "https://news.google.com/rss/articles/CBMipwJBVV95cUxOM0I0T213LUtuU0prRHJmWkpRbDZ5QURzSHhBUHJWNW1Vc3F5VmtDQ3FtT3FZYTVpSWNSOHR6WnFMSUZha3FCRzEyejVWVHZoZndjMm40LVNWaWZ5bVRJaU02OGtadXFFdHd6RE9tVEVaMDhyeWhNOFpIcjd4WkdYY0ZrXzd4bnlkNlVSRVRqWFhZbktYbjR5SmVJbnhkUktmblpGZ1VONTg4eF9hWm1EM2VneURMZVRybVJsV0gybWpLWE50SWJkVkN3cV95N1RjZEVwVmcyYUFPRzBWbHVlWWMxamNpYjh0R2FBYS1uTm9uRkdjaGJnVW9RaDBsaW1YYjJSZlNkMGpsWkhTeGJZb0F6ZnBTNXlqU01WTWVyMlA1d29CLWRr?oc=5",
+   "level": "yellow",
+   "relevance": "直接",
+   "lean": "利多",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:14",
+   "source": "Google新闻·地缘",
+   "title": "Iranian military spokesperson says Iran to receive Sukhoi 35 aircraft after war - JFeed",
+   "link": "https://news.google.com/rss/articles/CBMiuwFBVV95cUxPRXRTbWRqc3RJekdfaTdPR1NFT1NBeGdoNlVrc3BYMGpELTNQcUZxTVJzVTViZ2ZuRV9OQmVpS2ZmdGRfYUYyUUxTYjZRemdaX0tOeE5PWXV2TmUzckxYdEN0NnRXMTFLaHQ4WjN1eVM1dXNSUUxKM1RyLXoydU9Zc2RYRmNoVXk5SXA3WEdXQjBvWlRWc2V3X0tNTmhnX2dzR3NWSUF1MnJ3RmtiaExzczY5bkM2bWxvaXNz?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:14",
+   "source": "Google新闻·地缘",
+   "title": "XBOX’s Game Pass Strategy Hurting Game Sales as Gears of War: E-Day Struggles to Find Audience - NoobFeed",
+   "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFAwNU9sYURfUlJOUE1kOHE4OE9SN1ZRV3ZZQ01VM3lFVGpwVVdabmoweTBES1RaTjluR1djRHpHZFVOckJOTVFhMzVvM3B4UkJIc0xFVEl5SEVCSzZrcHplYWFwZ0h4Ui1WUWNpdkJ5cXo?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:14",
+   "source": "Google新闻·地缘",
+   "title": "SC upholds war injury pension for Army man in Op Rakshak - شبكة تواصل الإخبارية",
+   "link": "https://news.google.com/rss/articles/CBMiU0FVX3lxTE9Ld3YzSmtIaUxrYnZIV3RrRllCN2V5M3Y3YUFQeTdDQjdFTFhzT3JaaXY2MDVvZkMyYlplWWFzVzQ5NXlQM2k1VVFWRDdPdlpUUDdN?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:14",
+   "source": "Google新闻·地缘",
+   "title": "Bessent: Hormuz traffic at pre-war levels - Breakingthenews.net",
+   "link": "https://news.google.com/rss/articles/CBMijwFBVV95cUxNQlU1d3VnWmNSaXdDMWVLVTI0OXM1Qmlpb3ZJU000Y2xYYVBSaTZtMERnMjk1QnRWbFdQckM0eW50S0c5cjBFVWl4OGZwOWdkT3gzQ2NERkJsRGltUm90Z1VaeUczMGZlY3VYNHNxamxBQk9haTdBMWJDcmFiRzBXSHk4bnlXc3JidENQdjdrbw?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:14",
+   "source": "Google新闻·地缘",
+   "title": "Victors and vanquished alike: Israel cannot afford another war among itself - The Jerusalem Post",
+   "link": "https://news.google.com/rss/articles/CBMiV0FVX3lxTE9lOWFmQmVTemtlODRpckF4UzRTUVVTVFEwYnhPSWlnY1paVUZ4cEg5TzBzQUxNbzh4SVQ4VFhabUhiQm1UX0cxM3ZYMmdmX3Y1SjU3Ql9faw?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:14",
+   "source": "Google新闻·地缘",
+   "title": "Russia Ukraine War - Post Register",
+   "link": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxPSHhHR08yR1I2RFhkSjNhN3E5blB5QzBoMk12VC14c2tsd1I4MThEWjlYdGRia3JKQllUaTEtNnZPMExlcmxwUUhqd1RMdGs4VHlRbXMwcWlYUlNsaExsQjg5WDFzbFBqRU1RTkx5WEZXRTVhN1pMaTRzYm9Sd3F5cUdETmJXb1BSajk5UFhRWWRlV1FiYl9NeVBvbjlOMm5YZVhRODBvV2tiQQ?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:13",
+   "source": "Google新闻·比特币",
+   "title": "Moscow Exchange to introduce BTC, ETH, and USDT trading December 1, Scott Melker says - Traders Union",
+   "link": "https://news.google.com/rss/articles/CBMikAFBVV95cUxQX2hPdjBua3dUZUFmRF9PMW5URWVxVFBiaUZMRjh4Y0ZvSFJXWVhQSDZtOXR2cUVxeEdoX3p1TTRmdUwwZXF5YmplMS1VR0dQdjNxY1pSYU1FMGt0Wl9lOFAwbm5mdEdYRk4xYUtPTmtuNy1KWVpUZWpzeVBtQWpfYWJGa05iWlpEYmpOdUdwUlk?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:13",
+   "source": "Google新闻·比特币",
+   "title": "Perpetual Futures Poised for Growth Beyond Crypto, but Regulatory Uncertainty Remains - Traders Magazine",
+   "link": "https://news.google.com/rss/articles/CBMi0AFBVV95cUxPMHRlbkRBTWNvc05lRmg5SUo4bDVzU1kwdWRZNERjVm52QnFsMUFwNXFKelBLbFoxOWJvQXZIb3JMQzZJd2hTaEs3SUdlQUMzV0xNT0E2MmZmdEJJdnRldE0wS3dFTFRrT0x1VXR5V3BhMVpzRkkyeEFiV21JRFdfVGpBczNpRE93TUI4RTZmb1FPdDJJZWstT1AzWmJfWUVRUVM2ME81YkxQV3hJR09YejktVU5JQl9OZEZYdWRBYUhVdWllV3FlUmh4aEZrWnl3?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:13",
+   "source": "Google新闻·比特币",
+   "title": "Crypto ETF News: Bitcoin ETFs Lost $643 Million in a Day and Ethereum ETFs Have Bled for 11 Straight Days. How Much of October's Inflows Are Gone? - 24/7 Wall St.",
+   "link": "https://news.google.com/rss/articles/CBMi1gJBVV95cUxQRW5Lc1dSR2l5M0IxdElBTmJDZEZSa1lJS1NNSFRLcDVhN0hYYXBTSEp6eld6RzdyTW15US1RWGtBM3dBaEpUUkN3cTRfYmxFVVRQWjRaYUJOVmJndFZFQzFBZjRBMXZrYUlZQUdvM3JGVTBfMFhydG1ubzJQTXFtaWNUNHhpWmdHd01BVUNkY3JxZi03amlPUEprYkYyMWt2MzB4czlqTFRFN3dSSUszeXpaYUgyNEFWaVNMbTVhc3U4M3NjOWp6X3dGN2pZS1Q4S2k0UkFQZUdLdlo5c0UyUTc0MU12eXRuNGhRbHh5cndJNDlyZy1ldWplcnJHMkpCX2VRQjhsS3pMUWJaa0FZUTcxN3U2UTZ0Tkh5Tjg0RVpCNjlJZ2FsbTIzQUNOTUF1ejlvZ3hLQ1hJM0EtMjJBdnRndUtodEJOWFBZOW1xVi00TjZIaHc?oc=5",
+   "level": "yellow",
+   "relevance": "直接",
+   "lean": "利多",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:13",
+   "source": "Google新闻·比特币",
+   "title": "BTC price range on Nov 1, 2026 at 5pm EST Crypto Prediction Market - Robinhood",
+   "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNR0FaYkZKak94c2FlS3M1SlhGNW9OQ1dhb21aTVBlSUFkTHd6MlZJQm1hUDhPYnZsd09vVkFaQWFKOXFmTnRzamRHUkZDUEdFcXc5c2RMMnhRWVNxMVhUSXB1UEUzWVkwQ1VzTERDZEZYdERKNndqQm1TX1phZ1hKckJNemNpSG5iTlVXS21GTEVXM0U2N2E4U0FnMFZBQjZiSll0SlNlQ0ZaelRpY2tIeXlLRno?oc=5",
+   "level": "gray",
+   "relevance": "直接",
+   "lean": "中性",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:10",
+   "source": "Google新闻·地缘",
+   "title": "Galamsey: We're winning the financial war but losing the environmental war – Prof Appiagyei-Tuah - MyJoyOnline",
+   "link": "https://news.google.com/rss/articles/CBMivgFBVV95cUxPOXJKX09ta2k1TDNIX1VjdmJ4elhHMGdvYmk2WGkyaGdMZGgyQTZEZjgyNHdTbXU0M0FzRW9YbXc5a2U0VVpPUW81QlpKOERqbkNOY1BYX2tCT0Y2MHVJVjdVZVR2SE1IVl85M2x1Wk5OajI2YXJxZ05NZ0NpN0dNM1g2RmJHX2VCYVgxeE9YMlg2dzJId0JuaEE3V1c5LUVwUzRTcGx1ckVxMUNwM0pqUW14b1dCeEhuRGFtMlVR?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  },
+  {
+   "time": "11-01 05:10",
+   "source": "Google新闻·地缘",
+   "title": "Russia Ukraine War - GazetteXtra",
+   "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPTEFvNzU3VnlWNmdqdUEtSTdGbDhXVk90ZkVUdDJNbU1INkZrMW93bC1sOUZEM3d5YVdQUmY4V2ZVZnJUdnZONklpbnQwaWJ6ZUUzejgzWVpEcEp6WUVtcjNkMkl5RHMzakFqQVJIZVFnQUJCeXpyTTNLUmVEaEFTdjlNZHoxNDRjU0pjQVZhSkU5Z085LVVuMHQ4Y19kZFZTT0s3azN5STVfR1RRZkpwTElR?oc=5",
+   "level": "gray",
+   "relevance": "间接",
+   "lean": "利空（弱）",
+   "title_zh": "",
+   "reason": "",
+   "lean_src": "规则"
+  }
+ ]
+}
